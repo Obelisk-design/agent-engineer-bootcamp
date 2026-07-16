@@ -1,0 +1,9 @@
+# 工程脚本
+
+一次性 / 工具类脚本：
+- `scripts/migrate_*.py` — 数据迁移
+- `scripts/seed_*.py` — 种子数据
+- `scripts/bench_*.py` — 性能基准
+- `scripts/release.py` — 发布辅助
+
+不属于应用代码，放这里避免污染 `libs/`。

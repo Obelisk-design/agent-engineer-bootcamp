@@ -1,0 +1,9 @@
+# 资源文件
+
+gitignored 的大文件目录：
+- `resources/datasets/` — 评测数据集（gitignored，按需下载）
+- `resources/models/` — 模型权重（gitignored）
+- `resources/cache/` — 运行时缓存（gitignored）
+- `resources/samples/` — 小的样例输入输出（可入 git）
+
+不放代码、不放 prompt（那些去 libs/prompts/）。

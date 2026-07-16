@@ -1,0 +1,7 @@
+# Prompt 模板库
+
+存放 system prompt / few-shot example / prompt eval 用例。
+子目录建议：
+- `system/` — system prompt 模板（按角色分类：planner / coder / reviewer / ...）
+- `fewshot/` — few-shot 示例对
+- `eval/` — prompt 评估用例集

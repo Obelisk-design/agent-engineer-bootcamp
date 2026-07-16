@@ -1,0 +1,7 @@
+# 学习文档 / 架构设计 / ADR（Architecture Decision Records）
+
+每日学习笔记、阶段总结、架构决策记录都放在这里。
+子目录建议：
+- `adr/` — Architecture Decision Records（重大决策的"为什么"）
+- `daily/` — Day01~Day65 每日学习笔记
+- `design/` — 系统设计文档、流程图、时序图
