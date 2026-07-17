@@ -4,3 +4,9 @@ build
 coverage
 .husky
 pnpm-lock.yaml
+
+# Markdown 文件（含 CLAUDE.md / README.md 等项目级 instruction / 文档）不交给 Prettier：
+# 1) 内容多含手写中文与项目级 instruction，prettier 重排版式可能破坏语义
+# 2) Day 02 验证发现：CLAUDE.md 存在历史格式差异（commit 起始即未格式化），与新增 markdown 不应混为一谈
+# 如果未来需要 markdown 格式统一，单独评估 prettier MD 规则集，再决定是否移除此行。
+*.md
