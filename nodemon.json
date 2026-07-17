@@ -1,0 +1,19 @@
+{
+  "$schema": "https://nodemon.io/nodemon-schema.json",
+  "watch": ["libs/", "apps/", "examples/", "scripts/"],
+  "ext": "ts,tsx,js,mjs,cjs,json",
+  "ignore": [
+    "node_modules/",
+    "dist/",
+    "build/",
+    "coverage/",
+    ".git/",
+    "tests/",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "exec": "tsx",
+  "delay": 500,
+  "verbose": true,
+  "restartable": "rs"
+}
