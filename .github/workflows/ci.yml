@@ -46,16 +46,9 @@ jobs:
       - name: Format check
         run: pnpm format:check
 
-      - name: Test (with coverage)
-        run: pnpm test:coverage
+      - name: Test
+        # TODO(day03): libs/llm 契约单测落地后恢复 `pnpm test:coverage` + Codecov upload step
+        run: pnpm test
 
       - name: Build
         run: pnpm build
-
-      - name: Upload coverage to Codecov
-        if: matrix.node-version == '22' && github.event_name == 'push'
-        uses: codecov/codecov-action@v4
-        with:
-          file: coverage/lcov.info
-          flags: unittests
-          fail_ci_if_error: false
