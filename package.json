@@ -66,6 +66,7 @@
     ]
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.111.0",
     "gpt-tokenizer": "^3.4.0",
     "openai": "^6.47.0"
   }
