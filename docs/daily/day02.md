@@ -430,6 +430,40 @@ Vue / 浏览器                          Node 后端
 
 ---
 
+## 🆕 Day 02 延展：AnthropicChatClient 在 Day 02 落地
+
+> **触发**：bootcamp 外部的 Claude Code 环境（gateway `http://10.0.53.163:13000`，模型 `MiniMax-M3`）需要 Day 02 内验证。c851ad8 头注释里 "Day 03 第二个 provider — AnthropicChatClient" 的 TODO 与这次触发**正好对上**——Day 03 课题提前到 Day 02 末尾完成。
+
+### 改动清单
+
+| 项 | 内容 |
+|---|---|
+| 🆕 新文件 | `libs/llm/anthropic-chat-client.ts` —— implements `ChatClient`，消化 Anthropic 协议 3 差异（`system` 顶层化 / `content` → blocks / `max_tokens` 兜底） |
+| ✏️ 重命名 | `libs/llm/chat-client.ts` → `libs/llm/openai-chat-client.ts`（每 provider 一个文件的对称 pattern） |
+| ✏️ 拆 file | 新 `libs/llm/chat-client.ts` —— 只留 `ChatClient` interface 作为契约中心 |
+| ✏️ 改 export | `libs/llm/index.ts` 把 OpenAIChatClient 系列 export 源从 `./chat-client.js` 改为 `./openai-chat-client.js` |
+| 🆕 新 demo | `examples/day02/ex_002_anthropic_chat_client.ts` —— 端到端真发请求到 Claude Code gateway |
+| ✏️ 改 env | `.env.example` 加 `ANTHROPIC_AUTH_TOKEN` / `ANTHROPIC_BASE_URL` / `ANTHROPIC_MODEL` / `ANTHROPIC_MAX_TOKENS` 占位模板（**不写真 token**） |
+| ✏️ 装依赖 | `@anthropic-ai/sdk@^0.111.0` 入 `dependencies` |
+
+### 跑通验证（全 fresh）
+
+- ✅ `pnpm typecheck` 0 error
+- ✅ `pnpm lint` 0 error
+- ✅ `pnpm format:check` All matched files use Prettier code style!
+- ✅ `pnpm test` 3 / 3 passed
+- ✅ `pnpm exec tsx examples/day02/ex_002_anthropic_chat_client.ts` 真发请求成功（返回："我是一个由 MiniMax 开发的 AI 助手 MiniMax-M3..."）
+
+### 教学 takeaway（追加）
+
+1. **头注释 TODO 是真实可执行的** —— c851ad8 写的 "Day 03 第二个 provider — AnthropicChatClient" + 设计路径（system 顶层化 / content blocks / max_tokens 兜底）这次直接踩到。**TODO 注释写法 = 真实可执行的设计纲要**，不是 "留个空头"。
+2. **多 provider 兑现 Day 02 Review 承诺** —— Anthropic / OpenAI 协议差异在 provider class 里**完全消化**，调用方只调 `client.chat([...])`。**ChatClient interface 0 行改动**——这是 Day 02 Review 时 "接口稳定 + 多实现并存" 承诺的真正兑现。
+3. **对称 file 命名是 Day 02 Review 没明说但补完后才清楚的纪律** —— c851ad8 时 `chat-client.ts` 同时承担 "契约 + 默认实现" 两个职责，加 provider 后变拗。拆成 "中心契约 + 每 provider 一文件" 后，**未来加 GeminiChatClient / DeepSeekChatClient 都不需要再碰中心 file**。
+4. **refactor 不破 c851ad8 等价行为** —— `git mv` + 拆 file 后 typecheck 0 error + lint 0 error + test 3/3 + ex_001 demo 走 OpenAI 路径行为完全一致。ChatClient / Message 接口语义未变。
+5. **refactor 暴露了"index.ts import path 必须同步更新"** —— typecheck 第一次报 "Module '"./chat-client.js"' has no exported member 'OpenAIChatClient'"。这是 refactor 链路的标准 noise，按 "完成前必跑" 立即定位 → 改 index.ts 第 15-16 行 → typecheck 转绿。
+
+---
+
 ## 🚀 Day 03 预告
 
 **ChatClient 接口的"压力测试"+ 契约级单测**
