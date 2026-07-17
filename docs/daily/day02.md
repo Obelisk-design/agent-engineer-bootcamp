@@ -23,16 +23,20 @@
 agent-engineer-bootcamp/
 ├── libs/llm/                                  # LLM 客户端封装层（正式位置）
 │   ├── message.ts                             # 🆕 Role + Message（readonly）
-│   ├── chat-client.ts                         # 🆕 ChatClient 接口 + OpenAIChatClient
+│   ├── chat-client.ts                         # 🆕 ChatClient 接口（契约中心）
+│   ├── openai-chat-client.ts                  # 🆕 OpenAI 协议实现（拆 file，refactor c851ad8）
+│   ├── anthropic-chat-client.ts               # 🆕 Anthropic / Claude Code 协议实现（Day 02 末尾延展）
 │   └── index.ts                               # 🆕 公共导出（type + impl 拆分）
 ├── examples/day02/
-│   └── ex_001_chat_client.ts                  # 🆕 端到端 demo（真发请求）
+│   ├── ex_001_chat_client.ts                  # 🆕 端到端 demo（OpenAI 协议）
+│   └── ex_002_anthropic_chat_client.ts        # 🆕 端到端 demo（Claude Code gateway，Day 02 末尾延展）
 └── .prettierignore                            # ✏️ 加 *.md（修历史 CLAUDE.md 格式问题）
 ```
 
 **故意没做的事**（CLAUDE.md "Progressive Design — Leave TODO" 写进 [chat-client.ts:18-30](../../libs/llm/chat-client.ts#L18-L30)）：
 
-- ❌ AnthropicChatClient —— Day 03 课题，注释里已写出设计路径
+- ~~❌ AnthropicChatClient —— Day 03 课题，注释里已写出设计路径~~
+  - 🆕 **Day 02 末尾已落地** → 见[附录](#-day-02-延展anthropicchatclient-在-day-02-落地)
 - ❌ 单测 —— README 强制但留 Day 03 一并做
 - ❌ streaming / tool_use / structured output —— 明确禁项
 - ❌ Message 升级判别联合 / 多模态 / 多说话人 —— 未来扩展路径
@@ -272,6 +276,8 @@ await summarize(anthropic, '...');  // 走 Anthropic 协议
 ```
 
 > **今天的判断**：AnthropicChatClient 留 Day 03，不今天落（触及「核心链路引入新依赖」灰区）。设计路径写进 chat-client.ts 头注释。
+>
+> 📍 **事后记录**：因外部 Claude Code gateway 触发，Day 02 末尾已落地（见[附录](#-day-02-延展anthropicchatclient-在-day-02-落地)）。**当时判断没错** —— 条件变了决策才变。保留原文作「条件依赖型决策」teaching point。
 
 ---
 
@@ -424,7 +430,7 @@ Vue / 浏览器                          Node 后端
 - [x] `pnpm format:check` 全绿（含 `.prettierignore` 修复）
 - [x] `pnpm test` 3 / 3 passed（`tests/smoke.test.ts`）
 - [x] 没碰任何未来能力（streaming / tool / structured output / 多 provider / memory / RAG / MCP / multi-agent / workflow）
-- [x] AnthropicChatClient 留 Day 03（写进 `chat-client.ts:18-30` 头注释的 TODO）
+- [x] ~~AnthropicChatClient 留 Day 03（TODO）~~ → Day 02 末尾已落地（见[附录](#-day-02-延展anthropicchatclient-在-day-02-落地)）
 - [x] 第一次 commit 走完 commitlint 流程（commit `c851ad8`，5 文件，162 insertions）
 - [x] branch `master`，ahead of `origin/master` by 1 commit（push 节奏待拍）
 
@@ -470,7 +476,7 @@ Vue / 浏览器                          Node 后端
 
 具体待定候选：
 
-1. **AnthropicChatClient**（接口稳定的"压力测试"）—— 装 `@anthropic-ai/sdk`、消化 Anthropic 协议差异（`system` → 顶层字段、`content` → blocks、`max_tokens` 兜底），复用 `libs/llm/message.ts`。最自然承接今天的接口课题。
+1. ~~**AnthropicChatClient**（接口稳定的"压力测试"）~~ —— Day 02 末尾已落地（见[附录](#-day-02-延展anthropicchatclient-在-day-02-落地)）。Day 03 不再重复。
 2. **contract 单测**（mock SDK，验证 happy / empty / error）—— README 强制要求 libs 有测试，等今天工程化纪律固化后补上。Mock OpenAI SDK，验证 `OpenAIChatClient.chat` 在三种返回下都按契约行为。
 3. **抽 `Conversation`**（`messages: Message[]` + 多轮 demo）—— 把 Message 数组的"管理责任"从调用方抽出来。下一步 ChatClient 演化的自然方向。
 

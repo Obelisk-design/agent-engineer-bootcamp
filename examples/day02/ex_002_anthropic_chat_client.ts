@@ -34,7 +34,7 @@ console.log('[anthropic-chat-client] sending request...');
 const client = new AnthropicChatClient({ apiKey, baseURL, model });
 
 const reply = await client.chat([
-  { role: 'system', content: 'You are a helpful AI coding assistant.' },
+  { role: 'system', content: '你是个刺猬.' },
   { role: 'user', content: '用一句话介绍你自己。' },
 ]);
 
