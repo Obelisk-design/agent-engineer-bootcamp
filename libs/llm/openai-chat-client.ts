@@ -38,7 +38,8 @@ import OpenAI from 'openai';
 
 import type { ChatClient } from './chat-client.js';
 import type { Message } from './message.js';
-import type { ChatResponse, ToolDefinition } from './tool-call.js';
+import type { ChatResponse } from './tool-call.js';
+import type { ToolDefinition } from '../tools/tool.js';
 
 export interface OpenAIChatClientOptions {
   readonly apiKey: string;
@@ -61,10 +62,9 @@ export class OpenAIChatClient implements ChatClient {
   }
 
   async chat(messages: Message[]): Promise<string> {
-    // TODO: Day 04 Task 3 chatWithTools will replace this cast with proper tool message mapping
     const completion = await this.client.chat.completions.create({
       model: this.model,
-      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
+      messages: this.toOpenAIMessages(messages),
     });
     // OpenAI SDK 的返回类型对 strict + noUncheckedIndexedAccess 比较宽；
     // 这里用 ?? 把"原本是空"显式暴露给调用方。
@@ -72,10 +72,9 @@ export class OpenAIChatClient implements ChatClient {
   }
 
   async *stream(messages: Message[]): AsyncGenerator<string, void, undefined> {
-    // TODO: Day 04 Task 3 chatWithTools will replace this cast with proper tool message mapping
     const stream = await this.client.chat.completions.create({
       model: this.model,
-      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
+      messages: this.toOpenAIMessages(messages),
       stream: true,
     });
     for await (const chunk of stream) {
@@ -92,7 +91,7 @@ export class OpenAIChatClient implements ChatClient {
   ): Promise<ChatResponse> {
     const response = await this.client.chat.completions.create({
       model: this.model,
-      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
+      messages: this.toOpenAIMessages(messages),
       tools: tools.map((t) => ({
         type: 'function' as const,
         function: {
@@ -125,6 +124,37 @@ export class OpenAIChatClient implements ChatClient {
       };
     }
     return { kind: 'content', content: choice.message.content ?? '' };
+  }
+
+  private toOpenAIMessages(messages: readonly Message[]): OpenAI.Chat.ChatCompletionMessageParam[] {
+    return messages.map((m) => {
+      switch (m.role) {
+        case 'system':
+          return { role: 'system' as const, content: m.content };
+        case 'user':
+          return { role: 'user' as const, content: m.content };
+        case 'assistant': {
+          const toolCalls = m.toolCalls;
+          if (toolCalls !== undefined && toolCalls.length > 0) {
+            return {
+              role: 'assistant' as const,
+              content: m.content,
+              tool_calls: toolCalls.map((tc) => ({
+                id: tc.id,
+                type: 'function' as const,
+                function: {
+                  name: tc.toolName,
+                  arguments: JSON.stringify(tc.args),
+                },
+              })),
+            };
+          }
+          return { role: 'assistant' as const, content: m.content };
+        }
+        case 'tool':
+          return { role: 'tool' as const, content: m.content, tool_call_id: m.toolCallId ?? '' };
+      }
+    });
   }
 
   setModel(model: string): void {

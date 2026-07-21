@@ -39,7 +39,8 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import type { Message } from './message.js';
 import type { ChatClient } from './chat-client.js';
-import type { ChatResponse, ToolDefinition } from './tool-call.js';
+import type { ChatResponse } from './tool-call.js';
+import type { ToolDefinition } from '../tools/tool.js';
 
 export interface AnthropicChatClientOptions {
   readonly apiKey: string;
@@ -113,10 +114,13 @@ export class AnthropicChatClient implements ChatClient {
     messages: Message[],
     tools: ReadonlyArray<ToolDefinition>,
   ): Promise<ChatResponse> {
+    const { systemPrompt, apiMessages } = this.toApiMessages(messages);
+
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: this.maxTokens,
-      messages: messages as unknown as Anthropic.MessageParam[],
+      ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
+      messages: apiMessages,
       tools: tools.map((t) => ({
         name: t.name,
         description: t.description,
@@ -148,35 +152,65 @@ export class AnthropicChatClient implements ChatClient {
   /**
    * 把内部 Message[] 适配成 Anthropic Messages API 的入参形态：
    *   - 'system' 消息提升到顶层 `system` 字段
-   *   - string content → [{type:'text', text}] blocks
+   *   - 'user' 消息 → [{type:'text', text}] blocks
+   *   - 'assistant' 消息 → text blocks + tool_use blocks（如有 toolCalls）
+   *   - 'tool' 消息 → user role 下的 tool_result blocks
    *
-   * chat() 与 stream() 共用这一份协议适配，避免 Day 03 streaming 时暴露的
-   * "system 顶层化 / content blocks 转换" 重复代码。
-   *
-   * 注意：本 helper 仅服务 chat() / stream() 的非工具路径。
-   * chatWithTools() 不走这里 —— 工具路径需要保留 tool_use / tool_result blocks
-   * 在 messages 里（SDK 内置工具结果路由），所以直接 cast Message[] 到 SDK 入参。
+   * chat() / stream() / chatWithTools() 共用这一份协议适配，避免工具路径与非工具路径
+   * 各自维护一份转换规则。
    */
   private toApiMessages(messages: Message[]): {
     systemPrompt: string | undefined;
-    apiMessages: Array<{
-      role: 'user' | 'assistant';
-      content: Array<{ type: 'text'; text: string }>;
-    }>;
+    apiMessages: Anthropic.MessageParam[];
   } {
     let systemPrompt: string | undefined;
-    const convoMessages = messages.flatMap((m) => {
+    const apiMessages: Anthropic.MessageParam[] = [];
+
+    for (const m of messages) {
       if (m.role === 'system') {
         systemPrompt = m.content;
-        return [];
+        continue;
       }
-      return [m];
-    });
 
-    const apiMessages = convoMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: [{ type: 'text' as const, text: m.content }],
-    }));
+      if (m.role === 'user') {
+        apiMessages.push({
+          role: 'user',
+          content: [{ type: 'text' as const, text: m.content }],
+        });
+        continue;
+      }
+
+      if (m.role === 'assistant') {
+        const content: Anthropic.ContentBlockParam[] = [];
+        if (m.content) {
+          content.push({ type: 'text' as const, text: m.content });
+        }
+        if (m.toolCalls) {
+          for (const tc of m.toolCalls) {
+            content.push({
+              type: 'tool_use' as const,
+              id: tc.id,
+              name: tc.toolName,
+              input: tc.args as Record<string, unknown>,
+            });
+          }
+        }
+        apiMessages.push({ role: 'assistant', content });
+        continue;
+      }
+
+      // m.role === 'tool': Anthropic 把 tool 结果放在 user 消息的 tool_result block 里。
+      apiMessages.push({
+        role: 'user',
+        content: [
+          {
+            type: 'tool_result' as const,
+            tool_use_id: m.toolCallId ?? '',
+            content: m.content,
+          },
+        ],
+      });
+    }
 
     return { systemPrompt, apiMessages };
   }
