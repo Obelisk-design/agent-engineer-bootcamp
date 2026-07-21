@@ -20,10 +20,14 @@
  * - 跳过 delta.content 为 null 的 chunk（stream 开头 / 结尾事件常见）
  * - 一次性拿到 delta.content 就 yield，不缓存、不聚合
  *
+ * Day 04 加 chatWithTools() —— additive 工具调用扩展：
+ * - 通过 OpenAI SDK tools 参数发起非流式工具调用
+ * - 将 content / tool_calls 映射到 ChatResponse 判别联合
+ *
  * TODO（按 CLAUDE.md "Progressive Design — Leave TODO"）：
  * - 单测覆盖（README 强制）：smoke + mock 调用，Day 03 不做（spec 决策）。
  * - AbortSignal 取消：stream() 不支持（YAGNI），未来 day 加。
- * - tool_use / structured output：不在前期范围。
+ * - structured output：不在前期范围。
  *
  * 注：本文件 c851ad8 时叫 chat-client.ts（含 ChatClient interface）。
  *     Day 02 延展加 AnthropicChatClient 后被拆分 —— rename + 拆分见
@@ -34,6 +38,7 @@ import OpenAI from 'openai';
 
 import type { ChatClient } from './chat-client.js';
 import type { Message } from './message.js';
+import type { ChatResponse, ToolDefinition } from './tool-call.js';
 
 export interface OpenAIChatClientOptions {
   readonly apiKey: string;
@@ -79,6 +84,41 @@ export class OpenAIChatClient implements ChatClient {
       const delta = chunk.choices[0]?.delta?.content;
       if (delta) yield delta;
     }
+  }
+
+  async chatWithTools(
+    messages: Message[],
+    tools: ReadonlyArray<ToolDefinition>,
+  ): Promise<ChatResponse> {
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
+      tools: tools.map((t) => ({
+        type: 'function' as const,
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: t.parameters as unknown as Record<string, unknown>,
+        },
+      })),
+    });
+    const choice = response.choices[0];
+    if (!choice) {
+      return { kind: 'content', content: '' };
+    }
+    if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls) {
+      return {
+        kind: 'tool_calls',
+        toolCalls: choice.message.tool_calls
+          .filter((tc) => tc.type === 'function')
+          .map((tc) => ({
+            id: tc.id,
+            toolName: tc.function.name,
+            args: JSON.parse(tc.function.arguments) as unknown,
+          })),
+      };
+    }
+    return { kind: 'content', content: choice.message.content ?? '' };
   }
 
   setModel(model: string): void {
