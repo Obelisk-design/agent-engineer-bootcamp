@@ -57,23 +57,8 @@ export class AnthropicChatClient implements ChatClient {
   }
 
   async chat(messages: Message[]): Promise<string> {
-    // (1) system 从 messages 抽到顶层字段
-    let systemPrompt: string | undefined;
-    const convoMessages = messages.flatMap((m) => {
-      if (m.role === 'system') {
-        systemPrompt = m.content;
-        return [];
-      }
-      return [m];
-    });
+    const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
-    // (2) content string → [{type:'text', text}] blocks
-    const apiMessages = convoMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: [{ type: 'text' as const, text: m.content }],
-    }));
-
-    // (3) 调 Messages API
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: this.maxTokens,
@@ -91,23 +76,9 @@ export class AnthropicChatClient implements ChatClient {
   }
 
   async *stream(messages: Message[]): AsyncGenerator<string, void, undefined> {
-    // (1) system 从 messages 抽到顶层字段（与 chat() 同样的协议适配）
-    let systemPrompt: string | undefined;
-    const convoMessages = messages.flatMap((m) => {
-      if (m.role === 'system') {
-        systemPrompt = m.content;
-        return [];
-      }
-      return [m];
-    });
+    const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
-    // (2) content string → [{type:'text', text}] blocks（与 chat() 同样的协议适配）
-    const apiMessages = convoMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: [{ type: 'text' as const, text: m.content }],
-    }));
-
-    // (3) 启动 Anthropic 流。MessageStream implements AsyncIterable<MessageStreamEvent>。
+    // MessageStream implements AsyncIterable<MessageStreamEvent>。
     // MessageStreamEvent 是判别联合（RawMessageStreamEvent）：
     //   - 'message_start' / 'content_block_start' / 'content_block_stop' /
     //     'message_delta' / 'message_stop' —— 框架/元信息事件，跳过
@@ -130,6 +101,38 @@ export class AnthropicChatClient implements ChatClient {
         yield event.delta.text;
       }
     }
+  }
+
+  /**
+   * 把内部 Message[] 适配成 Anthropic Messages API 的入参形态：
+   *   - 'system' 消息提升到顶层 `system` 字段
+   *   - string content → [{type:'text', text}] blocks
+   *
+   * chat() 与 stream() 共用这一份协议适配，避免 Day 03 streaming 时暴露的
+   * "system 顶层化 / content blocks 转换" 重复代码。
+   */
+  private toApiMessages(messages: Message[]): {
+    systemPrompt: string | undefined;
+    apiMessages: Array<{
+      role: 'user' | 'assistant';
+      content: Array<{ type: 'text'; text: string }>;
+    }>;
+  } {
+    let systemPrompt: string | undefined;
+    const convoMessages = messages.flatMap((m) => {
+      if (m.role === 'system') {
+        systemPrompt = m.content;
+        return [];
+      }
+      return [m];
+    });
+
+    const apiMessages = convoMessages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: [{ type: 'text' as const, text: m.content }],
+    }));
+
+    return { systemPrompt, apiMessages };
   }
 
   setModel(model: string): void {
