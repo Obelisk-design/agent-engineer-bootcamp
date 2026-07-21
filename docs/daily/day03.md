@@ -127,7 +127,7 @@ interface ChatClient {
 | 流式响应      | 显式选择 `stream()`     | 被强制成为默认             |
 | 契约演化      | consumer-additive       | 明确 breaking              |
 
-**结论**：A 赢。实现见 [chat-client.ts:36-39](../../libs/llm/chat-client.ts#L36-L39)。
+**结论**：A 赢。实现见 [chat-client.ts:36-40](../../libs/llm/chat-client.ts#L36-L40)。
 
 但有一个必须讲清的细节：给 interface 新增**必选方法**，对已有调用方是 additive，对已有 `implements ChatClient` 的类却是 source-breaking。Task 1 落地后两个 provider 都出现 TS2420，直到 Tasks 2、4 补齐实现才恢复全绿。
 
@@ -227,7 +227,7 @@ for await (const event of stream) {
 }
 ```
 
-实现见 [anthropic-chat-client.ts:80-103](../../libs/llm/anthropic-chat-client.ts#L80-L103)。双 discriminant 检查让 TypeScript 把 `event.delta` 自动收窄成 `TextDelta`，不需要 cast。
+实现见 [anthropic-chat-client.ts:99-103](../../libs/llm/anthropic-chat-client.ts#L99-L103)。双 discriminant 检查让 TypeScript 把 `event.delta` 自动收窄成 `TextDelta`，不需要 cast。
 
 ```text
 RawMessageStreamEvent
@@ -349,7 +349,7 @@ const apiMessages = convoMessages.map(/* string -> text blocks */);
 const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 ```
 
-helper 见 [anthropic-chat-client.ts:105-135](../../libs/llm/anthropic-chat-client.ts#L105-L135)。它只处理 Anthropic 的两件事：
+helper 见 [anthropic-chat-client.ts:114-136](../../libs/llm/anthropic-chat-client.ts#L114-L136)。它只处理 Anthropic 的两件事：
 
 1. `system` message 提升为顶层字段；
 2. `content: string` 转成 text block 数组。
