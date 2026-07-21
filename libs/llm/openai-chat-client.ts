@@ -56,9 +56,10 @@ export class OpenAIChatClient implements ChatClient {
   }
 
   async chat(messages: Message[]): Promise<string> {
+    // TODO: Day 04 Task 3 chatWithTools will replace this cast with proper tool message mapping
     const completion = await this.client.chat.completions.create({
       model: this.model,
-      messages,
+      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
     });
     // OpenAI SDK 的返回类型对 strict + noUncheckedIndexedAccess 比较宽；
     // 这里用 ?? 把"原本是空"显式暴露给调用方。
@@ -66,9 +67,10 @@ export class OpenAIChatClient implements ChatClient {
   }
 
   async *stream(messages: Message[]): AsyncGenerator<string, void, undefined> {
+    // TODO: Day 04 Task 3 chatWithTools will replace this cast with proper tool message mapping
     const stream = await this.client.chat.completions.create({
       model: this.model,
-      messages,
+      messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
       stream: true,
     });
     for await (const chunk of stream) {
