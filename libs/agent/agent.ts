@@ -9,6 +9,10 @@
  * - 默认 maxIterations=5 防无限循环
  * - tool 执行错误 catch 后把错误字符串回传 LLM，让模型下轮纠正
  *
+ * Day 04 重构：使用统一的 chat({ messages, tools }) 接口
+ * - 移除 chatWithTools，普通聊天和工具调用用同一个方法
+ * - 返回 ChatResponse：{ content?, toolCalls? }
+ *
  * Day 04 不做：
  * - 并行 tool 执行（按 spec 顺序跑）
  * - Streaming tool calling
@@ -41,41 +45,54 @@ export class Agent {
     const maxIterations = this.options.maxIterations ?? 5;
 
     for (let i = 0; i < maxIterations; i++) {
-      const response: ChatResponse = await this.options.chat.chatWithTools(messages, toolDefs);
+      const response: ChatResponse = await this.options.chat.chat({
+        messages,
+        tools: toolDefs,
+      });
 
       this.options.onIteration?.(i + 1, response);
 
-      if (response.kind === 'content') {
+      // 普通回复路径：返回 content
+      if (response.content !== undefined) {
         return response.content;
       }
 
-      // assistant 决定调工具：把 tool_calls 写进历史
-      messages.push({
-        role: 'assistant',
-        content: '',
-        toolCalls: response.toolCalls,
-      });
-
-      // 顺序执行每个 tool_call，把结果写回历史
-      for (const tc of response.toolCalls) {
-        const tool = this.options.tools.get(tc.toolName);
-        let resultContent: string;
-        if (tool === undefined) {
-          resultContent = `Error: tool "${tc.toolName}" not found`;
-        } else {
-          try {
-            const result = await tool.execute(tc.args);
-            resultContent = JSON.stringify(result);
-          } catch (err) {
-            resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
-          }
-        }
+      // 工具调用路径
+      if (response.toolCalls !== undefined && response.toolCalls.length > 0) {
+        // assistant 决定调工具：把 tool_calls 写进历史
         messages.push({
-          role: 'tool',
-          content: resultContent,
-          toolCallId: tc.id,
+          role: 'assistant',
+          content: '',
+          toolCalls: response.toolCalls,
         });
+
+        // 顺序执行每个 tool_call，把结果写回历史
+        for (const tc of response.toolCalls) {
+          const tool = this.options.tools.get(tc.toolName);
+          let resultContent: string;
+          if (tool === undefined) {
+            resultContent = `Error: tool "${tc.toolName}" not found`;
+          } else {
+            try {
+              const result = await tool.execute(tc.args);
+              resultContent = JSON.stringify(result);
+            } catch (err) {
+              resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
+            }
+          }
+          messages.push({
+            role: 'tool',
+            content: resultContent,
+            toolCallId: tc.id,
+          });
+        }
+
+        // 继续下一轮循环
+        continue;
       }
+
+      // 既没有 content 也没有 toolCalls，返回空字符串
+      return '';
     }
 
     throw new Error(`Agent loop exceeded ${maxIterations} iterations without final answer`);

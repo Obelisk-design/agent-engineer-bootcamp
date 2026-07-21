@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Agent } from '../../../libs/agent/index.js';
 import { ToolRegistry, calculatorTool } from '../../../libs/tools/index.js';
-import type { ChatClient, ChatResponse, Message } from '../../../libs/llm/index.js';
-import type { ToolDefinition } from '../../../libs/tools/index.js';
+import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from '../../../libs/llm/index.js';
 
 class FakeChatClient implements ChatClient {
   private responses: ChatResponse[];
@@ -13,18 +12,7 @@ class FakeChatClient implements ChatClient {
     this.responses = responses;
   }
 
-  async chat(): Promise<string> {
-    return 'fake';
-  }
-
-  async *stream(): AsyncGenerator<string, void, undefined> {
-    yield 'fake';
-  }
-
-  async chatWithTools(
-    _messages: Message[],
-    _tools: ReadonlyArray<ToolDefinition>,
-  ): Promise<ChatResponse> {
+  async chat(_request: ChatRequest): Promise<ChatResponse> {
     const response = this.responses[this.callIndex];
     if (response === undefined) {
       throw new Error('FakeChatClient: no more mocked responses');
@@ -33,12 +21,16 @@ class FakeChatClient implements ChatClient {
     return response;
   }
 
+  async *stream(): AsyncGenerator<ChatChunk, void, undefined> {
+    yield { content: 'fake' };
+  }
+
   setModel(): void {}
 }
 
 describe('Agent', () => {
   it('returns content immediately when LLM answers without tool', async () => {
-    const chat = new FakeChatClient([{ kind: 'content', content: 'hi' }]);
+    const chat = new FakeChatClient([{ content: 'hi' }]);
     const tools = new ToolRegistry();
     const agent = new Agent({ chat, tools });
     const answer = await agent.run('hello');
@@ -48,10 +40,9 @@ describe('Agent', () => {
   it('runs tool loop and returns final content', async () => {
     const chat = new FakeChatClient([
       {
-        kind: 'tool_calls',
         toolCalls: [{ id: 'tc_1', toolName: 'calculator', args: { expression: '1+2' } }],
       },
-      { kind: 'content', content: '3' },
+      { content: '3' },
     ]);
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
@@ -63,10 +54,9 @@ describe('Agent', () => {
   it('returns error string for unknown tool and continues loop', async () => {
     const chat = new FakeChatClient([
       {
-        kind: 'tool_calls',
         toolCalls: [{ id: 'tc_1', toolName: 'nonexistent', args: {} }],
       },
-      { kind: 'content', content: 'done' },
+      { content: 'done' },
     ]);
     const tools = new ToolRegistry();
     const agent = new Agent({ chat, tools });
@@ -77,11 +67,9 @@ describe('Agent', () => {
   it('throws when loop exceeds maxIterations', async () => {
     const chat = new FakeChatClient([
       {
-        kind: 'tool_calls',
         toolCalls: [{ id: 'tc_1', toolName: 'calculator', args: { expression: '1' } }],
       },
       {
-        kind: 'tool_calls',
         toolCalls: [{ id: 'tc_2', toolName: 'calculator', args: { expression: '2' } }],
       },
     ]);

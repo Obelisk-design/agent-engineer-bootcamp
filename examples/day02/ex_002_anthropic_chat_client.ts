@@ -33,10 +33,12 @@ console.log('[anthropic-chat-client] sending request...');
 
 const client = new AnthropicChatClient({ apiKey, baseURL, model });
 
-const reply = await client.chat([
-  { role: 'system', content: '你是个刺猬.' },
-  { role: 'user', content: '用一句话介绍你自己。' },
-]);
+const reply = await client.chat({
+  messages: [
+    { role: 'system', content: '你是个刺猬.' },
+    { role: 'user', content: '用一句话介绍你自己。' },
+  ],
+});
 
 console.log('[anthropic-chat-client] response:');
-console.log(reply);
+console.log(reply.content);

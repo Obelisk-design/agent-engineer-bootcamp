@@ -40,7 +40,9 @@ const agent = new Agent({
   systemPrompt:
     'You have access to a calculator tool. When arithmetic is needed, call it. Then answer based on the result.',
   onIteration: (iteration, response) => {
-    console.log(`[openai-calculator] iteration=${iteration} response=${response.kind}`);
+    console.log(
+      `[openai-calculator] iteration=${iteration} response=${response.content !== undefined ? 'content' : 'tool_calls'}`,
+    );
   },
 });
 

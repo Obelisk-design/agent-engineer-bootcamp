@@ -12,7 +12,7 @@
  * - 未来 content 多模态: 加 contentBlocks?: ContentBlock[] 字段
  */
 
-import type { ToolCallData } from './tool-call.js';
+import type { ToolCallData } from './chat-client.js';
 
 export type Role = 'system' | 'user' | 'assistant' | 'tool';
 

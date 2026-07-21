@@ -36,10 +36,12 @@ console.log('[chat-client] sending request...');
 
 const client = new OpenAIChatClient({ apiKey, baseURL, model });
 
-const reply = await client.chat([
-  { role: 'system', content: 'You are a helpful AI coding assistant.' },
-  { role: 'user', content: '用一句话介绍你自己。' },
-]);
+const reply = await client.chat({
+  messages: [
+    { role: 'system', content: 'You are a helpful AI coding assistant.' },
+    { role: 'user', content: '用一句话介绍你自己。' },
+  ],
+});
 
 console.log('[chat-client] response:');
-console.log(reply);
+console.log(reply.content);

@@ -48,13 +48,15 @@ let chunkCount = 0;
 let totalChars = 0;
 
 console.log('[anthropic-stream] reply:');
-for await (const chunk of client.stream([
-  { role: 'system', content: '你是个刺猬。' },
-  { role: 'user', content: '用三句话介绍你自己，每句话末尾加一个表情。' },
-])) {
+for await (const chunk of client.stream({
+  messages: [
+    { role: 'system', content: '你是个刺猬。' },
+    { role: 'user', content: '用三句话介绍你自己，每句话末尾加一个表情。' },
+  ],
+})) {
   chunkCount += 1;
-  totalChars += chunk.length;
-  process.stdout.write(chunk);
+  totalChars += chunk.content?.length ?? 0;
+  process.stdout.write(chunk.content ?? '');
 }
 
 const elapsedMs = Date.now() - startMs;

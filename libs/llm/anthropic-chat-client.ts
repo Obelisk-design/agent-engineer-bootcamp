@@ -10,26 +10,22 @@
  *   2. content 是 blocks 数组（{ type: 'text', text: ... }），不是 string
  *   3. max_tokens 强制要求（本文件提供 1024 兜底）
  *
- * 业务方代码（`client.chat([...])`）与 OpenAIChatClient 完全一致 —— 这是
+ * 业务方代码（`client.chat({ messages })`）与 OpenAIChatClient 完全一致 —— 这是
  * ChatClient 抽象层的核心价值兑现。
- *
- * Day 02 commit c851ad8 (OpenAI provider) 落地时已经在头注释里写了 Day 03
- * 的 AnthropicChatClient 设计路径。这份文件 = 把那条 TODO 实装起来。
  *
  * Day 03 加 stream() —— Anthropic SDK 的特殊形态：
  *   client.messages.stream() 返回 MessageStream（implements AsyncIterable<MessageStreamEvent>）。
  *   事件是判别联合，包括 message_start / content_block_start /
  *   content_block_delta / content_block_stop / message_delta / message_stop。
  *
- *   ChatClient.stream() 契约要求只 yield 文本增量（string），所以本文件内部：
+ *   ChatClient.stream() 契约要求只 yield ChatChunk，所以本文件内部：
  *   - 只在 event.type === 'content_block_delta' && event.delta.type === 'text_delta'
- *     时 yield event.delta.text
+ *     时 yield { content: event.delta.text }
  *   - 其它所有事件类型全部跳过（调用方看不到协议细节）
  *
- * Day 04 加 chatWithTools() —— additive 工具调用扩展：
- *   - 通过 Anthropic SDK tools 参数发起非流式工具调用
- *   - 解析 ContentBlock[]，过滤 tool_use 块映射到 ChatResponse.tool_calls
- *   - 无 tool_use 时取首个 text 块 yield ChatResponse.content
+ * Day 04 重构：统一 chat / stream 接口，移除 chatWithTools
+ * - chat({ messages, tools }) 统一处理普通聊天和工具调用
+ * - 返回 ChatResponse：{ content?, toolCalls? }
  *
  * 注意：调用方应通过环境变量提供 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL /
  * ANTHROPIC_MODEL，永远不要硬编码到任何源文件。
@@ -37,10 +33,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 
+import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from './chat-client.js';
 import type { Message } from './message.js';
-import type { ChatClient } from './chat-client.js';
-import type { ChatResponse } from './tool-call.js';
-import type { ToolDefinition } from '../tools/tool.js';
 
 export interface AnthropicChatClientOptions {
   readonly apiKey: string;
@@ -63,7 +57,8 @@ export class AnthropicChatClient implements ChatClient {
     this.maxTokens = options.maxTokens ?? 1024;
   }
 
-  async chat(messages: Message[]): Promise<string> {
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    const { messages, tools } = request;
     const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
     const response = await this.client.messages.create({
@@ -71,18 +66,39 @@ export class AnthropicChatClient implements ChatClient {
       max_tokens: this.maxTokens,
       ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
       messages: apiMessages,
+      ...(tools !== undefined && tools.length > 0
+        ? {
+            tools: tools.map((t) => ({
+              name: t.name,
+              description: t.description,
+              input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
+            })),
+          }
+        : {}),
     });
 
-    // 提取首个 text block 的 text（response.content 是 ContentBlock[]）
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        return block.text;
-      }
+    // Anthropic response.content 是 ContentBlock[] 判别联合；
+    // tool_use 块表示模型决定调用工具。多个 tool_use = 一次返回多个并行调用。
+    const toolUseBlocks = response.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+    );
+    if (toolUseBlocks.length > 0) {
+      return {
+        toolCalls: toolUseBlocks.map((b) => ({
+          id: b.id,
+          toolName: b.name,
+          args: b.input as unknown,
+        })),
+      };
     }
-    return '';
+
+    // 普通回复路径：取首个 text block
+    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+    return { content: textBlock?.text ?? '' };
   }
 
-  async *stream(messages: Message[]): AsyncGenerator<string, void, undefined> {
+  async *stream(request: ChatRequest): AsyncGenerator<ChatChunk, void, undefined> {
+    const { messages } = request;
     const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
     // MessageStream implements AsyncIterable<MessageStreamEvent>。
@@ -91,7 +107,7 @@ export class AnthropicChatClient implements ChatClient {
     //     'message_delta' / 'message_stop' —— 框架/元信息事件，跳过
     //   - 'content_block_delta' —— 携带 delta: RawContentBlockDelta
     //       RawContentBlockDelta 也是判别联合：
-    //         - TextDelta       (type: 'text_delta')        —— yield event.delta.text
+    //         - TextDelta       (type: 'text_delta')        —— yield { content: event.delta.text }
     //         - InputJSONDelta  (type: 'input_json_delta')  —— 跳过（未来 tool_use）
     //         - CitationsDelta  (type: 'citations_delta')    —— 跳过
     //         - ThinkingDelta   (type: 'thinking_delta')     —— 跳过
@@ -105,48 +121,9 @@ export class AnthropicChatClient implements ChatClient {
 
     for await (const event of stream) {
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-        yield event.delta.text;
+        yield { content: event.delta.text };
       }
     }
-  }
-
-  async chatWithTools(
-    messages: Message[],
-    tools: ReadonlyArray<ToolDefinition>,
-  ): Promise<ChatResponse> {
-    const { systemPrompt, apiMessages } = this.toApiMessages(messages);
-
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: this.maxTokens,
-      ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
-      messages: apiMessages,
-      tools: tools.map((t) => ({
-        name: t.name,
-        description: t.description,
-        input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
-      })),
-    });
-
-    // Anthropic response.content 是 ContentBlock[] 判别联合；
-    // tool_use 块表示模型决定调用工具。多个 tool_use = 一次返回多个并行调用。
-    const toolUseBlocks = response.content.filter(
-      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
-    );
-    if (toolUseBlocks.length > 0) {
-      return {
-        kind: 'tool_calls',
-        toolCalls: toolUseBlocks.map((b) => ({
-          id: b.id,
-          toolName: b.name,
-          args: b.input as unknown,
-        })),
-      };
-    }
-
-    // 最终答复路径：取首个 text block（与 chat() 行为一致）。
-    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-    return { kind: 'content', content: textBlock?.text ?? '' };
   }
 
   /**
@@ -156,7 +133,7 @@ export class AnthropicChatClient implements ChatClient {
    *   - 'assistant' 消息 → text blocks + tool_use blocks（如有 toolCalls）
    *   - 'tool' 消息 → user role 下的 tool_result blocks
    *
-   * chat() / stream() / chatWithTools() 共用这一份协议适配，避免工具路径与非工具路径
+   * chat() / stream() 共用这一份协议适配，避免工具路径与非工具路径
    * 各自维护一份转换规则。
    */
   private toApiMessages(messages: Message[]): {
