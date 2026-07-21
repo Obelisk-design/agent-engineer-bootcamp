@@ -36,7 +36,7 @@ agent-engineer-bootcamp/
 
 **文件变化**：3 个修改文件 + 3 个新文件。
 
-Day 03 实际落地 **11 个 commit**（设计 3 + 实现 4 + 实施期 fix 1 + demo 2 + 文档 2，加自身 1）：
+Day 03 实际落地 **11 个 commit**（设计 3 + 实现 3 + demo 2 + 实施期 fix 1 + 文档 1 + 文档 fix 1）：
 
 | 阶段       | Commit    | 产出                                                                   |
 | ---------- | --------- | ---------------------------------------------------------------------- |
@@ -46,13 +46,13 @@ Day 03 实际落地 **11 个 commit**（设计 3 + 实现 4 + 实施期 fix 1 + 
 | 实现期     | `4628c01` | `feat(day03): add stream() to ChatClient interface`                    |
 | 实现期     | `b228718` | `feat(day03): add OpenAIChatClient.stream() implementation`            |
 | 实现期     | `c1e8696` | `feat(day03): add AnthropicChatClient.stream() implementation`         |
-| 实现期     | `30b9e76` | `feat(day03): add Anthropic streaming demo`                            |
+| Demo       | `30b9e76` | `feat(day03): add Anthropic streaming demo`                            |
 | Demo       | `4229361` | `feat(day03): add OpenAI streaming demo`                               |
 | 实施期 fix | `7987bac` | `refactor(day03): extract toApiMessages helper in AnthropicChatClient` |
 | 文档       | `3f6cb05` | `docs(day03): add daily learning note`                                 |
 | 文档 fix   | `9a24918` | `docs(day03): tighten file:line references in daily note`              |
 
-原计划列了 6 个实现 commit，但 SDD workflow 实际产生 **9 个非设计期 commit**（设计期 3 + 实施期 6 + 文档 fix 1）。多出的 3 个（`7987bac` 抽 helper / `4229361` 单独 demo commit / `9a24918` line-range 修正）不是失控，而是 review 抓出 duplication、独立 demo commit 便于回跑、reviewer 抓出 line-range drift 后留下的可审计修正记录。
+原计划列了 6 个实现 commit，但 SDD workflow 实际产生 **8 个非设计期 commit**（3 实现期 + 2 demo + 1 实施期 fix + 1 文档 + 1 文档 fix）。多出的 2 个（`7987bac` 抽 helper / `4229361` 单独 demo commit）不是失控，而是 review 抓出 duplication、独立 demo commit 便于回跑后留下的可审计修正记录。
 
 > **教学点**：计划里的 commit 数可以预测，**实施过程中发现的真实问题不能假装不存在**。Helper extraction / line-range 修正 都不是任务范围扩展，而是“今天代码写完后仍可被 review 推翻”的 fix loop 产物。
 
