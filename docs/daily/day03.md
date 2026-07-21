@@ -631,3 +631,20 @@ docs/daily/day03.md                                  ← 本笔记
 | `anthropic-chat-client.ts:114-136` —— `toApiMessages()` | [libs/llm/anthropic-chat-client.ts](../../libs/llm/anthropic-chat-client.ts) |
 
 > **教学点**：学习笔记最怕“只有结论，没有线索”。把 spec / plan / 报告 / 代码的相对路径固定下来，未来再起 Day 04 / Day 05 时回看今天只需要顺着这条链读，不必先考古 commit log。
+
+---
+
+## §12 CLAUDE.md 业务协议指令对 Day 03 的 scope 说明
+
+CLAUDE.md 末尾 3 行（未提交）写道：
+
+> 内部统一使用 AgentEvent 作为 Agent Runtime 的事件模型；对外统一通过 SSE 传输 AgentEvent。禁止直接传输纯文本 Chunk 作为业务协议
+
+这条指令**对 Day 03 不构成冲突**，理由：
+
+- 指令的“业务协议”scope 是 `apps/api/`（HTTP/SSE 适配层）与 `apps/web-vue/`（UI 消费层）—— 这两层 Day 03 都没起，留 Day 04 / Day 05+ 起 day 时落地。
+- Day 03 改动的 `libs/llm/chat-client.ts` 是 **SDK 抽象层**，返回 `AsyncIterable<string>`（纯文本 chunk）。这是 LLM SDK 抽象契约，不是“业务协议”。
+- 未来 `apps/api/` SSE adapter 的职责：把 `AsyncIterable<string>` 包成 AgentEvent JSON + SSE response —— **adapter 这一层才受 CLAUDE.md 那条指令约束**。
+- Day 04 候选 3（`apps/api/` 起 day）必须显式 reconcile：adapter 把 string chunk 转成结构化 AgentEvent，对外走 SSE。
+
+> **教学点**：一条全局指令的约束边界必须落到具体的层。CLAUDE.md 的“禁止裸 chunk 作为业务协议”管的是 transport / UI 的对外契约，不是 SDK 抽象层的内部返回类型；把 scope 写清，未来读者才不会误判 Day 03 违规。

@@ -25,13 +25,16 @@ import { AnthropicChatClient } from '../../libs/llm/index.js';
 
 const apiKey = process.env.ANTHROPIC_AUTH_TOKEN;
 const baseURL = process.env.ANTHROPIC_BASE_URL;
-const model = process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-5-...';
+const model = process.env.ANTHROPIC_MODEL;
 
 if (!apiKey) {
   throw new Error('ANTHROPIC_AUTH_TOKEN is required (set in .env)');
 }
 if (!baseURL) {
   throw new Error('ANTHROPIC_BASE_URL is required (set in .env)');
+}
+if (!model) {
+  throw new Error('ANTHROPIC_MODEL is required (set in .env)');
 }
 
 console.log(`[anthropic-stream] baseURL=${baseURL}`);
@@ -46,7 +49,7 @@ let totalChars = 0;
 
 console.log('[anthropic-stream] reply:');
 for await (const chunk of client.stream([
-  { role: 'system', content: '你是个刺猬.' },
+  { role: 'system', content: '你是个刺猬。' },
   { role: 'user', content: '用三句话介绍你自己，每句话末尾加一个表情。' },
 ])) {
   chunkCount += 1;
