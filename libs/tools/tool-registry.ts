@@ -10,13 +10,7 @@
  *   toProviderTools(provider: 'openai' | 'anthropic') 拆成两个 method。
  */
 
-import type { Tool, ToolParameters } from './tool.js';
-
-export interface ToolDefinition {
-  readonly name: string;
-  readonly description: string;
-  readonly parameters: ToolParameters;
-}
+import type { Tool, ToolDefinition } from './tool.js';
 
 export class ToolRegistry {
   private readonly tools = new Map<string, Tool>();

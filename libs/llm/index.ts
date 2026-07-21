@@ -8,7 +8,8 @@
  */
 
 export type { Role, Message } from './message.js';
-export type { ToolCallData, ChatResponse, ToolDefinition } from './tool-call.js';
+export type { ToolCallData, ChatResponse } from './tool-call.js';
+export type { ToolDefinition } from '../tools/tool.js';
 export type { ChatClient } from './chat-client.js';
 export type { OpenAIChatClientOptions } from './openai-chat-client.js';
 export { OpenAIChatClient } from './openai-chat-client.js';

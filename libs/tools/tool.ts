@@ -16,6 +16,12 @@ export interface ToolParameters {
   readonly required?: ReadonlyArray<string>;
 }
 
+export interface ToolDefinition {
+  readonly name: string;
+  readonly description: string;
+  readonly parameters: ToolParameters;
+}
+
 export interface Tool<TArgs = unknown, TReturn = unknown> {
   readonly name: string;
   readonly description: string;

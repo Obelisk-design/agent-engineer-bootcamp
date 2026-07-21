@@ -28,7 +28,8 @@
  */
 
 import type { Message } from './message.js';
-import type { ChatResponse, ToolDefinition } from './tool-call.js';
+import type { ChatResponse } from './tool-call.js';
+import type { ToolDefinition } from '../tools/tool.js';
 
 export interface ChatClient {
   chat(messages: Message[]): Promise<string>;
