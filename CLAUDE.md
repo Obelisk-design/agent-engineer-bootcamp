@@ -155,3 +155,6 @@ Small > Huge
 为什么这样设计。
 
 而不是语法。
+
+
+内部统一使用 AgentEvent 作为 Agent Runtime 的事件模型；对外统一通过 SSE 传输 AgentEvent。禁止直接传输纯文本 Chunk 作为业务协议
