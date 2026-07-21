@@ -26,6 +26,11 @@
  *     时 yield event.delta.text
  *   - 其它所有事件类型全部跳过（调用方看不到协议细节）
  *
+ * Day 04 加 chatWithTools() —— additive 工具调用扩展：
+ *   - 通过 Anthropic SDK tools 参数发起非流式工具调用
+ *   - 解析 ContentBlock[]，过滤 tool_use 块映射到 ChatResponse.tool_calls
+ *   - 无 tool_use 时取首个 text 块 yield ChatResponse.content
+ *
  * 注意：调用方应通过环境变量提供 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL /
  * ANTHROPIC_MODEL，永远不要硬编码到任何源文件。
  */
@@ -34,6 +39,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import type { Message } from './message.js';
 import type { ChatClient } from './chat-client.js';
+import type { ChatResponse, ToolDefinition } from './tool-call.js';
 
 export interface AnthropicChatClientOptions {
   readonly apiKey: string;
@@ -103,6 +109,42 @@ export class AnthropicChatClient implements ChatClient {
     }
   }
 
+  async chatWithTools(
+    messages: Message[],
+    tools: ReadonlyArray<ToolDefinition>,
+  ): Promise<ChatResponse> {
+    const response = await this.client.messages.create({
+      model: this.model,
+      max_tokens: this.maxTokens,
+      messages: messages as unknown as Anthropic.MessageParam[],
+      tools: tools.map((t) => ({
+        name: t.name,
+        description: t.description,
+        input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
+      })),
+    });
+
+    // Anthropic response.content 是 ContentBlock[] 判别联合；
+    // tool_use 块表示模型决定调用工具。多个 tool_use = 一次返回多个并行调用。
+    const toolUseBlocks = response.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use',
+    );
+    if (toolUseBlocks.length > 0) {
+      return {
+        kind: 'tool_calls',
+        toolCalls: toolUseBlocks.map((b) => ({
+          id: b.id,
+          toolName: b.name,
+          args: b.input as unknown,
+        })),
+      };
+    }
+
+    // 最终答复路径：取首个 text block（与 chat() 行为一致）。
+    const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
+    return { kind: 'content', content: textBlock?.text ?? '' };
+  }
+
   /**
    * 把内部 Message[] 适配成 Anthropic Messages API 的入参形态：
    *   - 'system' 消息提升到顶层 `system` 字段
@@ -110,6 +152,10 @@ export class AnthropicChatClient implements ChatClient {
    *
    * chat() 与 stream() 共用这一份协议适配，避免 Day 03 streaming 时暴露的
    * "system 顶层化 / content blocks 转换" 重复代码。
+   *
+   * 注意：本 helper 仅服务 chat() / stream() 的非工具路径。
+   * chatWithTools() 不走这里 —— 工具路径需要保留 tool_use / tool_result blocks
+   * 在 messages 里（SDK 内置工具结果路由），所以直接 cast Message[] 到 SDK 入参。
    */
   private toApiMessages(messages: Message[]): {
     systemPrompt: string | undefined;
