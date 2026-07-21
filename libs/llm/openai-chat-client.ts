@@ -110,7 +110,13 @@ export class OpenAIChatClient implements ChatClient {
       return {
         kind: 'tool_calls',
         toolCalls: choice.message.tool_calls
-          .filter((tc) => tc.type === 'function')
+          // Filter custom tool calls — this client only declares function tools,
+          // so custom type is theoretically impossible. If SDK ever returns
+          // non-function tool calls, they're silently dropped (consider adding
+          // diagnostic if Day 04 fix loop finds a real case).
+          .filter(
+            (tc): tc is OpenAI.Chat.ChatCompletionMessageFunctionToolCall => tc.type === 'function',
+          )
           .map((tc) => ({
             id: tc.id,
             toolName: tc.function.name,
