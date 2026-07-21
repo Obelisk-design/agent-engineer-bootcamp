@@ -19,9 +19,10 @@
 - `libs/tools/tool.ts` — `Tool<TArgs, TReturn>` interface + `ToolParameters` (JSON Schema)
 - `libs/tools/tool-registry.ts` — `ToolRegistry` 类：register / get / toProviderTools
 - `libs/tools/calculator-tool.ts` — CalculatorTool demo（自写简易 expression parser，不调 eval/new Function）
-- `libs/agent/types.ts` — `ToolCallRequest` / `ChatResponse` / `ToolCallData`
 - `libs/agent/agent.ts` — `Agent` 类：orchestration + loop
 - `libs/agent/agent-loop.ts` — Loop 逻辑（拆出便于单测 + 复用）
+- `libs/agent/types.ts` — re-export `ToolCallData` / `ChatResponse` / `ToolDefinition`（定义在 `libs/llm/tool-call.ts`）
+- `libs/llm/tool-call.ts` — `ToolCallData` / `ToolDefinition` / `ChatResponse` 类型定义
 - `libs/llm/chat-client.ts` — 加 `chatWithTools(messages, tools): Promise<ChatResponse>` method
 - `libs/llm/openai-chat-client.ts` — 实现 `chatWithTools`（SDK `tools` 参数 + 解析 `tool_calls`）
 - `libs/llm/anthropic-chat-client.ts` — 实现 `chatWithTools`（SDK `tools` 参数 + 解析 `tool_use` 块）
@@ -170,25 +171,29 @@ export const calculatorTool: Tool<{ expression: string }, { result: number }> = 
 
 `evaluate()`：自写 tokenizer + shunting-yard → RPN 评估。不引入外部依赖。
 
-### 4.4 `libs/agent/types.ts`
+### 4.4 `libs/llm/tool-call.ts` —— ToolCallData 与 ToolDefinition（**放在 llm 层**，避免下层依赖上层）
 
 ```ts
+import type { ToolParameters } from '../tools/tool.js';
+
 export interface ToolCallData {
   readonly id: string;
   readonly toolName: string;
   readonly args: unknown;
 }
 
-export type ChatResponse =
-  | { readonly kind: 'content'; readonly content: string }
-  | { readonly kind: 'tool_calls'; readonly toolCalls: ReadonlyArray<ToolCallData> };
-
 export interface ToolDefinition {
   readonly name: string;
   readonly description: string;
   readonly parameters: ToolParameters;
 }
+
+export type ChatResponse =
+  | { readonly kind: 'content'; readonly content: string }
+  | { readonly kind: 'tool_calls'; readonly toolCalls: ReadonlyArray<ToolCallData> };
 ```
+
+`ToolParameters` 从 `libs/tools/tool.ts` import —— tools 层定义参数 schema 形态，llm 层用其组装 SDK 请求形态。`libs/agent/types.ts` 改 import 自 `libs/llm/tool-call.ts`（不再定义，纯粹 re-export）。
 
 ### 4.5 `libs/llm/message.ts` —— 加 2 个 optional 字段
 
