@@ -200,6 +200,10 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
    - 未来要多 Agent → 走 `createAgentApp({ agents: Record<string, Agent> })` 还是把"路由→agent"放调用方？**留给 Day 10+**
 5. **三阶段同日交付的复盘节奏**：本次 Day 05 一个工作日产生了 7 commit（5 + 2），复盘文档需要"持续同步"
    - 节奏不变：每 5 天 review；**额外约定**——每次"同日多阶段交付"后必须更新本复盘
+6. **systemPrompt vs ToolDefinition 职责分离**（肥老大 Day 05 指出）：早期 4 处 demo 的 systemPrompt 把"工具描述"塞进了"Agent 行为 prompt"——是职责错位
+   - 原则：`Agent Prompt`（身份/行为/约束） ≠ `ToolDefinition`（工具协议） ≠ `Provider Adapter`（协议差异）
+   - 加新 tool → 只需 `ToolRegistry.register`，**不动 systemPrompt**
+   - 未来 `PromptBuilder`（Day 06+ 多用户/多角色拼装） + `PromptToolCallingAdapter`（不支持原生 tool calling 的 Provider），都**不污染 Agent 层**
 
 ---
 
@@ -293,6 +297,7 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 - **每改公共 API 都要同步更新 day demo**——不留断链
 - **每 5 天一次复盘**——`docs/review/` 目录
 - **同日多阶段交付后必须更新复盘**——本次 Day 05 三阶段交付，复盘在第一阶段后写过，后续两阶段 commit 都更新了复盘，**纪律已立**
+- **systemPrompt 不含工具描述**——Agent Prompt（身份/行为）vs ToolDefinition（协议）vs Provider Adapter（差异），三层职责严格分离
 
 ---
 

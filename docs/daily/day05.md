@@ -458,3 +458,55 @@ function dispatch(ev) {
 - [apps/api/src/web-loader.ts](../../apps/api/src/web-loader.ts) — 基于 import.meta.url 的 HTML 路径解析
 - [apps/api/src/server.ts](../../apps/api/src/server.ts) — `GET /` + `POST /agent` 两路由
 - [tests/apps/api/web-html.test.ts](../../tests/apps/api/web-html.test.ts) — HTML 静态测试
+
+---
+
+## 🔀 阶段五（追加）— systemPrompt vs ToolDefinition 职责分离
+
+> 肥老大指出 demo 里 4 处 systemPrompt 重复同一句"You have access to a calculator tool..."是**错位**——把"工具描述"塞进了"Agent 行为 prompt"。
+
+### 根因
+
+`ToolDefinition.description`（[libs/tools/tool.ts](../../libs/tools/tool.ts)）是**面向模型的协议字段**（OpenAI function calling / Anthropic tool_use），通过 `ChatClient.chat({ tools })` 自动透传。但之前 4 处 demo 的 systemPrompt 手写了一段跟 ToolDefinition.description 重复的话：
+
+```text
+"You have access to a calculator tool. When arithmetic is needed, call it..."
+```
+
+这是把**工具描述**塞进 **Agent 行为 prompt**——两层职责耦合。
+
+### 职责分离
+
+| 职责 | 拥有者 | 形式 |
+|---|---|---|
+| **Agent Prompt**（身份/行为/约束/上下文） | 调用方写，可选 | 自由文本，运行时由 `PromptBuilder`（Day 06+）拼装 |
+| **ToolDefinition**（工具协议） | `ToolRegistry` | 通过 `ChatClient.chat({ tools })` 协议传递 |
+| **Tool Execution** | `ToolRegistry` | `tool.execute(args)` |
+| **Provider 协议差异** | Provider Adapter | 不污染 Agent 层；不支持原生 tool calling 的模型才在 Provider 层加 `PromptToolCallingAdapter` |
+
+**关键不变量**：
+- systemPrompt **不包含**任何工具描述
+- ToolDefinition.description **不翻译**回 prompt
+- 加新 tool → 只需 `ToolRegistry.register(newTool)`，**不动 systemPrompt**
+
+### 改写后的 systemPrompt（4 处统一）
+
+```typescript
+systemPrompt: 'You are a helpful assistant. Prefer using available tools over guessing.',
+```
+
+- "You are a helpful assistant" — Agent **身份**
+- "Prefer using available tools over guessing" — Agent **行为规则**（不依赖具体工具）
+
+工具描述通过 `ChatClient.chat({ tools })` 协议传递，**LLM 看到的是 ToolDefinition 协议字段**（OpenAI / Anthropic 原生 tool calling），不是文本。
+
+### 不引入新模块
+
+- `PromptBuilder`（Day 06+ 范畴）—— 当 systemPrompt 需要动态拼装（多用户/多角色）时
+- `PromptToolCallingAdapter`（如果未来某些模型不支持原生 tool calling）—— 在 Provider 层加，**不污染 Agent 层**
+
+### 验证
+
+- ✅ 4 处 demo systemPrompt 措辞统一
+- ✅ 1 处 README 样例统一
+- ✅ ChatClient / Agent / ToolRegistry 零改动（**职责分离**的回报：改动只在调用方）
