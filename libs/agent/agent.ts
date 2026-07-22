@@ -7,17 +7,22 @@
  * - 统一 ChatClient 接口：chat({ messages, tools })
  * - ChatResponse = { content?, toolCalls? }
  *
- * Day 05 重构（重要）：
+ * Day 05 追加：
  * - 引入 AgentEvent 判别联合（见 event.ts），作为 Agent Runtime 的事件模型。
  * - 新增 runEvents(): AsyncIterable<AgentEvent> —— 暴露完整 loop 过程。
  * - run() 重构为 runEvents() 的收尾版（消除重复），返回最终 content。
  * - 删除 onIteration 回调 —— runEvents() 是它的替代品，再保留就是同一信息的两个出口。
+ *
+ * Day 05 追加：runEvents 在每次 chat() 前后 yield `request` / `response` 事件，
+ * 把 LLM 调用的入参（累积 messages）和出参（ChatResponse）暴露给消费方。
+ * 这是 Agent Runtime 事件模型的"过程快照"，前端可以可视化"为什么模型这么决定"。
  *
  * 不做（YAGNI）：
  * - 并行 tool 执行
  * - Streaming tool calling（content 整段，不分 delta）
  * - AbortSignal / 取消
  * - 持久化 / 跨会话历史
+ * - token 用量 / 延迟
  */
 
 import type { ChatClient, Message } from '../llm/index.js';
@@ -59,10 +64,26 @@ export class Agent {
     for (let i = 0; i < maxIterations; i++) {
       yield { kind: 'iteration', n: i + 1 };
 
+      // 把当前累积的 messages 暴露出去（"调用过程快照"）
+      yield {
+        kind: 'request',
+        iteration: i + 1,
+        messages,
+      };
+
       const response = await this.options.chat.chat({
         messages,
         tools: toolDefs,
       });
+
+      // 把 LLM 响应也暴露出去
+      const responseEvent: AgentEvent =
+        response.content !== undefined
+          ? { kind: 'response', iteration: i + 1, content: response.content }
+          : response.toolCalls !== undefined
+            ? { kind: 'response', iteration: i + 1, toolCalls: response.toolCalls }
+            : { kind: 'response', iteration: i + 1 };
+      yield responseEvent;
 
       // 普通回复路径：返回 content
       if (response.content !== undefined) {
