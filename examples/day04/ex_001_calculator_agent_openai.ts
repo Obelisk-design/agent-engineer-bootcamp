@@ -39,15 +39,23 @@ const agent = new Agent({
   tools,
   systemPrompt:
     'You have access to a calculator tool. When arithmetic is needed, call it. Then answer based on the result.',
-  onIteration: (iteration, response) => {
-    console.log(
-      `[openai-calculator] iteration=${iteration} response=${response.content !== undefined ? 'content' : 'tool_calls'}`,
-    );
-  },
 });
 
 async function main() {
-  const answer = await agent.run('用 calculator 工具计算 1+2*3');
+  // Day 05 起 Agent 推荐用 runEvents() 看完整事件流；这里手动打印 iteration 进度，
+  // 不再走 onIteration 回调（回调跟 runEvents 是同一信息的两个出口，已删除）。
+  let answer = '';
+  for await (const ev of agent.runEvents('用 calculator 工具计算 1+2*3')) {
+    if (ev.kind === 'iteration') {
+      console.log(`[openai-calculator] iteration=${ev.n}`);
+    } else if (ev.kind === 'tool_call') {
+      console.log(`[openai-calculator] tool_call name=${ev.name} args=${JSON.stringify(ev.args)}`);
+    } else if (ev.kind === 'tool_result') {
+      console.log(`[openai-calculator] tool_result output=${ev.output}`);
+    } else if (ev.kind === 'message_end') {
+      answer = ev.content;
+    }
+  }
   console.log(`[openai-calculator] answer: ${answer}`);
 }
 
