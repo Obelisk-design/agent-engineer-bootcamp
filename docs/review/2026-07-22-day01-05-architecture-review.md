@@ -64,7 +64,7 @@
 
 **关键决策**：`Message` 用 optional `toolCalls` / `toolCallId`（不升级判别联合），明天再升级。
 
-### Day 05 — AgentEvent + SSE + Web UI（今日）
+### Day 05 — AgentEvent + SSE + Web UI + Timeline 详细化（今日，三阶段交付）
 
 **学到了什么**：
 
@@ -73,8 +73,19 @@
 - **删除 `onIteration` 回调**：与 `runEvents` 是同一信息的两个出口，**临时 API 被替代品取代即删**
 - apps/api 落地：`createAgentApp` + `sse-adapter`（framework-agnostic）+ Agent Console Web UI
 - Claude Code 风格双栏 UI：**左 Conversation + 右 Execution Timeline，同一事件源分发**
+- 阶段三 `request` / `response` 事件把"调用过程"全可视化——肥老大指令触发，**调用前 messages 累积 / 调用后 ChatResponse** 都暴露
 
-**关键决策**：sse-adapter 输出 `{ event, data }` 形态不依赖 hono，server.ts 才耦合 hono——未来换 Fastify/Express 不动 adapter。
+**关键决策**：
+
+- sse-adapter 输出 `{ event, data }` 形态不依赖 hono，server.ts 才耦合 hono——未来换 Fastify/Express 不动 adapter
+- `request` / `response` 复用了现有 `Message` / `ToolCallData` 类型，不引入新领域概念
+- Web UI 折叠区用原生 `<details><summary>`，**零依赖**（区别于 React Collapsible 等）
+
+**三阶段交付路径**：
+
+1. **阶段一**：libs/agent 改造 + apps/api SSE（5 commit 提交了复盘）
+2. **阶段二**：Web UI 双栏（肥老大同日追加） + Timeline 卡片化样式调整（"一片黑"反馈）
+3. **阶段三**：Timeline 详细化（"整个调用过程都显示出来"反馈）—— AgentEvent 扩 2 kind + UI 折叠 JSON 详情
 
 ---
 
@@ -178,13 +189,17 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 
 ### 风险点（明天决策前必看）
 
-1. **事件类型闭合 vs 扩展**：`AgentEvent` 7 kind 当前是 closed set，未来加 `checkpoint` / `partial delta` 会扩
-   - **每加一种都要走"修改五问"**，不留"未来可能用" 的占位
-2. **web/ 单文件 vs 框架**：HTML 内联 530 行，CSS ~250 行。再加 200 行就要拆——**今天明确不拆**
+1. **事件类型扩展的纪律性**：`AgentEvent` 当前 **9 kind**（Day 05 阶段一 7 + 阶段三 +2）。这次扩是**肥老大指令触发**，有意识扩展
+   - **未来每加一种都要走"修改五问"**，不留"未来可能用"的占位
+   - 经验：扩 2 kind 后，**测试 + 文档 + 复盘要同步更新**（不复盘就成"过时承诺"）
+2. **web/ 单文件 vs 框架**：HTML 内联 530+ 行（含三阶段样式调整），CSS 280+ 行。再加 200 行就要拆——**今天明确不拆**
+   - 阶段三折叠区用 `<details><summary>` 零依赖——**继续守住"不引前端框架"**
 3. **真实 LLM 依赖 demo**：`examples/day05/ex_001/ex_002` 都依赖 `OPENAI_API_KEY`，CI 不能直接跑
    - **未来要做"无 LLM 依赖的 smoke test"**（用 FakeChatClient + app.fetch）
 4. **`apps/api/` 只有一个 endpoint + 一个 GET/**：单 Agent 单端口绑死
    - 未来要多 Agent → 走 `createAgentApp({ agents: Record<string, Agent> })` 还是把"路由→agent"放调用方？**留给 Day 10+**
+5. **三阶段同日交付的复盘节奏**：本次 Day 05 一个工作日产生了 7 commit（5 + 2），复盘文档需要"持续同步"
+   - 节奏不变：每 5 天 review；**额外约定**——每次"同日多阶段交付"后必须更新本复盘
 
 ---
 
@@ -192,9 +207,10 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 
 ### 候选
 
-1. **流式 content via `message_delta`**（**推荐 Day 06**）
-   - 把 `Agent.runEvents()` 内部 `chat()` 换成 `stream()`，让 `message_end` 之前能 yield 多个 `message_delta`
-   - 前端可以打字机效果
+1. **流式 content via `message_delta`**（**部分完成 ✅**，剩 stream content 未做）
+   - ✅ **已做**：肥老大指令触发，Day 05 阶段三把 `request` / `response` 加进 AgentEvent，UI 用 `<details>` 折叠 JSON
+     —— 这是"调用过程可视化"的最小集，**比 message_delta 更基本**
+   - ⏳ **未做**：把 `Agent.runEvents()` 内部 `chat()` 换成 `stream()`，让 `message_end` 之前 yield 多个 `message_delta`
    - 风险：tool_calls 在流式下的顺序处理（OpenAI / Anthropic 行为差异）
 
 2. **AbortSignal 取消**（次推荐 Day 07）
@@ -212,9 +228,9 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 
 ### 我的判断
 
-**Day 06 选 1（流式 content）**——继续累积"管线深度"（与 day04 chat/stream 统一、day05 SSE 串联）。
-**Day 07 选 2（AbortSignal）**——基础设施补齐，给流式 content 加 stop 能力。
-**Day 06-08 任何时候穿插 4（无 LLM smoke test）**——把 CI 闭环。
+**Day 06 优先做候选 4（无 LLM smoke test）**——把 CI 闭环，给 day 06+ 提供回归保护。`request` / `response` 阶段三扩了 2 kind，**正需要 FakeChatClient 测试覆盖**（现实 LLM 太贵）。
+**Day 07 选 2（AbortSignal）**——基础设施补齐，给未来流式 content 加 stop 能力。
+**候选 1 剩下的 stream content 推到 Day 08+**——配合 AbortSignal 一起做。
 **3（多轮历史）放 Day 09+**——复杂度高，需要先有 AbortSignal 和会话隔离设计。
 
 ---
@@ -256,13 +272,16 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 + 新增 apps/api/ 包（Hono + SSE transport）          —— 维护成本 中，3 年存活率 高
 + 新增 AgentEvent 判别联合（libs/agent/event.ts）    —— 维护成本 低，3 年存活率 高
 + 新增 apps/api/web/ 单 HTML UI                      —— 维护成本 中，3 年存活率 中
++ 新增 AgentEvent.request / .response 2 kind         —— 维护成本 低，3 年存活率 高
++ 新增 Web UI 折叠 JSON 详情（<details> 零依赖）     —— 维护成本 低，3 年存活率 中
 - 删除 Agent.onIteration 回调（合并到 runEvents）    —— 消除临时 API
 - 删除 libs/llm/tool-call.ts（合并到 chat-client.ts）—— 消除双事实源
-净增：+4 模块 / -2 临时 API
+净增：+6 模块 / -2 临时 API
 反驳记录：
-  - 5 天净增 4 模块符合"每天 ≤1 个新模块"目标
+  - 5 天净增 6 模块偏高（阶段三同日内多扩 2 kind 是用户指令触发）
   - 删除 2 个临时 API 证明"临时 API 即删"纪律有效
   - 单 HTML UI YAGNI 边界明确，未来扩规模时再 refactor
+  - 阶段三"request/response"扩 kind 是有意为之，不是悄悄扩张
 ```
 
 ---
@@ -273,6 +292,7 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 - **每加一个真实 LLM demo 都要配 FakeChatClient smoke test**——CI 不能依赖 LLM
 - **每改公共 API 都要同步更新 day demo**——不留断链
 - **每 5 天一次复盘**——`docs/review/` 目录
+- **同日多阶段交付后必须更新复盘**——本次 Day 05 三阶段交付，复盘在第一阶段后写过，后续两阶段 commit 都更新了复盘，**纪律已立**
 
 ---
 
@@ -281,4 +301,7 @@ apps/   →  libs/agent/  →  libs/{llm, tools}/
 - 每日笔记：[day01](daily/day01.md) / [day02](daily/day02.md) / [day03](daily/day03.md) / [day04](daily/day04.md) / [day05](daily/day05.md)
 - 全局约定：[CLAUDE.md](../../CLAUDE.md)
 - Day 04-05 关键 commit：`3ff54dd` / `9593b72` / `09d5589`（AgentEvent 协议指令）
-- 5 天累计 22 个 commit：见 `git log --oneline`
+- Day 05 三阶段 7 commit：
+  - 阶段一 SSE：`3e12fd2` / `e27dd9d` / `7310645` / `2f596a7` / `e75544a`
+  - 阶段三 Timeline 详细化：`a906335` / `1cf1b2a`
+- 总 27 个 commit：见 `git log --oneline`
