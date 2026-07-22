@@ -140,6 +140,14 @@ Small > Huge
 
 不要提前实现未来能力。
 
+## Architecture Decision Records (ADR)
+
+`docs/adr/` 目录下有按编号命名的架构决策记录（`NNNN-short-name.md`）。改代码时若触及 ADR 涵盖的范围，**必须先读对应 ADR 再下笔**——ADR 记录了 Context / Decision / Consequences / Enforcement，是"为什么这样写"的权威来源。
+
+已生效的 ADR：
+
+- [0001](docs/adr/0001-tool-capability-must-not-embed-in-system-prompt.md) — Tool capability declaration MUST NOT be embedded into system prompt
+
 ## Teaching Preference
 
 默认使用 TypeScript 示例。
