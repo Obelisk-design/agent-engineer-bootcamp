@@ -80,6 +80,12 @@ describe('createAgentApp POST /agent', () => {
     expect(body).toContain('event: tool_result\ndata:');
     expect(body).toContain('event: message_end\ndata: {"kind":"message_end","content":"3"}\n\n');
     expect(body).toContain('event: done\ndata: {"kind":"done"}\n\n');
+    // request / response 也应出现在 SSE 流（Day 05 追加：调用过程全可视化）
+    expect(body).toContain('event: request\ndata:');
+    expect(body).toMatch(/"kind":"request"/);
+    expect(body).toMatch(/"messages":\[/);
+    expect(body).toContain('event: response\ndata:');
+    expect(body).toMatch(/"kind":"response"/);
   });
 
   it('streams message_end + done when LLM answers without tools', async () => {

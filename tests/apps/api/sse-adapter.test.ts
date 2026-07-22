@@ -65,6 +65,53 @@ describe('agentEventToSSEMessage', () => {
     expect(msg.event).toBe('error');
     expect(JSON.parse(msg.data)).toEqual({ kind: 'error', message: 'oops' });
   });
+
+  it('encodes request with iteration and messages', () => {
+    const msg = agentEventToSSEMessage({
+      kind: 'request',
+      iteration: 1,
+      messages: [
+        { role: 'system', content: 'You have a calculator' },
+        { role: 'user', content: '1+2*3' },
+      ],
+    });
+    expect(msg.event).toBe('request');
+    const parsed = JSON.parse(msg.data);
+    expect(parsed.kind).toBe('request');
+    expect(parsed.iteration).toBe(1);
+    expect(parsed.messages).toEqual([
+      { role: 'system', content: 'You have a calculator' },
+      { role: 'user', content: '1+2*3' },
+    ]);
+  });
+
+  it('encodes response with content', () => {
+    const msg = agentEventToSSEMessage({
+      kind: 'response',
+      iteration: 2,
+      content: 'the answer is 7',
+    });
+    expect(msg.event).toBe('response');
+    const parsed = JSON.parse(msg.data);
+    expect(parsed.iteration).toBe(2);
+    expect(parsed.content).toBe('the answer is 7');
+    expect(parsed.toolCalls).toBeUndefined();
+  });
+
+  it('encodes response with toolCalls', () => {
+    const msg = agentEventToSSEMessage({
+      kind: 'response',
+      iteration: 1,
+      toolCalls: [{ id: 'tc_1', toolName: 'calculator', args: { expression: '1+2*3' } }],
+    });
+    expect(msg.event).toBe('response');
+    const parsed = JSON.parse(msg.data);
+    expect(parsed.iteration).toBe(1);
+    expect(parsed.content).toBeUndefined();
+    expect(parsed.toolCalls).toEqual([
+      { id: 'tc_1', toolName: 'calculator', args: { expression: '1+2*3' } },
+    ]);
+  });
 });
 
 describe('agentEventsToSSEMessages', () => {

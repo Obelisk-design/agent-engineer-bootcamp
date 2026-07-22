@@ -55,6 +55,8 @@ describe('Agent Console index.html', () => {
     const kinds = [
       'message_start',
       'iteration',
+      'request',
+      'response',
       'tool_call',
       'tool_result',
       'message_end',
@@ -64,6 +66,15 @@ describe('Agent Console index.html', () => {
     for (const k of kinds) {
       expect(html).toContain(`case '${k}'`);
     }
+  });
+
+  it('renders request/response as collapsible details', () => {
+    // 折叠区用 <details> 元素（动态创建）
+    expect(html).toContain("createElement('details')");
+    expect(html).toContain("createElement('summary')");
+    // 折叠 summary 文案包含 emoji 提示
+    expect(html).toMatch(/查看 LLM 请求/);
+    expect(html).toMatch(/查看 LLM 响应/);
   });
 
   it('shows the user input in Conversation and timeline steps in Timeline', () => {

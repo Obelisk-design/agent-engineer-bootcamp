@@ -344,8 +344,12 @@
       function resetTimeline() {
         timelineEl.innerHTML = '';
       }
-      function addTimelineStep(label, detail, status) {
+      function addTimelineStep(label, detail, status, opts) {
         // status: 'done' | 'active' | 'error' | 'pending' (默认 'done')
+        // opts.collapsible: detail 放进 <details> 默认折叠（用于长 JSON）
+        // opts.collapsibleOpen: 默认展开
+        // opts.summaryText: 折叠区 summary 文字
+        const opt = opts || {};
         const step = document.createElement('div');
         step.className = 'timeline-step ' + (status || 'done');
         const icon = document.createElement('div');
@@ -361,10 +365,23 @@
         lbl.textContent = label;
         body.appendChild(lbl);
         if (detail) {
-          const det = document.createElement('div');
-          det.className = 'step-detail';
-          det.textContent = detail;
-          body.appendChild(det);
+          if (opt.collapsible || opt.collapsibleOpen) {
+            const det = document.createElement('details');
+            if (opt.collapsibleOpen) det.open = true;
+            const sm = document.createElement('summary');
+            sm.textContent = opt.summaryText || '查看详情';
+            det.appendChild(sm);
+            const pre = document.createElement('pre');
+            pre.className = 'step-detail';
+            pre.textContent = detail;
+            det.appendChild(pre);
+            body.appendChild(det);
+          } else {
+            const det = document.createElement('div');
+            det.className = 'step-detail';
+            det.textContent = detail;
+            body.appendChild(det);
+          }
         }
         step.appendChild(body);
         timelineEl.appendChild(step);
@@ -381,6 +398,30 @@
           case 'iteration':
             addTimelineStep('Iteration ' + ev.n, null, 'active');
             break;
+          case 'request': {
+            const payload = { iteration: ev.iteration, messages: ev.messages };
+            addTimelineStep(
+              'request · Iteration ' + ev.iteration,
+              JSON.stringify(payload, null, 2),
+              'active',
+              { collapsible: true, summaryText: '📨 查看 LLM 请求（messages 累计）' },
+            );
+            break;
+          }
+          case 'response': {
+            const payload = {
+              iteration: ev.iteration,
+              content: ev.content,
+              toolCalls: ev.toolCalls,
+            };
+            addTimelineStep(
+              'response · Iteration ' + ev.iteration,
+              JSON.stringify(payload, null, 2),
+              'active',
+              { collapsible: true, summaryText: '🤖 查看 LLM 响应' },
+            );
+            break;
+          }
           case 'tool_call':
             addTimelineStep('调用 ' + ev.name, JSON.stringify(ev.args), 'active');
             break;
