@@ -42,8 +42,7 @@ tools.register(calculatorTool);
 const agent = new Agent({
   chat,
   tools,
-  systemPrompt:
-    'You have access to a calculator tool. When arithmetic is needed, call it. Then answer based on the result.',
+  systemPrompt: 'You are a helpful assistant. Prefer using available tools over guessing.',
 });
 
 async function main() {
