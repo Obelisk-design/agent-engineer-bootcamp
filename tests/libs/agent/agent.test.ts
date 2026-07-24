@@ -2,31 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Agent } from '../../../libs/agent/index.js';
 import { ToolRegistry, calculatorTool } from '../../../libs/tools/index.js';
-import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from '../../../libs/llm/index.js';
-
-class FakeChatClient implements ChatClient {
-  private responses: ChatResponse[];
-  private callIndex = 0;
-
-  constructor(responses: ChatResponse[]) {
-    this.responses = responses;
-  }
-
-  async chat(_request: ChatRequest): Promise<ChatResponse> {
-    const response = this.responses[this.callIndex];
-    if (response === undefined) {
-      throw new Error('FakeChatClient: no more mocked responses');
-    }
-    this.callIndex += 1;
-    return response;
-  }
-
-  async *stream(): AsyncGenerator<ChatChunk, void, undefined> {
-    yield { content: 'fake' };
-  }
-
-  setModel(): void {}
-}
+import { FakeChatClient } from './shared/fake-chat-client.js';
 
 describe('Agent', () => {
   it('returns content immediately when LLM answers without tool', async () => {
