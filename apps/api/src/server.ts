@@ -1,46 +1,64 @@
 /**
  * apps/api/src/server.ts
  *
- * Hono App —— 把 Agent 暴露成 SSE HTTP 端点 + 单页 Web UI。
+ * Hono App —— 把 Agent 暴露成 SSE HTTP 端点 + 单页 Web UI + Trace 端点。
  *
  * 设计原则：
  * - 不在 apps/api/ 里硬编码 ChatClient / ToolRegistry。调用方构造 Agent 后传给 createAgentApp。
- *   这样 apps/api/ 不依赖任何具体 provider，可被 OpenAI / Anthropic / Fake 任意 Agent 复用。
- * - 只暴露两个路由：GET / 返回单页 HTML，POST /agent 走 SSE。Day 05/06 YAGNI 边界。
- * - HTML 用 fs.readFileSync 启动时读一次，缓存到内存。零运行时磁盘 IO 成本。
- * - HTML 路径解析基于 import.meta.url：server 编译后位置变了也能正确找到 web/index.html。
+ * - 路由：
+ *   GET  /              Agent Console 单页 UI
+ *   POST /agent         Server-Sent Events
+ *   GET  /traces        列出最近 trace（按 startedAt 倒序）
+ *   GET  /traces/:runId 拿指定 trace 完整 events 快照
+ * - TraceCollector 是可选注入（默认 new 一个 in-memory），跨请求共享状态。
+ * - 错误返回：
+ *   - HTTP 协议层（缺 input）：400 + JSON
+ *   - Runtime 层（loop 抛错）：以 `event: error` SSE 帧发出
+ *   - Trace 查询（runId 不存在）：404 + JSON
  *
  * 不做的事（YAGNI）：
- * - Auth / API key 校验
- * - 多 Agent 并发 / queue
- * - 错误重试 / 熔断
- * - 流式 abort
- * - Markdown / 代码高亮 / 多轮对话历史
+ * - Trace 持久化（Day 10+）
+ * - Token/Latency/Cost 派生（Day 07+）
+ * - Trace 过滤 / 分页 / 模糊匹配（Day 10+ Evaluation）
  */
 
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 
 import type { Agent } from '../../../libs/agent/index.js';
-import { agentEventsToSSEMessages } from './sse-adapter.js';
+import { agentEventToSSEMessage } from './sse-adapter.js';
 import { loadWebIndexHtml } from './web-loader.js';
+import { TraceCollector } from './trace-collector.js';
 
 export interface AgentAppOptions {
   readonly agent: Agent;
+  readonly collector?: TraceCollector;
 }
 
 /**
  * 构造一个绑定到指定 Agent 的 Hono app。
- * 调用方拿到 app 后可以挂到自己的 HTTP server，也可以 `app.fetch(req)` 自行处理。
  */
 export function createAgentApp(options: AgentAppOptions): Hono {
   const app = new Hono();
+  const collector = options.collector ?? new TraceCollector();
 
-  // Day 06：单页 Web UI。GET / 返回 HTML；POST /agent 走 SSE。
+  // Day 06: 单页 Web UI
   const html = loadWebIndexHtml();
-
   app.get('/', (c) => c.html(html));
 
+  // Day 06: Trace 查询路由
+  app.get('/traces', (c) => c.json(collector.list()));
+
+  app.get('/traces/:runId', (c) => {
+    const runId = c.req.param('runId');
+    const trace = collector.get(runId);
+    if (trace === undefined) {
+      return c.json({ error: `trace not found: ${runId}` }, 404);
+    }
+    return c.json(trace);
+  });
+
+  // Day 05: POST /agent + SSE
   app.post('/agent', async (c) => {
     const body = (await c.req.json().catch(() => null)) as { input?: unknown } | null;
     const input = body?.input;
@@ -48,18 +66,24 @@ export function createAgentApp(options: AgentAppOptions): Hono {
       return c.json({ error: 'request body must be { input: string }' }, 400);
     }
 
+    // Day 06: start() 分配 runId，事件流走 TraceCollector + SSE 双路
+    const runId = collector.start();
+
     return streamSSE(c, async (stream) => {
       try {
-        for await (const msg of agentEventsToSSEMessages(options.agent.runEvents(input))) {
-          await stream.writeSSE(msg);
+        for await (const ev of options.agent.runEvents(input)) {
+          collector.collect(runId, ev);
+          await stream.writeSSE(agentEventToSSEMessage(ev));
         }
       } catch (err) {
-        // Loop 抛错（maxIterations 超限 / chat 客户端异常）以 error 事件发出，让客户端收到收尾信号。
         const message = err instanceof Error ? err.message : String(err);
+        collector.collect(runId, { kind: 'error', message });
         await stream.writeSSE({
           event: 'error',
           data: JSON.stringify({ kind: 'error', message }),
         });
+      } finally {
+        collector.end(runId);
       }
     });
   });

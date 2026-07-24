@@ -11,3 +11,4 @@ export {
   type SSEMessage,
 } from './sse-adapter.js';
 export { loadWebIndexHtml } from './web-loader.js';
+export { TraceCollector, type AgentTrace } from './trace-collector.js';

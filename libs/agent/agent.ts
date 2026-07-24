@@ -65,10 +65,12 @@ export class Agent {
       yield { kind: 'iteration', n: i + 1 };
 
       // 把当前累积的 messages 暴露出去（"调用过程快照"）
+      // 深拷贝 messages —— 否则两次 yield 都引用同一个累积数组，
+      // TraceCollector / 消费方拿到的 requests[N].messages 都指向最终累积状态。
       yield {
         kind: 'request',
         iteration: i + 1,
-        messages,
+        messages: messages.map((m) => ({ ...m })),
       };
 
       const response = await this.options.chat.chat({
