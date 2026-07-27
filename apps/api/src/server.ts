@@ -13,12 +13,19 @@
  * - TraceCollector 是可选注入（默认 new 一个 in-memory），跨请求共享状态。
  * - 错误返回：
  *   - HTTP 协议层（缺 input）：400 + JSON
- *   - Runtime 层（loop 抛错）：以 `event: error` SSE 帧发出
+ *   - Runtime 层：error 走 SSE 事件（Day 07 行为变更：runEvents yield error，不再 throw）
  *   - Trace 查询（runId 不存在）：404 + JSON
+ *
+ * Day 07 改造（Phase C Task 9）：
+ * - AbortController：监听 request.signal（客户端断线）→ abortController.abort()
+ * - signal 透传给 agent.runEvents(input, { signal })
+ * - usage 累积：消费 response 事件，把 ChatUsage 累加
+ * - message_end / error 时把 totalUsage 写进 trace meta（addMeta）
+ * - 删 try/catch（error 已走 SSE 事件路径）；保留 finally 保证 collector.end()
  *
  * 不做的事（YAGNI）：
  * - Trace 持久化（Day 10+）
- * - Token/Latency/Cost 派生（Day 07+）
+ * - latency / cost 派生（Day 10+）
  * - Trace 过滤 / 分页 / 模糊匹配（Day 10+ Evaluation）
  */
 
@@ -26,6 +33,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 
 import type { Agent } from '../../../libs/agent/index.js';
+import type { ChatUsage } from '../../../libs/llm/chat-client.js';
 import { agentEventToSSEMessage } from './sse-adapter.js';
 import { loadWebIndexHtml } from './web-loader.js';
 import { TraceCollector } from './trace-collector.js';
@@ -58,7 +66,7 @@ export function createAgentApp(options: AgentAppOptions): Hono {
     return c.json(trace);
   });
 
-  // Day 05: POST /agent + SSE
+  // Day 05/07: POST /agent + SSE
   app.post('/agent', async (c) => {
     const body = (await c.req.json().catch(() => null)) as { input?: unknown } | null;
     const input = body?.input;
@@ -66,23 +74,46 @@ export function createAgentApp(options: AgentAppOptions): Hono {
       return c.json({ error: 'request body must be { input: string }' }, 400);
     }
 
+    // 🆕 Day 07: AbortController + 监听客户端断线
+    const abortController = new AbortController();
+    c.req.raw.signal.addEventListener('abort', () => abortController.abort());
+
     // Day 06: start() 分配 runId，事件流走 TraceCollector + SSE 双路
     const runId = collector.start();
 
     return streamSSE(c, async (stream) => {
+      // 🆕 Day 07: usage 累积（多轮 tool_calls + final answer 之和）
+      let totalUsage: ChatUsage | undefined;
+
       try {
-        for await (const ev of options.agent.runEvents(input)) {
+        for await (const ev of options.agent.runEvents(input, {
+          signal: abortController.signal,
+        })) {
           collector.collect(runId, ev);
+
+          // 🆕 Day 07: 累积 usage
+          if (ev.kind === 'response' && ev.usage !== undefined) {
+            totalUsage =
+              totalUsage === undefined
+                ? ev.usage
+                : {
+                    promptTokens: totalUsage.promptTokens + ev.usage.promptTokens,
+                    completionTokens: totalUsage.completionTokens + ev.usage.completionTokens,
+                  };
+          }
+
+          // 终止事件：写 meta + end
+          if (ev.kind === 'message_end' || ev.kind === 'error') {
+            if (totalUsage !== undefined) {
+              collector.addMeta(runId, { usage: totalUsage });
+            }
+            collector.end(runId);
+          }
+
           await stream.writeSSE(agentEventToSSEMessage(ev));
         }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        collector.collect(runId, { kind: 'error', message });
-        await stream.writeSSE({
-          event: 'error',
-          data: JSON.stringify({ kind: 'error', message }),
-        });
       } finally {
+        // 兜底：signal abort / 流异常时也保证 collector.end 被调
         collector.end(runId);
       }
     });
