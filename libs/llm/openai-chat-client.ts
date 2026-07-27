@@ -19,15 +19,28 @@
  * - chat({ messages, tools }) 统一处理普通聊天和工具调用
  * - 返回 ChatResponse：{ content?, toolCalls? }
  *
- * TODO（按 CLAUDE.md "Progressive Design — Leave TODO"）：
- * - 单测覆盖（README 强制）：smoke + mock 调用，Day 03 不做（spec 决策）。
- * - AbortSignal 取消：stream() 不支持（YAGNI），未来 day 加。
+ * Day 07 加 signal + usage（Phase A Task 2）：
+ * - chat/stream 加 options?: ChatOptions 参数
+ * - signal 透传给 SDK 第二参数（OpenAI SDK 接受 AbortSignal）
+ * - chat() parse completion.usage → ChatResponse.usage
+ * - stream() 不暴露 usage（Plan Task 5 简化方案：chat 探测拿 usage，stream 仅 yield delta）
+ *
+ * 不做的事（YAGNI）：
+ * - stream() 不开 stream_options.include_usage（agent 不从 stream 取 usage）
+ * - 单测覆盖（README 强制）：smoke + mock 调用。
  * - structured output：不在前期范围。
  */
 
 import OpenAI from 'openai';
 
-import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from './chat-client.js';
+import type {
+  ChatClient,
+  ChatRequest,
+  ChatResponse,
+  ChatChunk,
+  ChatOptions,
+  ChatUsage,
+} from './chat-client.js';
 import type { Message } from './message.js';
 
 export interface OpenAIChatClientOptions {
@@ -50,30 +63,42 @@ export class OpenAIChatClient implements ChatClient {
     this.model = options.model;
   }
 
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest, options?: ChatOptions): Promise<ChatResponse> {
     const { messages, tools } = request;
 
-    const completion = await this.client.chat.completions.create({
-      model: this.model,
-      messages: this.toOpenAIMessages(messages),
-      ...(tools !== undefined && tools.length > 0
-        ? {
-            tools: tools.map((t) => ({
-              type: 'function' as const,
-              function: {
-                name: t.name,
-                description: t.description,
-                parameters: t.parameters as unknown as Record<string, unknown>,
-              },
-            })),
-          }
-        : {}),
-    });
+    const completion = await this.client.chat.completions.create(
+      {
+        model: this.model,
+        messages: this.toOpenAIMessages(messages),
+        ...(tools !== undefined && tools.length > 0
+          ? {
+              tools: tools.map((t) => ({
+                type: 'function' as const,
+                function: {
+                  name: t.name,
+                  description: t.description,
+                  parameters: t.parameters as unknown as Record<string, unknown>,
+                },
+              })),
+            }
+          : {}),
+      },
+      options?.signal !== undefined ? { signal: options.signal } : {},
+    );
 
     const choice = completion.choices[0];
     if (!choice) {
       return { content: '' };
     }
+
+    // 🆕 Day 07: parse token usage
+    const usage: ChatUsage | undefined =
+      completion.usage !== null && completion.usage !== undefined
+        ? {
+            promptTokens: completion.usage.prompt_tokens,
+            completionTokens: completion.usage.completion_tokens,
+          }
+        : undefined;
 
     // 工具调用路径
     if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls) {
@@ -87,21 +112,31 @@ export class OpenAIChatClient implements ChatClient {
             toolName: tc.function.name,
             args: JSON.parse(tc.function.arguments) as unknown,
           })),
+        ...(usage !== undefined ? { usage } : {}),
       };
     }
 
     // 普通回复路径
-    return { content: choice.message.content ?? '' };
+    return {
+      content: choice.message.content ?? '',
+      ...(usage !== undefined ? { usage } : {}),
+    };
   }
 
-  async *stream(request: ChatRequest): AsyncGenerator<ChatChunk, void, undefined> {
+  async *stream(
+    request: ChatRequest,
+    options?: ChatOptions,
+  ): AsyncGenerator<ChatChunk, void, undefined> {
     const { messages } = request;
 
-    const stream = await this.client.chat.completions.create({
-      model: this.model,
-      messages: this.toOpenAIMessages(messages),
-      stream: true,
-    });
+    const stream = await this.client.chat.completions.create(
+      {
+        model: this.model,
+        messages: this.toOpenAIMessages(messages),
+        stream: true,
+      },
+      options?.signal !== undefined ? { signal: options.signal } : {},
+    );
 
     for await (const chunk of stream) {
       // OpenAI stream 的首尾 chunk 通常 delta.content = null（role-only 或 finish_reason），
