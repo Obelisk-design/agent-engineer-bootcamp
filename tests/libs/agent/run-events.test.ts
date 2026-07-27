@@ -32,7 +32,7 @@ describe('Agent.runEvents — event sequence', () => {
     const events = [];
     for await (const ev of agent.runEvents('compute 1+2')) events.push(ev);
 
-    // 序列断言：覆盖 8 个 kind（不含 error）
+    // 序列断言：覆盖 10 kind（不含 error）—— Day 07 加 message_delta
     const kinds = events.map((e) => e.kind);
     expect(kinds).toEqual([
       'message_start',
@@ -43,6 +43,7 @@ describe('Agent.runEvents — event sequence', () => {
       'tool_result',
       'iteration', // 2
       'request', // 2
+      'message_delta', // 🆕 Day 07: final-answer iter 流式
       'response', // 2: content
       'message_end',
       'done',
@@ -63,9 +64,9 @@ describe('Agent.runEvents — event sequence', () => {
     expect(events.at(-1)).toEqual({ kind: 'done' });
   });
 
-  it('emits error event when loop throws', async () => {
-    // 2 次 toolCalls 但 maxIterations=2 → 第 2 次 chat 调用时进入下一轮前
-    // maxIterations 已经越界 → runEvents throws → for-await 冒泡
+  it('emits error event when loop exceeds maxIterations', async () => {
+    // 🆕 Day 07: error throw → yield（行为变更，灰区，肥老大 ack）
+    // 2 次 toolCalls 但 maxIterations=2 → 第 2 次循环后超限
     const chat = new FakeChatClient([
       {
         toolCalls: [{ id: 'tc_1', toolName: 'calculator', args: { expression: '1' } }],
@@ -78,19 +79,15 @@ describe('Agent.runEvents — event sequence', () => {
     tools.register(calculatorTool);
     const agent = new Agent({ chat, tools, maxIterations: 2 });
 
-    let caught: unknown = null;
-    try {
-      for await (const _ev of agent.runEvents('infinite')) {
-        // drain
-      }
-    } catch (err) {
-      caught = err;
-    }
+    // Day 07: 不再 throw，消费方拿到 error 事件，for-await 不抛
+    const events = [];
+    for await (const ev of agent.runEvents('infinite')) events.push(ev);
 
-    // runEvents 当前不在内部 catch（仍直接 throw），for-await 冒泡
-    // 后续 Day 06+ 也许会把 throw 转成 yield error 事件，但当前契约：throw 出去
-    expect(caught).toBeInstanceOf(Error);
-    expect((caught as Error).message).toMatch(/exceeded 2 iterations/);
+    const errorEvent = events.find((e) => e.kind === 'error');
+    expect(errorEvent).toBeDefined();
+    expect((errorEvent as { message: string }).message).toMatch(/exceeded 2 iterations/);
+    // error 后不发 done
+    expect(events.find((e) => e.kind === 'done')).toBeUndefined();
   });
 });
 

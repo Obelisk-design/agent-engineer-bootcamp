@@ -17,15 +17,35 @@
  * 把 LLM 调用的入参（累积 messages）和出参（ChatResponse）暴露给消费方。
  * 这是 Agent Runtime 事件模型的"过程快照"，前端可以可视化"为什么模型这么决定"。
  *
+ * Day 07 改造（Phase B Task 5 —— 核心改动）：
+ *
+ * 1) runEvents 加 options.signal：调用方可以中途 abort。
+ *    - signal.aborted 检查在每次 iter 起始 / chat/stream 完成后 / 每个 stream chunk 之后
+ *    - signal 触发 → yield {kind:'error', message:'aborted by signal'} → return（不发 done）
+ *
+ * 2) error throw → yield（行为变更，灰区，肥老大 ack）：
+ *    - maxIterations 超限 → yield error → return
+ *    - chat/stream 抛错 → catch → yield error → return
+ *    - signal.aborted → yield error → return
+ *    - run() 内部消费 runEvents 的 error 事件，转 throw new Error(message)（保持 Promise<string> 契约）
+ *
+ * 3) final-answer iter 切 stream()（Plan Task 5 简化方案）：
+ *    - 先 chat() 探测拿 usage
+ *    - 若 probe.content !== undefined → final-answer iter → 重调 stream() 流式 yield message_delta
+ *    - 若 probe.toolCalls → tool_calls iter，不流式（仍走 request/response）
+ *    - 代价：final-answer iter 双重调用 = 双重 token 计费（Day 10+ 评估一次 stream 方案）
+ *
+ * 4) usage 进 response 事件 + AgentEvent.response.usage 字段
+ *    - apps/api 层累积到 TraceCollector meta
+ *
  * 不做（YAGNI）：
  * - 并行 tool 执行
- * - Streaming tool calling（content 整段，不分 delta）
- * - AbortSignal / 取消
+ * - 流式 tool_calls（tool_calls iter 仍走 request/response，不流式中间态）
  * - 持久化 / 跨会话历史
- * - token 用量 / 延迟
+ * - latency / cost 进 response
  */
 
-import type { ChatClient, Message } from '../llm/index.js';
+import type { ChatClient, ChatResponse, Message } from '../llm/index.js';
 import type { ToolRegistry } from '../tools/index.js';
 import type { AgentEvent } from './event.js';
 
@@ -36,20 +56,25 @@ export interface AgentOptions {
   readonly maxIterations?: number;
 }
 
+export interface AgentRunOptions {
+  readonly signal?: AbortSignal;
+}
+
 export class Agent {
   constructor(private readonly options: AgentOptions) {}
 
-  async run(userInput: string): Promise<string> {
-    // 收尾版 run：委托给 runEvents，遇到 message_end 拿 content 退出。
+  async run(userInput: string, options?: AgentRunOptions): Promise<string> {
+    // 收尾版 run：委托给 runEvents，遇到 message_end 拿 content，遇到 error 转 throw。
     // 这样保证 run() 和 runEvents() 是同一份 loop 实现，不会分叉。
-    for await (const ev of this.runEvents(userInput)) {
+    for await (const ev of this.runEvents(userInput, options)) {
       if (ev.kind === 'message_end') return ev.content;
       if (ev.kind === 'error') throw new Error(ev.message);
     }
     return '';
   }
 
-  async *runEvents(userInput: string): AsyncIterable<AgentEvent> {
+  async *runEvents(userInput: string, options?: AgentRunOptions): AsyncIterable<AgentEvent> {
+    const signal = options?.signal;
     const messages: Message[] = [
       ...(this.options.systemPrompt !== undefined
         ? [{ role: 'system' as const, content: this.options.systemPrompt }]
@@ -62,6 +87,12 @@ export class Agent {
     yield { kind: 'message_start' };
 
     for (let i = 0; i < maxIterations; i++) {
+      // 🆕 Day 07: signal 检查在每次 iter 起始
+      if (signal?.aborted) {
+        yield { kind: 'error', message: 'aborted by signal' };
+        return;
+      }
+
       yield { kind: 'iteration', n: i + 1 };
 
       // 把当前累积的 messages 暴露出去（"调用过程快照"）
@@ -73,18 +104,57 @@ export class Agent {
         messages: messages.map((m) => ({ ...m })),
       };
 
-      const response = await this.options.chat.chat({
-        messages,
-        tools: toolDefs,
-      });
+      let response: ChatResponse;
+      try {
+        // 🆕 Day 07: 先 chat() 探测拿 usage + 判定 iter 类型
+        const probe = await this.options.chat.chat({ messages, tools: toolDefs }, options);
 
-      // 把 LLM 响应也暴露出去
-      const responseEvent: AgentEvent =
-        response.content !== undefined
-          ? { kind: 'response', iteration: i + 1, content: response.content }
-          : response.toolCalls !== undefined
-            ? { kind: 'response', iteration: i + 1, toolCalls: response.toolCalls }
-            : { kind: 'response', iteration: i + 1 };
+        // chat 后再检查一次 signal
+        if (signal?.aborted) {
+          yield { kind: 'error', message: 'aborted by signal' };
+          return;
+        }
+
+        if (probe.content !== undefined) {
+          // 🆕 Day 07: final-answer iter → 重调 stream() 流式 yield message_delta
+          let accumulated = '';
+          for await (const chunk of this.options.chat.stream({ messages }, options)) {
+            // 流式过程中 signal 检查（每个 chunk 后）
+            if (signal?.aborted) {
+              yield { kind: 'error', message: 'aborted by signal' };
+              return;
+            }
+            if (chunk.content) {
+              accumulated += chunk.content;
+              yield { kind: 'message_delta', content: chunk.content };
+            }
+          }
+          // 流式完成后，usage 用 probe 的（chat 探测时已拿到）
+          response = {
+            content: accumulated,
+            ...(probe.usage !== undefined ? { usage: probe.usage } : {}),
+          };
+        } else {
+          // tool_calls iter：不流式，直接用 probe
+          response = probe;
+        }
+      } catch (err) {
+        // 🆕 Day 07: error throw → yield（行为变更）
+        yield {
+          kind: 'error',
+          message: err instanceof Error ? err.message : String(err),
+        };
+        return;
+      }
+
+      // 把 LLM 响应也暴露出去（带 usage）
+      const responseEvent: AgentEvent = {
+        kind: 'response',
+        iteration: i + 1,
+        ...(response.content !== undefined ? { content: response.content } : {}),
+        ...(response.toolCalls !== undefined ? { toolCalls: response.toolCalls } : {}),
+        ...(response.usage !== undefined ? { usage: response.usage } : {}),
+      };
       yield responseEvent;
 
       // 普通回复路径：返回 content
@@ -149,6 +219,11 @@ export class Agent {
       return;
     }
 
-    throw new Error(`Agent loop exceeded ${maxIterations} iterations without final answer`);
+    // 🆕 Day 07: maxIterations 超限 → yield error（不 throw）
+    yield {
+      kind: 'error',
+      message: `Agent loop exceeded ${maxIterations} iterations without final answer`,
+    };
+    return;
   }
 }

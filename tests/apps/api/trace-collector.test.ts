@@ -76,7 +76,7 @@ describe('Trace Collector (POST /agent)', () => {
     expect(trace.startedAt).toBeLessThanOrEqual(trace.endedAt ?? Date.now());
     expect(trace.meta).toEqual({});
 
-    // 完整 8 kind 序列（不含 error）
+    // 完整 10 kind 序列（不含 error）—— Day 07 加 message_delta
     const kinds = trace.events.map((e) => e.kind);
     expect(kinds).toEqual([
       'message_start',
@@ -87,6 +87,7 @@ describe('Trace Collector (POST /agent)', () => {
       'tool_result',
       'iteration',
       'request',
+      'message_delta', // 🆕 Day 07
       'response',
       'message_end',
       'done',

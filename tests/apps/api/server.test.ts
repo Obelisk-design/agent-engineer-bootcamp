@@ -8,12 +8,18 @@ import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from '../../../
 class FakeChatClient implements ChatClient {
   private responses: ChatResponse[];
   private callIndex = 0;
+  public requests: ChatRequest[] = [];
 
   constructor(responses: ChatResponse[]) {
     this.responses = responses;
   }
 
-  async chat(_request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest): Promise<ChatResponse> {
+    // 🆕 Day 07: deep-copy messages (snapshot semantic)
+    this.requests.push({
+      ...request,
+      messages: request.messages.map((m) => ({ ...m })),
+    });
     const response = this.responses[this.callIndex];
     if (response === undefined) {
       throw new Error('FakeChatClient: no more mocked responses');
@@ -23,7 +29,12 @@ class FakeChatClient implements ChatClient {
   }
 
   async *stream(): AsyncGenerator<ChatChunk, void, undefined> {
-    yield { content: 'fake' };
+    // 🆕 Day 07 fallback：自动 yield chat response content 作为单 chunk
+    const lastIndex = this.callIndex - 1;
+    const lastResponse = this.responses[lastIndex];
+    if (lastResponse?.content !== undefined) {
+      yield { content: lastResponse.content };
+    }
   }
 
   setModel(): void {}
