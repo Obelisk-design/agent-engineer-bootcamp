@@ -10,10 +10,14 @@
  *   - meta 是 Record<string, unknown>，预留扩展点（Token/Latency/Cost/Permission...）
  * - LRU 32：只保留最近 32 次执行 —— Day 06 in-memory 够用，Day 10+ 评估持久化
  *
+ * Day 07 追加（Phase C Task 8）：
+ * - addMeta(runId, partial) 方法 —— partial shallow merge 到 trace.meta
+ * - 消费方（apps/api/server.ts）在累积 usage 时调：addMeta(runId, { usage: totalUsage })
+ *
  * 不做的事（YAGNI）：
  * - 持久化存储（Day 10+）
  * - Trace 查询 / 分页 / 过滤 API（Day 10+ Evaluation 阶段）
- * - Token/Latency/Cost 派生计算（Day 07+ 之后）
+ * - latency / cost 派生计算（Day 07+ 之后）
  * - 完整 LRU 算法（用 Map insertion order 简化：超 max 时删最早插入的）
  */
 
@@ -59,6 +63,20 @@ export class TraceCollector {
       return;
     }
     trace.events.push(ev);
+  }
+
+  /**
+   * 🆕 Day 07: shallow merge partial 到 trace.meta。
+   * - 调用方约定顶层 key（usage / latency / cost 等）
+   * - 不 throw —— best-effort，runId 不存在静默忽略
+   * - 不深拷贝 partial —— 调用方传值类型 / 不可变对象即可
+   */
+  addMeta(runId: string, partial: Record<string, unknown>): void {
+    const trace = this.traces.get(runId);
+    if (trace === undefined) return;
+    for (const [key, value] of Object.entries(partial)) {
+      trace.meta[key] = value;
+    }
   }
 
   /**
