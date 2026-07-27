@@ -43,7 +43,11 @@ const agent = new Agent({
 async function main() {
   // Day 05 起 Agent 推荐用 runEvents() 看完整事件流；这里手动打印 iteration 进度，
   // 不再走 onIteration 回调（回调跟 runEvents 是同一信息的两个出口，已删除）。
+  //
+  // 🆕 Day 07：final-answer iter 改流式（message_delta 事件），
+  //   response 事件携带 usage 字段，累积打印 token 用量。
   let answer = '';
+  let totalUsage: { promptTokens: number; completionTokens: number } | undefined;
   for await (const ev of agent.runEvents('用 calculator 工具计算 1+2*3')) {
     if (ev.kind === 'iteration') {
       console.log(`[openai-calculator] iteration=${ev.n}`);
@@ -51,11 +55,30 @@ async function main() {
       console.log(`[openai-calculator] tool_call name=${ev.name} args=${JSON.stringify(ev.args)}`);
     } else if (ev.kind === 'tool_result') {
       console.log(`[openai-calculator] tool_result output=${ev.output}`);
+    } else if (ev.kind === 'message_delta') {
+      // 🆕 Day 07：final-answer iter 流式文本增量
+      process.stdout.write(ev.content);
+    } else if (ev.kind === 'response' && ev.usage !== undefined) {
+      // 🆕 Day 07：单轮 token 用量 → 累积
+      totalUsage =
+        totalUsage === undefined
+          ? ev.usage
+          : {
+              promptTokens: totalUsage.promptTokens + ev.usage.promptTokens,
+              completionTokens: totalUsage.completionTokens + ev.usage.completionTokens,
+            };
     } else if (ev.kind === 'message_end') {
       answer = ev.content;
+    } else if (ev.kind === 'error') {
+      console.error(`[openai-calculator] error: ${ev.message}`);
     }
   }
-  console.log(`[openai-calculator] answer: ${answer}`);
+  if (totalUsage !== undefined) {
+    console.log(
+      `\n[openai-calculator] total usage: prompt=${totalUsage.promptTokens} completion=${totalUsage.completionTokens}`,
+    );
+  }
+  console.log(`\n[openai-calculator] answer: ${answer}`);
 }
 
 main().catch((err) => {
