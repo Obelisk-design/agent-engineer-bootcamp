@@ -17,14 +17,20 @@
  * - response 携带 LLM 返回的 ChatResponse（content 或 toolCalls）
  * - 配 iteration 编号方便 timeline 把 request/response 锚定到对应轮次
  *
+ * Day 07 追加：加 `message_delta` kind（10 kind）+ `response.usage` 可选字段。
+ * - message_delta：final-answer iter 流式 yield 文本增量。tool_calls iter 不流式（仍走 request/response）。
+ * - response.usage：单轮 LLM 调用的 token 用量（provider 返回的 ChatUsage）。
+ *   apps/api 层累积到 TraceCollector meta（totalUsage = 多轮 sum）。
+ *
  * 不做的事（YAGNI）：
  * - 事件序列号 / id（SSE 重连场景）
  * - 时间戳（消费方自己加）
  * - 分块 / partial JSON
- * - token 用量 / 延迟（provider 能力差异大，统一抽象成本高）
+ * - latency / cost 进 response（Day 10+ 评估）
  */
 
 import type { Message, ToolCallData } from '../llm/index.js';
+import type { ChatUsage } from '../llm/chat-client.js';
 
 export type AgentEvent =
   | { readonly kind: 'message_start' }
@@ -39,7 +45,9 @@ export type AgentEvent =
       readonly iteration: number;
       readonly content?: string;
       readonly toolCalls?: ReadonlyArray<ToolCallData>;
+      readonly usage?: ChatUsage; // 🆕 Day 07
     }
+  | { readonly kind: 'message_delta'; readonly content: string } // 🆕 Day 07
   | {
       readonly kind: 'tool_call';
       readonly id: string;
