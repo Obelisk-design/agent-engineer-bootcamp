@@ -27,13 +27,26 @@
  * - chat({ messages, tools }) 统一处理普通聊天和工具调用
  * - 返回 ChatResponse：{ content?, toolCalls? }
  *
+ * Day 07 加 signal + usage（Phase A Task 3）：
+ * - chat/stream 加 options?: ChatOptions 参数
+ * - signal 透传给 SDK（chat 用 create 第二参数 / stream 用 messages.stream 第二参数）
+ * - chat() parse response.usage → ChatResponse.usage
+ * - stream() 不暴露 usage（Plan Task 5 简化方案：chat 探测拿 usage）
+ *
  * 注意：调用方应通过环境变量提供 ANTHROPIC_AUTH_TOKEN / ANTHROPIC_BASE_URL /
  * ANTHROPIC_MODEL，永远不要硬编码到任何源文件。
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 
-import type { ChatClient, ChatRequest, ChatResponse, ChatChunk } from './chat-client.js';
+import type {
+  ChatClient,
+  ChatRequest,
+  ChatResponse,
+  ChatChunk,
+  ChatOptions,
+  ChatUsage,
+} from './chat-client.js';
 import type { Message } from './message.js';
 
 export interface AnthropicChatClientOptions {
@@ -57,25 +70,36 @@ export class AnthropicChatClient implements ChatClient {
     this.maxTokens = options.maxTokens ?? 1024;
   }
 
-  async chat(request: ChatRequest): Promise<ChatResponse> {
+  async chat(request: ChatRequest, options?: ChatOptions): Promise<ChatResponse> {
     const { messages, tools } = request;
     const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: this.maxTokens,
-      ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
-      messages: apiMessages,
-      ...(tools !== undefined && tools.length > 0
-        ? {
-            tools: tools.map((t) => ({
-              name: t.name,
-              description: t.description,
-              input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
-            })),
-          }
-        : {}),
-    });
+    const response = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: this.maxTokens,
+        ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
+        messages: apiMessages,
+        ...(tools !== undefined && tools.length > 0
+          ? {
+              tools: tools.map((t) => ({
+                name: t.name,
+                description: t.description,
+                input_schema: t.parameters as unknown as Anthropic.Tool.InputSchema,
+              })),
+            }
+          : {}),
+      },
+      options?.signal !== undefined ? { signal: options.signal } : {},
+    );
+
+    // 🆕 Day 07: parse token usage
+    const usage: ChatUsage | undefined = response.usage
+      ? {
+          promptTokens: response.usage.input_tokens,
+          completionTokens: response.usage.output_tokens,
+        }
+      : undefined;
 
     // Anthropic response.content 是 ContentBlock[] 判别联合；
     // tool_use 块表示模型决定调用工具。多个 tool_use = 一次返回多个并行调用。
@@ -89,15 +113,22 @@ export class AnthropicChatClient implements ChatClient {
           toolName: b.name,
           args: b.input as unknown,
         })),
+        ...(usage !== undefined ? { usage } : {}),
       };
     }
 
     // 普通回复路径：取首个 text block
     const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === 'text');
-    return { content: textBlock?.text ?? '' };
+    return {
+      content: textBlock?.text ?? '',
+      ...(usage !== undefined ? { usage } : {}),
+    };
   }
 
-  async *stream(request: ChatRequest): AsyncGenerator<ChatChunk, void, undefined> {
+  async *stream(
+    request: ChatRequest,
+    options?: ChatOptions,
+  ): AsyncGenerator<ChatChunk, void, undefined> {
     const { messages } = request;
     const { systemPrompt, apiMessages } = this.toApiMessages(messages);
 
@@ -112,12 +143,15 @@ export class AnthropicChatClient implements ChatClient {
     //         - CitationsDelta  (type: 'citations_delta')    —— 跳过
     //         - ThinkingDelta   (type: 'thinking_delta')     —— 跳过
     //         - SignatureDelta  (type: 'signature_delta')    —— 跳过
-    const stream = this.client.messages.stream({
-      model: this.model,
-      max_tokens: this.maxTokens,
-      ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
-      messages: apiMessages,
-    });
+    const stream = this.client.messages.stream(
+      {
+        model: this.model,
+        max_tokens: this.maxTokens,
+        ...(systemPrompt !== undefined ? { system: systemPrompt } : {}),
+        messages: apiMessages,
+      },
+      options?.signal !== undefined ? { signal: options.signal } : {},
+    );
 
     for await (const event of stream) {
       if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
