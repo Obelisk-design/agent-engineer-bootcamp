@@ -11,6 +11,12 @@
  * - `data` 用 JSON.stringify。JSON 字符串不含裸换行符，
  *   单行 SSE `data:` 一定合法，不需要拆多行。
  *
+ * Day 07 验证（Phase C Task 7）：
+ * - AgentEvent 加 message_delta kind → 自动通过 JSON.stringify 编码
+ * - response 事件加 usage? 字段 → 同样自动编码
+ * - 不需要改本文件代码 —— framework-agnostic 抽象的好处：
+ *   新增事件字段不需要修改 adapter 层。
+ *
  * 不做的事（YAGNI）：
  * - event id（重连场景）
  * - retry 字段
