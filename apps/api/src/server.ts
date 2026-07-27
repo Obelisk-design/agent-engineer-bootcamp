@@ -35,7 +35,6 @@ import { streamSSE } from 'hono/streaming';
 import type { Agent } from '../../../libs/agent/index.js';
 import type { ChatUsage } from '../../../libs/llm/chat-client.js';
 import { agentEventToSSEMessage } from './sse-adapter.js';
-import { loadWebIndexHtml } from './web-loader.js';
 import { TraceCollector } from './trace-collector.js';
 
 export interface AgentAppOptions {
@@ -45,14 +44,13 @@ export interface AgentAppOptions {
 
 /**
  * 构造一个绑定到指定 Agent 的 Hono app。
+ *
+ * 🆕 Day 08: 不再返回 HTML UI（前后端分离）。
+ * 前端是 apps/web（Vue + Vite），通过 dev proxy / 生产反代打到本 server。
  */
 export function createAgentApp(options: AgentAppOptions): Hono {
   const app = new Hono();
   const collector = options.collector ?? new TraceCollector();
-
-  // Day 06: 单页 Web UI
-  const html = loadWebIndexHtml();
-  app.get('/', (c) => c.html(html));
 
   // Day 06: Trace 查询路由
   app.get('/traces', (c) => c.json(collector.list()));

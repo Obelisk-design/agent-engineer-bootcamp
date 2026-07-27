@@ -174,21 +174,14 @@ describe('createAgentApp POST /agent', () => {
     expect(res.status).toBe(400);
   });
 
-  it('GET / returns the Agent Console HTML', async () => {
+  it('GET / returns 404 (frontend moved to apps/web, Day 08)', async () => {
     const chat = new FakeChatClient([]);
     const tools = new ToolRegistry();
     const agent = new Agent({ chat, tools });
     const app = createAgentApp({ agent });
 
     const res = await app.fetch(new Request('http://localhost/'));
-
-    expect(res.status).toBe(200);
-    expect(res.headers.get('content-type')).toMatch(/text\/html/);
-    const body = await res.text();
-    expect(body).toContain('Agent Console');
-    expect(body).toContain('id="conversation"');
-    expect(body).toContain('id="timeline"');
-    expect(body).toContain("fetch('/agent'");
+    expect(res.status).toBe(404);
   });
 
   it('emits error event when agent loop throws', async () => {
