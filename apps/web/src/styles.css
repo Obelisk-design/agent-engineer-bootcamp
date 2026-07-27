@@ -1,0 +1,327 @@
+/* apps/web/src/styles.css
+ *
+ * Agent Console 全局样式（从原 apps/api/src/web/index.html 内嵌 CSS 抽出）。
+ * 变量集中放在 :root，组件 scoped 样式可引用。
+ */
+
+:root {
+  --bg: #1a1a1a;
+  --bg-panel: #232323;
+  --bg-input: #1f1f1f;
+  --fg: #e6e6e6;
+  --fg-muted: #8b8b8b;
+  --accent: #4ade80;
+  --accent-blue: #60a5fa;
+  --accent-red: #f87171;
+  --border: #2e2e2e;
+  --user-bubble: #2a3f5f;
+  --ai-bubble: #1f3528;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============ 顶栏 ============ */
+header.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+header.app-header .title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+header.app-header .title .badge {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--fg-muted);
+  margin-left: 8px;
+}
+
+header.app-header .actions {
+  display: flex;
+  gap: 8px;
+}
+
+header.app-header button {
+  padding: 4px 10px;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+header.app-header button:hover {
+  border-color: var(--fg-muted);
+}
+
+header.app-header button.stop {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+/* ============ 双栏布局 ============ */
+main.panels {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  min-height: 0;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+}
+
+.panel:last-child {
+  border-right: none;
+}
+
+.panel-header {
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  flex-shrink: 0;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* ============ Message 气泡 ============ */
+.message {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.message .role {
+  font-size: 11px;
+  color: var(--fg-muted);
+  margin-bottom: 2px;
+}
+
+.message.user {
+  background: var(--user-bubble);
+  margin-left: auto;
+}
+
+.message.ai {
+  background: var(--ai-bubble);
+}
+
+.message.ai.streaming .streaming-body::after {
+  content: '▍';
+  color: var(--accent-blue);
+  animation: blink 1s steps(1) infinite;
+  margin-left: 1px;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.message.error {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid var(--accent-red);
+  color: var(--accent-red);
+}
+
+.message.thinking {
+  background: transparent;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.empty-hint {
+  color: var(--fg-muted);
+  text-align: center;
+  padding: 40px 16px;
+  font-size: 13px;
+}
+
+/* ============ Timeline 步骤 ============ */
+.timeline-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 6px;
+}
+
+.timeline-step.done {
+  border-left-color: var(--accent);
+}
+
+.timeline-step.active {
+  border-left-color: var(--accent-blue);
+  background: #1f2a3a;
+}
+
+.timeline-step.error {
+  border-left-color: var(--accent-red);
+}
+
+.timeline-step .icon {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--fg-muted);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.timeline-step.done .icon {
+  color: var(--accent);
+}
+
+.timeline-step.active .icon {
+  color: var(--accent-blue);
+}
+
+.timeline-step.error .icon {
+  color: var(--accent-red);
+}
+
+.timeline-step .body {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-step .step-label {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--fg);
+  font-size: 13px;
+}
+
+.timeline-step .step-detail {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #b8b8b8;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 6px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ============ 输入栏 ============ */
+footer.input-bar {
+  padding: 10px 16px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+textarea {
+  flex: 1;
+  min-height: 38px;
+  max-height: 120px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: none;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+button.action {
+  padding: 8px 18px;
+  background: var(--accent);
+  color: #0a0a0a;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  height: 38px;
+}
+
+button.action:disabled {
+  background: #4b5563;
+  cursor: not-allowed;
+}
+
+button.stop {
+  background: var(--accent-red);
+  color: #0a0a0a;
+}
+
+button.stop:hover {
+  background: #ef4444;
+}
+
+/* ============ 小屏堆叠 ============ */
+@media (max-width: 720px) {
+  main.panels {
+    grid-template-columns: 1fr;
+  }
+  .panel:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
