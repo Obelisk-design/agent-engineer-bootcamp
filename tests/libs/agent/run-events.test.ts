@@ -207,3 +207,98 @@ describe('Agent.runEvents — response event payload', () => {
     expect(responses[0]).not.toHaveProperty('toolCalls');
   });
 });
+
+/**
+ * 🆕 Day 07 新增测试场景：
+ * - signal abort 触发 yield error
+ * - chat 抛错被 catch 转 yield error
+ * - usage 字段正确从 response 事件透出
+ * - message_delta 累积与 message_end.content 一致
+ */
+describe('Agent.runEvents — signal and error yield (Day 07)', () => {
+  it('yields error event when signal aborts before first iteration', async () => {
+    const chat = new FakeChatClient([{ content: 'never used' }]);
+    const agent = new Agent({ chat, tools: new ToolRegistry() });
+    const controller = new AbortController();
+    controller.abort(); // 立即 abort
+
+    const events = [];
+    for await (const ev of agent.runEvents('hi', { signal: controller.signal })) {
+      events.push(ev);
+    }
+
+    const errorEvent = events.find((e) => e.kind === 'error');
+    expect(errorEvent).toBeDefined();
+    expect((errorEvent as { message: string }).message).toBe('aborted by signal');
+    // 不应进入 iteration / chat 调用
+    expect(events.find((e) => e.kind === 'iteration')).toBeUndefined();
+    expect(chat.requests).toHaveLength(0);
+  });
+
+  it('yields error event when chat throws', async () => {
+    // FakeChatClient.chat 当 responses 耗尽时 throw —— 用空 responses 触发
+    const chat = new FakeChatClient([]);
+    const agent = new Agent({ chat, tools: new ToolRegistry() });
+
+    const events = [];
+    for await (const ev of agent.runEvents('hi')) {
+      events.push(ev);
+    }
+
+    const errorEvent = events.find((e) => e.kind === 'error');
+    expect(errorEvent).toBeDefined();
+    expect((errorEvent as { message: string }).message).toMatch(/no more mocked responses/);
+  });
+
+  it('emits message_delta events during final-answer iteration', async () => {
+    const chat = new FakeChatClient([{ content: 'hi back' }]);
+    // streamChunks 精细控制：拆 3 个 chunk
+    chat.streamChunks.push([{ content: 'hi' }, { content: ' ' }, { content: 'back' }]);
+    const agent = new Agent({ chat, tools: new ToolRegistry() });
+
+    const events = [];
+    for await (const ev of agent.runEvents('hello')) events.push(ev);
+
+    const deltas = events.filter((e) => e.kind === 'message_delta');
+    expect(deltas).toHaveLength(3);
+    expect(deltas.map((e) => (e as { content: string }).content)).toEqual(['hi', ' ', 'back']);
+  });
+});
+
+describe('Agent.runEvents — usage accumulation (Day 07)', () => {
+  it('response event includes usage from chat', async () => {
+    const chat = new FakeChatClient([
+      {
+        content: 'answer',
+        usage: { promptTokens: 10, completionTokens: 5 },
+      },
+    ]);
+    const agent = new Agent({ chat, tools: new ToolRegistry() });
+
+    const responses = [];
+    for await (const ev of agent.runEvents('q')) {
+      if (ev.kind === 'response') responses.push(ev);
+    }
+
+    expect(responses[0]?.usage).toEqual({ promptTokens: 10, completionTokens: 5 });
+  });
+
+  it('final message_end event comes after stream accumulates full content', async () => {
+    const chat = new FakeChatClient([{ content: 'final answer' }]);
+    const agent = new Agent({ chat, tools: new ToolRegistry() });
+
+    let accumulatedDeltas = '';
+    let messageEndContent = '';
+    for await (const ev of agent.runEvents('q')) {
+      if (ev.kind === 'message_delta') {
+        accumulatedDeltas += (ev as { content: string }).content;
+      }
+      if (ev.kind === 'message_end') {
+        messageEndContent = (ev as { content: string }).content;
+      }
+    }
+
+    expect(accumulatedDeltas).toBe('final answer');
+    expect(messageEndContent).toBe('final answer');
+  });
+});
