@@ -13,6 +13,8 @@ export type {
   ChatRequest,
   ChatResponse,
   ChatChunk,
+  ChatOptions,
+  ChatUsage,
   ToolCallData,
 } from './chat-client.js';
 export type { OpenAIChatClientOptions } from './openai-chat-client.js';
