@@ -22,30 +22,17 @@ import { defaultAgentClient } from './api/agentClient.js';
 import Conversation from './components/Conversation.vue';
 import Timeline from './components/Timeline.vue';
 import InputBar from './components/InputBar.vue';
+import type { ConversationItem, TimelineItem } from './types/agentEvent.js';
 
 // ============ 状态 ============
 
-interface ConversationItem {
-  readonly role: 'user' | 'assistant' | 'thinking' | 'error';
-  readonly text: string;
-  readonly streaming: boolean;
-}
-
-interface TimelineItem {
-  readonly id: number;
-  readonly label: string;
-  readonly detail: string | null;
-  readonly status: 'done' | 'active' | 'error';
-  readonly collapsible: boolean;
-  readonly collapsibleOpen: boolean;
-  readonly summaryText: string | null;
-}
-
 const conversation = ref<ConversationItem[]>([]);
 const timeline = ref<TimelineItem[]>([]);
+const eventLog = ref<AgentEvent[]>([]);
 const isStreaming = ref(false);
 const isThinking = ref(false);
 const errorMessage = ref<string | null>(null);
+const isCancelled = ref(false);
 let timelineIdCounter = 0;
 let activeAbortController: AbortController | null = null;
 
@@ -59,7 +46,9 @@ const streamingIndex = computed(() =>
 function resetTurn(): void {
   conversation.value = [];
   timeline.value = [];
+  eventLog.value = [];
   errorMessage.value = null;
+  isCancelled.value = false;
 }
 
 function appendConversation(item: ConversationItem): void {
@@ -68,6 +57,10 @@ function appendConversation(item: ConversationItem): void {
 
 function appendTimeline(item: Omit<TimelineItem, 'id'>): void {
   timeline.value.push({ ...item, id: timelineIdCounter++ });
+}
+
+function createTimelineEntry(title: string, detail: string | null, status: TimelineItem['status'], kind: string, meta?: Record<string, unknown> | null): void {
+  appendTimeline({ title, detail, status, kind, meta: meta ?? null });
 }
 
 function scrollConversationToBottom(): void {
@@ -88,30 +81,31 @@ function scrollTimelineToBottom(): void {
 // ============ AgentEvent 路由（type-safe switch） ============
 
 function dispatch(ev: AgentEvent): void {
+  eventLog.value = [...eventLog.value, ev];
+
   switch (ev.kind) {
     case 'message_start':
       isThinking.value = true;
       appendConversation({ role: 'thinking', text: 'Agent 接收任务…', streaming: false });
-      appendTimeline({ label: '接收任务', detail: null, status: 'done', collapsible: false, collapsibleOpen: false, summaryText: null });
+      createTimelineEntry('Agent Start', 'Execution started', 'done', 'message_start');
       scrollConversationToBottom();
       scrollTimelineToBottom();
       break;
 
     case 'iteration':
-      appendTimeline({ label: `Iteration ${String(ev.n)}`, detail: null, status: 'active', collapsible: false, collapsibleOpen: false, summaryText: null });
+      createTimelineEntry(`Iteration ${String(ev.n)}`, null, 'active', 'iteration');
       scrollTimelineToBottom();
       break;
 
     case 'request': {
       const payload = { iteration: ev.iteration, messages: ev.messages };
-      appendTimeline({
-        label: `request · Iteration ${String(ev.iteration)}`,
-        detail: JSON.stringify(payload, null, 2),
-        status: 'active',
-        collapsible: true,
-        collapsibleOpen: false,
-        summaryText: '📨 查看 LLM 请求（messages 累计）',
-      });
+      createTimelineEntry(
+        `LLM Request · ${String(ev.iteration)}`,
+        JSON.stringify(payload, null, 2),
+        'active',
+        'request',
+        { model: 'model', messages: ev.messages.length },
+      );
       scrollTimelineToBottom();
       break;
     }
@@ -123,39 +117,28 @@ function dispatch(ev: AgentEvent): void {
         toolCalls: ev.toolCalls,
         usage: ev.usage,
       };
-      appendTimeline({
-        label: `response · Iteration ${String(ev.iteration)}`,
-        detail: JSON.stringify(payload, null, 2),
-        status: 'active',
-        collapsible: true,
-        collapsibleOpen: false,
-        summaryText: '🤖 查看 LLM 响应（含 usage）',
-      });
+      createTimelineEntry(
+        `LLM Response · ${String(ev.iteration)}`,
+        JSON.stringify(payload, null, 2),
+        'active',
+        'response',
+        {
+          content: ev.content ?? null,
+          toolCalls: ev.toolCalls?.length ?? 0,
+          usage: ev.usage ?? null,
+        },
+      );
       scrollTimelineToBottom();
       break;
     }
 
     case 'tool_call':
-      appendTimeline({
-        label: `调用 ${ev.name}`,
-        detail: JSON.stringify(ev.args),
-        status: 'active',
-        collapsible: false,
-        collapsibleOpen: false,
-        summaryText: null,
-      });
+      createTimelineEntry(`Tool Call · ${ev.name}`, JSON.stringify(ev.args, null, 2), 'active', 'tool_call');
       scrollTimelineToBottom();
       break;
 
     case 'tool_result':
-      appendTimeline({
-        label: 'Tool 返回',
-        detail: ev.output,
-        status: 'done',
-        collapsible: false,
-        collapsibleOpen: false,
-        summaryText: null,
-      });
+      createTimelineEntry('Tool Result', ev.output, 'done', 'tool_result');
       scrollTimelineToBottom();
       break;
 
@@ -191,26 +174,23 @@ function dispatch(ev: AgentEvent): void {
         isThinking.value = false;
         appendConversation({ role: 'assistant', text: ev.content, streaming: false });
       }
-      appendTimeline({
-        label: '生成答案',
-        detail: null,
-        status: 'done',
-        collapsible: false,
-        collapsibleOpen: false,
-        summaryText: null,
-      });
+      createTimelineEntry('Final Answer', ev.content, 'done', 'message_end');
       scrollConversationToBottom();
       scrollTimelineToBottom();
       break;
     }
 
     case 'done':
-      appendTimeline({ label: '完成', detail: null, status: 'done', collapsible: false, collapsibleOpen: false, summaryText: null });
+      createTimelineEntry('Done', null, 'done', 'done');
       scrollTimelineToBottom();
       break;
 
     case 'error':
       isThinking.value = false;
+      const friendlyError = ev.message === 'aborted by signal' ? '已取消当前执行' : ev.message;
+      if (ev.message === 'aborted by signal') {
+        isCancelled.value = true;
+      }
       // finalize streaming bubble (保留已写内容)
       const errIdx = streamingIndex.value;
       if (errIdx >= 0) {
@@ -219,16 +199,9 @@ function dispatch(ev: AgentEvent): void {
           conversation.value[errIdx] = { ...existing, streaming: false };
         }
       }
-      appendConversation({ role: 'error', text: ev.message, streaming: false });
-      appendTimeline({
-        label: '错误',
-        detail: ev.message,
-        status: 'error',
-        collapsible: false,
-        collapsibleOpen: false,
-        summaryText: null,
-      });
-      errorMessage.value = ev.message;
+      appendConversation({ role: 'error', text: friendlyError, streaming: false });
+      createTimelineEntry('Error', friendlyError, 'error', 'error');
+      errorMessage.value = friendlyError;
       scrollConversationToBottom();
       scrollTimelineToBottom();
       break;
@@ -256,14 +229,7 @@ async function send(input: string): Promise<void> {
     isThinking.value = false;
     const msg = err instanceof Error ? err.message : String(err);
     appendConversation({ role: 'error', text: msg, streaming: false });
-    appendTimeline({
-      label: '请求失败',
-      detail: msg,
-      status: 'error',
-      collapsible: false,
-      collapsibleOpen: false,
-      summaryText: null,
-    });
+    createTimelineEntry('Request Failed', msg, 'error', 'error');
     errorMessage.value = msg;
     scrollConversationToBottom();
     scrollTimelineToBottom();
@@ -293,6 +259,7 @@ function clear(): void {
       <span class="badge">Day 08 · Vue + Vite 前端分离</span>
     </div>
     <div class="actions">
+      <span v-if="isCancelled" class="status-pill">Execution cancelled</span>
       <button
         v-if="isStreaming"
         class="stop"

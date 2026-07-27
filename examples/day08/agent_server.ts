@@ -56,7 +56,8 @@ server.on('listening', () => {
   if (address === null) {
     throw new Error('server address is null after listening');
   }
-  const url = `http://127.0.0.1:${String(address.port)}`;
+  const portValue = typeof address === 'string' ? Number(address) : address.port;
+  const url = `http://127.0.0.1:${String(portValue)}`;
   console.log(`[day08-server] listening on ${url}`);
   console.log(`[day08-server] POST SSE endpoint: ${url}/agent`);
   console.log(`[day08-server] GET traces: ${url}/traces`);
