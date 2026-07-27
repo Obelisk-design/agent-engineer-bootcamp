@@ -78,10 +78,15 @@ describe('Agent Console index.html', () => {
   });
 
   it('shows the user input in Conversation and timeline steps in Timeline', () => {
-    // 左栏 message role classes
+    // 左栏 message role classes —— 🆕 Day 07: 'ai' 替换为 streaming 机制
     expect(html).toContain("'user'");
-    expect(html).toContain("'ai'");
     expect(html).toContain("'error'");
+    // 'thinking' 用作 className（含空格，非 quoted 字符串）
+    expect(html).toContain("'message thinking'");
+    // 🆕 Day 07: streaming bubble class + append function
+    expect(html).toContain("'message ai streaming'");
+    expect(html).toContain('appendStreamingDelta');
+    expect(html).toContain('finalizeStreamingBubble');
     // 右栏 timeline status
     expect(html).toContain('timeline-step');
     expect(html).toContain('addTimelineStep');

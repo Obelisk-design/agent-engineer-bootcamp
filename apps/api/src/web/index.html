@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Agent Console — Day 06</title>
+    <title>Agent Console — Day 07</title>
     <style>
       :root {
         --bg: #1a1a1a;
@@ -129,6 +129,18 @@
       }
       .message.ai {
         background: var(--ai-bubble);
+      }
+      .message.ai.streaming .streaming-body::after {
+        /* 🆕 Day 07：打字机光标效果 */
+        content: '▍';
+        color: var(--accent-blue);
+        animation: blink 1s steps(1) infinite;
+        margin-left: 1px;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
       }
       .message.error {
         background: rgba(248, 113, 113, 0.15);
@@ -271,7 +283,7 @@
     <header>
       <div class="title">
         Agent Console
-        <span class="badge">Day 06 · POST /agent · SSE</span>
+        <span class="badge">Day 07 · 流式 + signal + usage</span>
       </div>
       <div class="actions">
         <button id="clear-btn">Clear</button>
@@ -310,6 +322,8 @@
       const timelineEl = document.getElementById('timeline');
 
       // ============ Conversation（左栏）============
+      // 🆕 Day 07：streaming bubble —— message_delta 累加到当前 AI 气泡文本节点
+      let streamingBubble = null;
       function addMessage(role, content, opts) {
         const opt = opts || {};
         // 清掉 empty-hint
@@ -338,6 +352,39 @@
         el.textContent = text;
         conversationEl.appendChild(el);
         conversationEl.scrollTop = conversationEl.scrollHeight;
+      }
+      // 🆕 Day 07：创建 streaming bubble（empty content，message_delta 累加）
+      function startStreamingBubble() {
+        const hint = conversationEl.querySelector('.empty-hint');
+        if (hint) hint.remove();
+        const el = document.createElement('div');
+        el.className = 'message ai streaming';
+        const roleEl = document.createElement('div');
+        roleEl.className = 'role';
+        roleEl.textContent = 'AI';
+        el.appendChild(roleEl);
+        const body = document.createElement('div');
+        body.className = 'streaming-body';
+        el.appendChild(body);
+        conversationEl.appendChild(el);
+        streamingBubble = body;
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+        return body;
+      }
+      // 🆕 Day 07：message_delta → append to streamingBubble
+      function appendStreamingDelta(text) {
+        if (streamingBubble === null) {
+          startStreamingBubble();
+        }
+        streamingBubble.textContent += text;
+        conversationEl.scrollTop = conversationEl.scrollHeight;
+      }
+      // 🆕 Day 07：message_end → finalize streaming bubble（去掉 streaming 类）
+      function finalizeStreamingBubble() {
+        if (streamingBubble !== null) {
+          streamingBubble.parentElement.classList.remove('streaming');
+          streamingBubble = null;
+        }
       }
 
       // ============ Execution Timeline（右栏）============
@@ -413,12 +460,13 @@
               iteration: ev.iteration,
               content: ev.content,
               toolCalls: ev.toolCalls,
+              usage: ev.usage,
             };
             addTimelineStep(
               'response · Iteration ' + ev.iteration,
               JSON.stringify(payload, null, 2),
               'active',
-              { collapsible: true, summaryText: '🤖 查看 LLM 响应' },
+              { collapsible: true, summaryText: '🤖 查看 LLM 响应（含 usage）' },
             );
             break;
           }
@@ -428,10 +476,19 @@
           case 'tool_result':
             addTimelineStep('Tool 返回', ev.output, 'done');
             break;
+          case 'message_delta':
+            // 🆕 Day 07：打字机效果 —— append to streaming bubble
+            appendStreamingDelta(ev.content);
+            break;
           case 'message_end':
+            // 🆕 Day 07：finalize streaming bubble（不重建）
             setThinking(null);
-            addMessage('ai', ev.content, { roleLabel: 'AI' });
-            addTimelineStep('生成答案', ev.content, 'done');
+            finalizeStreamingBubble();
+            addTimelineStep('生成答案', null, 'done', {
+              collapsible: true,
+              collapsibleOpen: false,
+              summaryText: '查看最终答案',
+            });
             break;
           case 'done':
             addTimelineStep('完成', null, 'done');
