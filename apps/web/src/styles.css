@@ -1,3 +1,4 @@
+@import "tailwindcss";
 /* apps/web/src/styles.css
  *
  * Agent Console 全局样式（从原 apps/api/src/web/index.html 内嵌 CSS 抽出）。
