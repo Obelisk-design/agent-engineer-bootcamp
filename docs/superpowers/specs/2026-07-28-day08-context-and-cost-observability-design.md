@@ -421,7 +421,7 @@ export default {
 4. **week 4 超时** — count_tokens 自身可能慢（~100ms）。**带 signal** 让 abort 路径快速失败。
 5. **未知 model 静默** — 用户用了 `MODELS` 注册表里没有的 model（如 `gpt-4.1`），context 事件不 yield，UI 显示空。**不在 UI 报错**（避免误导），但前端 console.warn 提示。
 6. **Tailwind 4 与 Vue SFC 兼容性** — `@tailwindcss/vite` 是官方 Vite 插件，Vite 项目主流方案；旧 scoped CSS 在 Vue 3 SFC 与 Tailwind 4 无冲突（utility 全局、scoped 局部）。
-7. **三栏布局响应式** — 移动端 240px sidebar 会挤掉 conversation。**Day 08 不做移动端适配**（CLAUDE.md 不要求），viewport < 768px 直接 sidebar 折叠为顶部。
+7. **三栏布局响应式** — 移动端 240px sidebar 会挤掉 conversation。**Day 08 不做移动端适配**（CLAUDE.md 不要求），viewport < 768px 时 sidebar 仍占 240px（横滚动），未来再 fold。
 8. **`run_summary` 累积精度** — 多次 iter 累加 token 可能浮点漂移。但 token 是整数，**无浮点问题**（仅 cost 才需要担心）。
 9. **run_summary 在 error 路径** — tool_calls 失败 / network abort 时，totalToken 是 partial。在 UI 上明确标"partial"（橙色 badge），不误导。
 
