@@ -4,6 +4,9 @@ import { Agent } from '../../../libs/agent/index.js';
 import { ToolRegistry, calculatorTool } from '../../../libs/tools/index.js';
 import { FakeChatClient } from './shared/fake-chat-client.js';
 
+const hasAnthropicKey =
+  process.env.ANTHROPIC_API_KEY !== undefined && process.env.ANTHROPIC_API_KEY !== '';
+
 /**
  * Day 06 CI smoke tests for Agent.runEvents().
  *
@@ -32,7 +35,8 @@ describe('Agent.runEvents — event sequence', () => {
     const events = [];
     for await (const ev of agent.runEvents('compute 1+2')) events.push(ev);
 
-    // 序列断言：覆盖 10 kind（不含 error）—— Day 07 加 message_delta
+    // 序列断言：覆盖 11 kind（不含 error / context）—— Day 07 加 message_delta；Day 08 加 run_summary
+    // 注：calculator-flow 测试不传 model → 不 yield context 事件
     const kinds = events.map((e) => e.kind);
     expect(kinds).toEqual([
       'message_start',
@@ -43,8 +47,9 @@ describe('Agent.runEvents — event sequence', () => {
       'tool_result',
       'iteration', // 2
       'request', // 2
-      'message_delta', // 🆕 Day 07: final-answer iter 流式
+      'message_delta', // Day 07: final-answer iter 流式
       'response', // 2: content
+      'run_summary', // 🆕 Day 08: before message_end
       'message_end',
       'done',
     ]);
@@ -59,8 +64,20 @@ describe('Agent.runEvents — event sequence', () => {
     for await (const ev of agent.runEvents('hello')) events.push(ev);
 
     expect(events[0]?.kind).toBe('message_start');
+    const context = events.find((e) => e.kind === 'context');
+    expect(context).toBeUndefined(); // no model passed → no context event
     const messageEnd = events.find((e) => e.kind === 'message_end');
     expect(messageEnd).toEqual({ kind: 'message_end', content: 'hi' });
+    // run_summary 出现在 message_end 之前
+    const runSummary = events.find((e) => e.kind === 'run_summary');
+    expect(runSummary).toBeDefined();
+    expect(runSummary).toMatchObject({
+      kind: 'run_summary',
+      totalPromptTokens: 0,
+      totalCompletionTokens: 0,
+      peakPromptTokens: 0,
+      iterations: 1,
+    });
     expect(events.at(-1)).toEqual({ kind: 'done' });
   });
 
@@ -88,6 +105,23 @@ describe('Agent.runEvents — event sequence', () => {
     expect((errorEvent as { message: string }).message).toMatch(/exceeded 2 iterations/);
     // error 后不发 done
     expect(events.find((e) => e.kind === 'done')).toBeUndefined();
+  });
+
+  it.runIf(hasAnthropicKey)('emits context event when model is provided', async () => {
+    const chat = new FakeChatClient([{ content: 'hi' }]);
+    const tools = new ToolRegistry();
+    const agent = new Agent({ chat, tools, model: 'claude-opus-5' });
+
+    const events = [];
+    for await (const ev of agent.runEvents('hello')) events.push(ev);
+
+    const context = events.find((e) => e.kind === 'context');
+    expect(context).toBeDefined();
+    if (context?.kind === 'context') {
+      expect(context.iteration).toBe(1);
+      expect(context.limit).toBe(1_000_000);
+      expect(context.promptTokens).toBeGreaterThan(0);
+    }
   });
 });
 
