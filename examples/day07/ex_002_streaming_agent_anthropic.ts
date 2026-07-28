@@ -40,6 +40,7 @@ const agent = new Agent({
   chat,
   tools,
   systemPrompt: 'You are a helpful assistant. Keep your answer short (under 100 words).',
+  model,
 });
 
 async function main() {

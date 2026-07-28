@@ -48,6 +48,7 @@ const agent = new Agent({
   chat,
   tools,
   systemPrompt: 'You are a helpful assistant. Prefer using available tools over guessing.',
+  model,
 });
 
 const app = createAgentApp({ agent });

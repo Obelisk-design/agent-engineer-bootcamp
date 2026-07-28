@@ -43,6 +43,7 @@ const agent = new Agent({
   chat,
   tools,
   systemPrompt: 'You are a helpful assistant. Prefer using available tools over guessing.',
+  model,
 });
 
 // 关键：Day 06 加了 collector 注入，让 demo 拿同一实例查 trace
