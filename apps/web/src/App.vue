@@ -22,6 +22,8 @@ import { defaultAgentClient } from './api/agentClient.js';
 import Conversation from './components/Conversation.vue';
 import Timeline from './components/Timeline.vue';
 import InputBar from './components/InputBar.vue';
+import HeaderPill from './components/HeaderPill.vue';
+import MetricsSidebar from './components/MetricsSidebar.vue';
 import type { ConversationItem, TimelineItem } from './types/agentEvent.js';
 
 // ============ 状态 ============
@@ -36,6 +38,21 @@ const isCancelled = ref(false);
 let timelineIdCounter = 0;
 let activeAbortController: AbortController | null = null;
 
+interface ContextRow {
+  readonly iteration: number;
+  readonly promptTokens: number;
+  readonly limit: number;
+}
+interface RunSummary {
+  readonly totalPromptTokens: number;
+  readonly totalCompletionTokens: number;
+  readonly peakPromptTokens: number;
+  readonly iterations: number;
+}
+const runSummary = ref<RunSummary | null>(null);
+const runContexts = ref<ContextRow[]>([]);
+const contextLimit = ref<number>(200_000); // fallback, updated when context event arrives
+
 /** 当前 streaming bubble 引用 —— 用来 append message_delta */
 const streamingIndex = computed(() =>
   conversation.value.findIndex((c) => c.role === 'assistant' && c.streaming),
@@ -49,6 +66,8 @@ function resetTurn(): void {
   eventLog.value = [];
   errorMessage.value = null;
   isCancelled.value = false;
+  runSummary.value = null;
+  runContexts.value = [];
 }
 
 function appendConversation(item: ConversationItem): void {
@@ -75,6 +94,13 @@ function scrollTimelineToBottom(): void {
   nextTick(() => {
     const el = document.getElementById('timeline-body');
     if (el !== null) el.scrollTop = el.scrollHeight;
+  });
+}
+
+function scrollToIteration(n: number): void {
+  nextTick(() => {
+    const el = document.querySelector(`[data-iteration="${n}"]`);
+    if (el !== null) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
 
@@ -141,6 +167,31 @@ function dispatch(ev: AgentEvent): void {
       createTimelineEntry('Tool Result', ev.output, 'done', 'tool_result');
       scrollTimelineToBottom();
       break;
+
+    case 'context': {
+      runContexts.value = [...runContexts.value, {
+        iteration: ev.iteration,
+        promptTokens: ev.promptTokens,
+        limit: ev.limit,
+      }];
+      scrollTimelineToBottom();
+      break;
+    }
+
+    case 'run_summary': {
+      runSummary.value = {
+        totalPromptTokens: ev.totalPromptTokens,
+        totalCompletionTokens: ev.totalCompletionTokens,
+        peakPromptTokens: ev.peakPromptTokens,
+        iterations: ev.iterations,
+      };
+      if (runContexts.value.length > 0) {
+        const lastCtx = runContexts.value[runContexts.value.length - 1];
+        if (lastCtx !== undefined) contextLimit.value = lastCtx.limit;
+      }
+      scrollTimelineToBottom();
+      break;
+    }
 
     case 'message_delta': {
       // 打字机：append 到当前 streaming bubble（如果有），否则创建新的
@@ -256,9 +307,10 @@ function clear(): void {
   <header class="app-header">
     <div class="title">
       Agent Console
-      <span class="badge">Day 08 · Vue + Vite 前端分离</span>
+      <span class="badge">Day 08 · Context Window + Tailwind</span>
     </div>
-    <div class="actions">
+    <div class="flex items-center gap-3">
+      <HeaderPill :summary="runSummary" :context-limit="contextLimit" />
       <span v-if="isCancelled" class="status-pill">Execution cancelled</span>
       <button
         v-if="isStreaming"
@@ -272,7 +324,12 @@ function clear(): void {
     </div>
   </header>
 
-  <main class="panels">
+  <main class="panels grid grid-cols-[240px_1fr_360px]">
+    <MetricsSidebar
+      :contexts="runContexts"
+      :summary="runSummary"
+      @scroll-to-iteration="scrollToIteration"
+    />
     <Conversation :items="conversation" />
     <Timeline :items="timeline" />
   </main>
