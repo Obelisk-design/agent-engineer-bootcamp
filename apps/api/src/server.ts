@@ -100,6 +100,16 @@ export function createAgentApp(options: AgentAppOptions): Hono {
                   };
           }
 
+          // 🆕 Day 08: run_summary 时写 context 进 meta
+          if (ev.kind === 'run_summary') {
+            collector.addMeta(runId, {
+              context: {
+                peakPromptTokens: ev.peakPromptTokens,
+                iterations: ev.iterations,
+              },
+            });
+          }
+
           // 终止事件：写 meta + end
           if (ev.kind === 'message_end' || ev.kind === 'error') {
             if (totalUsage !== undefined) {
