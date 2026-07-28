@@ -109,6 +109,38 @@ describe('POST /agent end-to-end (CI smoke)', () => {
     expect(body).not.toContain('event: tool_call');
   });
 
+  it('writes meta.context from run_summary event', async () => {
+    const chat = new FakeChatClient([{ content: 'hi back' }]);
+    const tools = new ToolRegistry();
+    const agent = new Agent({ chat, tools });
+    const app = createAgentApp({ agent });
+
+    const res = await app.fetch(
+      new Request('http://localhost/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: 'hello' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    await readSSEResponse(res); // drain the SSE stream
+
+    // Get the latest trace
+    const tracesResponse = await app.fetch(new Request('http://localhost/traces'));
+    const traces = (await tracesResponse.json()) as Array<{
+      meta: Record<string, unknown>;
+    }>;
+    const latestTrace = traces[0];
+    expect(latestTrace).toBeDefined();
+
+    // Assert meta.context is populated
+    expect(latestTrace.meta.context).toBeDefined();
+    expect(latestTrace.meta.context).toMatchObject({
+      peakPromptTokens: expect.any(Number),
+      iterations: expect.any(Number),
+    });
+  });
+
   it('second LLM call receives messages including tool result', async () => {
     const chat = new FakeChatClient([
       {
