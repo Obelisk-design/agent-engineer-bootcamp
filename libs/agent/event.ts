@@ -22,6 +22,10 @@
  * - response.usage：单轮 LLM 调用的 token 用量（provider 返回的 ChatUsage）。
  *   apps/api 层累积到 TraceCollector meta（totalUsage = 多轮 sum）。
  *
+ * Day 08 追加：加 `context` / `run_summary` 两种事件（12 kind 总计）。
+ * - context：每次 LLM 调用前 yield，携带 promptTokens 与 contextLimit。前端 HeaderPill / Sidebar 消费。
+ * - run_summary：message_end / error 之前 yield，携带累积的 totalPromptTokens / totalCompletionTokens / peakPromptTokens / iterations。
+ *
  * 不做的事（YAGNI）：
  * - 事件序列号 / id（SSE 重连场景）
  * - 时间戳（消费方自己加）
@@ -49,6 +53,12 @@ export type AgentEvent =
     }
   | { readonly kind: 'message_delta'; readonly content: string } // 🆕 Day 07
   | {
+      readonly kind: 'context';
+      readonly iteration: number;
+      readonly promptTokens: number;
+      readonly limit: number;
+    } // 🆕 Day 08
+  | {
       readonly kind: 'tool_call';
       readonly id: string;
       readonly name: string;
@@ -61,5 +71,12 @@ export type AgentEvent =
       readonly output: string;
     }
   | { readonly kind: 'message_end'; readonly content: string }
+  | {
+      readonly kind: 'run_summary';
+      readonly totalPromptTokens: number;
+      readonly totalCompletionTokens: number;
+      readonly peakPromptTokens: number;
+      readonly iterations: number;
+    } // 🆕 Day 08
   | { readonly kind: 'done' }
   | { readonly kind: 'error'; readonly message: string };
