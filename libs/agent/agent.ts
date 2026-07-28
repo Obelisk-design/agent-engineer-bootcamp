@@ -102,6 +102,14 @@ export class Agent {
     for (let i = 0; i < maxIterations; i++) {
       // 🆕 Day 07: signal 检查在每次 iter 起始
       if (signal?.aborted) {
+        // 🆕 Day 08: run_summary 先于 error 发出（partial 累加）
+        yield {
+          kind: 'run_summary',
+          totalPromptTokens,
+          totalCompletionTokens,
+          peakPromptTokens,
+          iterations: iterationsCompleted,
+        };
         yield { kind: 'error', message: 'aborted by signal' };
         return;
       }
@@ -142,6 +150,14 @@ export class Agent {
 
         // chat 后再检查一次 signal
         if (signal?.aborted) {
+          // 🆕 Day 08: run_summary 先于 error 发出（partial 累加）
+          yield {
+            kind: 'run_summary',
+            totalPromptTokens,
+            totalCompletionTokens,
+            peakPromptTokens,
+            iterations: iterationsCompleted,
+          };
           yield { kind: 'error', message: 'aborted by signal' };
           return;
         }
@@ -152,6 +168,14 @@ export class Agent {
           for await (const chunk of this.options.chat.stream({ messages }, options)) {
             // 流式过程中 signal 检查（每个 chunk 后）
             if (signal?.aborted) {
+              // 🆕 Day 08: run_summary 先于 error 发出（partial 累加）
+              yield {
+                kind: 'run_summary',
+                totalPromptTokens,
+                totalCompletionTokens,
+                peakPromptTokens,
+                iterations: iterationsCompleted,
+              };
               yield { kind: 'error', message: 'aborted by signal' };
               return;
             }
@@ -171,6 +195,14 @@ export class Agent {
         }
       } catch (err) {
         // 🆕 Day 07: error throw → yield（行为变更）
+        // 🆕 Day 08: run_summary 先于 error 发出（partial 累加）
+        yield {
+          kind: 'run_summary',
+          totalPromptTokens,
+          totalCompletionTokens,
+          peakPromptTokens,
+          iterations: iterationsCompleted,
+        };
         yield {
           kind: 'error',
           message: err instanceof Error ? err.message : String(err),
