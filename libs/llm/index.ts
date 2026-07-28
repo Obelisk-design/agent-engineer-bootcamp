@@ -21,3 +21,7 @@ export type { OpenAIChatClientOptions } from './openai-chat-client.js';
 export { OpenAIChatClient } from './openai-chat-client.js';
 export type { AnthropicChatClientOptions } from './anthropic-chat-client.js';
 export { AnthropicChatClient } from './anthropic-chat-client.js';
+
+// 🆕 Day 08
+export type { ModelMeta, ContextCountResult } from './observability/index.js';
+export { MODELS, getModelMeta, countContextTokens } from './observability/index.js';
