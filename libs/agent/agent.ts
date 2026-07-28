@@ -38,6 +38,11 @@
  * 4) usage 进 response 事件 + AgentEvent.response.usage 字段
  *    - apps/api 层累积到 TraceCollector meta
  *
+ * Day 08 改造：
+ * - AgentOptions 加 model 字段（可选；用于 Anthropic count_tokens 调上下文观测）
+ * - runEvents 在每次 LLM 调用前 yield `context` 事件（best-effort，失败/未知 model 不 yield）
+ * - runEvents 在 message_end / error 之前 yield `run_summary` 事件（累积 usage + peak）
+ *
  * 不做（YAGNI）：
  * - 并行 tool 执行
  * - 流式 tool_calls（tool_calls iter 仍走 request/response，不流式中间态）
@@ -46,6 +51,7 @@
  */
 
 import type { ChatClient, ChatResponse, Message } from '../llm/index.js';
+import { countContextTokens, getModelMeta } from '../llm/index.js';
 import type { ToolRegistry } from '../tools/index.js';
 import type { AgentEvent } from './event.js';
 
@@ -54,6 +60,7 @@ export interface AgentOptions {
   readonly tools: ToolRegistry;
   readonly systemPrompt?: string;
   readonly maxIterations?: number;
+  readonly model?: string; // 🆕 Day 08: 必需 if context observability 启用；未知 model → context 事件不 yield
 }
 
 export interface AgentRunOptions {
@@ -86,6 +93,12 @@ export class Agent {
 
     yield { kind: 'message_start' };
 
+    // 🆕 Day 08: 累积 token / context 状态
+    let totalPromptTokens = 0;
+    let totalCompletionTokens = 0;
+    let peakPromptTokens = 0;
+    let iterationsCompleted = 0;
+
     for (let i = 0; i < maxIterations; i++) {
       // 🆕 Day 07: signal 检查在每次 iter 起始
       if (signal?.aborted) {
@@ -103,6 +116,24 @@ export class Agent {
         iteration: i + 1,
         messages: messages.map((m) => ({ ...m })),
       };
+
+      // 🆕 Day 08: context 计数（best-effort，失败不打断主流程）
+      const model = this.options.model;
+      if (model !== undefined) {
+        const meta = getModelMeta(model);
+        if (meta !== undefined) {
+          const ctxResult = await countContextTokens(messages, model, signal);
+          if (ctxResult !== undefined) {
+            yield {
+              kind: 'context',
+              iteration: i + 1,
+              promptTokens: ctxResult.tokens,
+              limit: meta.contextLimit,
+            };
+            peakPromptTokens = Math.max(peakPromptTokens, ctxResult.tokens);
+          }
+        }
+      }
 
       let response: ChatResponse;
       try {
@@ -147,6 +178,13 @@ export class Agent {
         return;
       }
 
+      // 🆕 Day 08: 累积 usage（不论 success / error 路径都累加）
+      if (response.usage !== undefined) {
+        totalPromptTokens += response.usage.promptTokens;
+        totalCompletionTokens += response.usage.completionTokens;
+      }
+      iterationsCompleted = i + 1;
+
       // 把 LLM 响应也暴露出去（带 usage）
       const responseEvent: AgentEvent = {
         kind: 'response',
@@ -159,6 +197,14 @@ export class Agent {
 
       // 普通回复路径：返回 content
       if (response.content !== undefined) {
+        // 🆕 Day 08: run_summary 先于 message_end 发出
+        yield {
+          kind: 'run_summary',
+          totalPromptTokens,
+          totalCompletionTokens,
+          peakPromptTokens,
+          iterations: iterationsCompleted,
+        };
         yield { kind: 'message_end', content: response.content };
         yield { kind: 'done' };
         return;
@@ -214,12 +260,28 @@ export class Agent {
       }
 
       // 既没有 content 也没有 toolCalls：返回空字符串
+      // 🆕 Day 08: run_summary 先于 message_end
+      yield {
+        kind: 'run_summary',
+        totalPromptTokens,
+        totalCompletionTokens,
+        peakPromptTokens,
+        iterations: iterationsCompleted,
+      };
       yield { kind: 'message_end', content: '' };
       yield { kind: 'done' };
       return;
     }
 
     // 🆕 Day 07: maxIterations 超限 → yield error（不 throw）
+    // 🆕 Day 08: error 之前 yield run_summary（partial 累加也给前端看）
+    yield {
+      kind: 'run_summary',
+      totalPromptTokens,
+      totalCompletionTokens,
+      peakPromptTokens,
+      iterations: iterationsCompleted,
+    };
     yield {
       kind: 'error',
       message: `Agent loop exceeded ${maxIterations} iterations without final answer`,
