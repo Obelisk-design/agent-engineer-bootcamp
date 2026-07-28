@@ -134,8 +134,8 @@ describe('POST /agent end-to-end (CI smoke)', () => {
     expect(latestTrace).toBeDefined();
 
     // Assert meta.context is populated
-    expect(latestTrace.meta.context).toBeDefined();
-    expect(latestTrace.meta.context).toMatchObject({
+    expect(latestTrace!.meta.context).toBeDefined();
+    expect(latestTrace!.meta.context).toMatchObject({
       peakPromptTokens: expect.any(Number),
       iterations: expect.any(Number),
     });
