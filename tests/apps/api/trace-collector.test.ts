@@ -74,9 +74,12 @@ describe('Trace Collector (POST /agent)', () => {
     expect(typeof trace.startedAt).toBe('number');
     expect(typeof trace.endedAt).toBe('number');
     expect(trace.startedAt).toBeLessThanOrEqual(trace.endedAt ?? Date.now());
-    expect(trace.meta).toEqual({});
+    // Day 08: meta.context is populated by run_summary event (peakPromptTokens + iterations)
+    expect(trace.meta).toEqual({
+      context: { peakPromptTokens: expect.any(Number), iterations: expect.any(Number) },
+    });
 
-    // 完整 10 kind 序列（不含 error）—— Day 07 加 message_delta
+    // 完整 12 kind 序列（不含 error）—— Day 07 加 message_delta，Day 08 加 run_summary
     const kinds = trace.events.map((e) => e.kind);
     expect(kinds).toEqual([
       'message_start',
@@ -89,6 +92,7 @@ describe('Trace Collector (POST /agent)', () => {
       'request',
       'message_delta', // 🆕 Day 07
       'response',
+      'run_summary', // 🆕 Day 08
       'message_end',
       'done',
     ]);
