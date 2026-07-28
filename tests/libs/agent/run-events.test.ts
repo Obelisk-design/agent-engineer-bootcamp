@@ -107,6 +107,30 @@ describe('Agent.runEvents — event sequence', () => {
     expect(events.find((e) => e.kind === 'done')).toBeUndefined();
   });
 
+  it('emits run_summary before error when maxIterations exceeded', async () => {
+    // 🆕 Day 08: error 路径也必须先发 run_summary（partial 累加也给前端看）
+    const chat = new FakeChatClient([
+      {
+        toolCalls: [{ id: 'tc_1', toolName: 'calculator', args: { expression: '1' } }],
+      },
+      {
+        toolCalls: [{ id: 'tc_2', toolName: 'calculator', args: { expression: '2' } }],
+      },
+    ]);
+    const tools = new ToolRegistry();
+    tools.register(calculatorTool);
+    const agent = new Agent({ chat, tools, maxIterations: 2 });
+
+    const events = [];
+    for await (const ev of agent.runEvents('infinite')) events.push(ev);
+
+    const runSummaryIndex = events.findIndex((e) => e.kind === 'run_summary');
+    const errorIndex = events.findIndex((e) => e.kind === 'error');
+    expect(runSummaryIndex).toBeGreaterThan(-1);
+    expect(errorIndex).toBeGreaterThan(-1);
+    expect(runSummaryIndex).toBeLessThan(errorIndex);
+  });
+
   it.runIf(hasAnthropicKey)('emits context event when model is provided', async () => {
     const chat = new FakeChatClient([{ content: 'hi' }]);
     const tools = new ToolRegistry();

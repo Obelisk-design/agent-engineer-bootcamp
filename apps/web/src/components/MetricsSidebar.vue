@@ -45,7 +45,7 @@ const iterations = computed(() => props.summary?.iterations ?? null);
 function barColor(tokens: number, limit: number): string {
   const p = (tokens / limit) * 100;
   if (p < 50) return 'bg-emerald-500';
-  if (p < 80) return 'bg-amber-500';
+  if (p <= 80) return 'bg-amber-500';
   return 'bg-red-500';
 }
 

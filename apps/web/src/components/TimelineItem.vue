@@ -1,10 +1,11 @@
 <script setup lang="ts">
 interface Props {
+  timelineId: number;
   title: string;
   detail: string | null;
   status: 'done' | 'active' | 'error';
   kind: string;
-  meta?: Record<string, unknown> | null;
+  meta?: Record<string, unknown> | null | undefined;
 }
 
 const props = defineProps<Props>();
@@ -22,7 +23,7 @@ function formatMeta(meta: Record<string, unknown> | null | undefined): string[] 
 </script>
 
 <template>
-  <div :class="['timeline-item', props.status]">
+  <div :class="['timeline-item', props.status]" :data-timeline-id="props.timelineId">
     <div class="timeline-icon">{{ iconFor(props.status) }}</div>
     <div class="timeline-body">
       <div class="timeline-title">{{ props.title }}</div>

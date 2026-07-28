@@ -15,6 +15,7 @@ defineProps<{
       <TimelineItemVue
         v-for="item in items"
         :key="item.id"
+        :timeline-id="item.id"
         :title="item.title"
         :detail="item.detail"
         :status="item.status"

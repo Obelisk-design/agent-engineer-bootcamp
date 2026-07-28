@@ -40,7 +40,7 @@ const pct = computed(() => {
 
 const barColor = computed(() => {
   if (pct.value < 50) return 'bg-emerald-500';
-  if (pct.value < 80) return 'bg-amber-500';
+  if (pct.value <= 80) return 'bg-amber-500';
   return 'bg-red-500';
 });
 

@@ -37,6 +37,7 @@ const errorMessage = ref<string | null>(null);
 const isCancelled = ref(false);
 let timelineIdCounter = 0;
 let activeAbortController: AbortController | null = null;
+const iterationToTimelineId = new Map<number, number>();
 
 interface ContextRow {
   readonly iteration: number;
@@ -68,6 +69,7 @@ function resetTurn(): void {
   isCancelled.value = false;
   runSummary.value = null;
   runContexts.value = [];
+  iterationToTimelineId.clear();
 }
 
 function appendConversation(item: ConversationItem): void {
@@ -78,8 +80,9 @@ function appendTimeline(item: Omit<TimelineItem, 'id'>): void {
   timeline.value.push({ ...item, id: timelineIdCounter++ });
 }
 
-function createTimelineEntry(title: string, detail: string | null, status: TimelineItem['status'], kind: string, meta?: Record<string, unknown> | null): void {
+function createTimelineEntry(title: string, detail: string | null, status: TimelineItem['status'], kind: string, meta?: Record<string, unknown> | null): number {
   appendTimeline({ title, detail, status, kind, meta: meta ?? null });
+  return timelineIdCounter - 1;
 }
 
 function scrollConversationToBottom(): void {
@@ -98,8 +101,10 @@ function scrollTimelineToBottom(): void {
 }
 
 function scrollToIteration(n: number): void {
+  const tid = iterationToTimelineId.get(n);
+  if (tid === undefined) return;
   nextTick(() => {
-    const el = document.querySelector(`[data-iteration="${n}"]`);
+    const el = document.querySelector(`[data-timeline-id="${tid}"]`);
     if (el !== null) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 }
@@ -125,13 +130,14 @@ function dispatch(ev: AgentEvent): void {
 
     case 'request': {
       const payload = { iteration: ev.iteration, messages: ev.messages };
-      createTimelineEntry(
+      const tid = createTimelineEntry(
         `LLM Request · ${String(ev.iteration)}`,
         JSON.stringify(payload, null, 2),
         'active',
         'request',
         { model: 'model', messages: ev.messages.length },
       );
+      iterationToTimelineId.set(ev.iteration, tid);
       scrollTimelineToBottom();
       break;
     }
