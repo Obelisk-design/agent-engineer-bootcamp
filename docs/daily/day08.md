@@ -102,9 +102,17 @@ tests/
 
 ```bash
 # === Day 08 demos（真实 LLM + Context Window 观测）===
+
+# 推荐：一行起 API + 前端（concurrently 托管，Ctrl+C 同时退出）
+pnpm run dev:day08
+
+# 旧方式：两个 terminal（保留；适合单进程调试 + 另端 curl 验证）
+# terminal 1
 pnpm exec tsx examples/day08/agent_server.ts  # API + Context meta
+# terminal 2
 cd apps/web && pnpm exec vite --host 127.0.0.1  # 前端 + Tailwind
 # 浏览器看 http://127.0.0.1:5173/ → HeaderPill 显示 peak/limit + 进度条
+```
 
 # === 真实跑 Context === 
 # 1) 设 ANTHROPIC_API_KEY

@@ -7,7 +7,16 @@
  * - 等待 server.listen() 完成后再读 server.address()（修异步 race bug）
  * - 注释指向 apps/web（Vite dev proxy 默认 5173）
  *
- * 用法：
+ * 启动方式（推荐 → 备选）：
+ *
+ *   # 推荐：一行起 API + 前端（concurrently）
+ *   pnpm run dev:day08
+ *
+ *   # 备选：两个 terminal（仅在单进程调试场景，比如只想要 API + curl 时）
+ *   pnpm run dev:api     # 等价于下面 terminal 1
+ *   pnpm run dev:web     # 等价于下面 terminal 2
+ *
+ *   # 备选：原始两条命令（保持原貌，便于 copy-paste）
  *   # terminal 1: 起 API
  *   pnpm exec tsx examples/day08/agent_server.ts
  *
