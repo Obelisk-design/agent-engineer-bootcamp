@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { AgentEvent } from '../../../libs/agent/index.js';
+import type { Message } from '../../../libs/llm/index.js';
 import { defaultAgentClient } from './api/agentClient.js';
 import type {
   ConversationItem,
@@ -51,8 +52,10 @@ function setStatus(s: typeof status.value): void {
   status.value = s;
 }
 
-function resetTurn(): void {
-  conversation.value = [];
+function resetRunState(): void {
+  // 🆕 Day 09: 多轮对话 —— conversation 不再每次清空，只清 per-run 状态
+  // (timeline / runSummary / runContexts / errorMessage 等)
+  // conversation 由 message_end 路径自然累积，多轮时 scrollback 直接看到
   timeline.value = [];
   runContexts.value = [];
   runSummary.value = null;
@@ -264,18 +267,30 @@ function dispatch(ev: AgentEvent): void {
 
 async function send(input: string): Promise<void> {
   if (input.trim() === '' || isStreaming.value) return;
-  resetTurn();
+  resetRunState();
   conversation.value = [
     ...conversation.value,
     { role: 'user', text: input, streaming: false },
   ];
   scrollConversationToBottom();
 
+  // 🆕 Day 09: 多轮对话 —— 把 conversation 累积的 user/assistant 翻译成 server 的 Message[]
+  // system/tool 消息前端不持有（前端 ConversationItem 只 4 种 role）
+  const historyMessages: Message[] = conversation.value
+    .filter((c): c is { role: 'user' | 'assistant'; text: string; streaming: boolean } =>
+      c.role === 'user' || c.role === 'assistant',
+    )
+    .filter((c) => c.text.length > 0) // 跳过 streaming 中的空 assistant
+    .map((c) => ({ role: c.role, content: c.text }));
+
   isStreaming.value = true;
   activeAbortController = new AbortController();
 
   try {
-    const events = defaultAgentClient.stream(input, { signal: activeAbortController.signal });
+    const events = defaultAgentClient.stream(input, {
+      signal: activeAbortController.signal,
+      messages: historyMessages,
+    });
     for await (const ev of events) {
       dispatch(ev);
     }

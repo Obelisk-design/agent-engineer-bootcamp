@@ -20,6 +20,7 @@
  */
 
 import type { AgentEvent } from '../../../../libs/agent/index.js';
+import type { Message } from '../../../../libs/llm/index.js';
 
 /**
  * 流式消费选项。
@@ -27,9 +28,13 @@ import type { AgentEvent } from '../../../../libs/agent/index.js';
  * signal：调用方持有 AbortController，触发 abort 时 fetch 自动断开，
  *        server.ts 监听 c.req.raw.signal → 内部 abort → Agent.runEvents yield error。
  *        Day 07 AbortSignal 链路完整闭环。
+ *
+ * 🆕 Day 09: messages —— 多轮对话历史。前端 conversation 累积的 user/assistant
+ *   翻译成 server Message[]，server 拼上本轮 input 后发给 LLM。
  */
 export interface StreamOptions {
   readonly signal?: AbortSignal;
+  readonly messages?: readonly Message[];
 }
 
 export interface AgentClient {
@@ -132,10 +137,15 @@ function isAgentEvent(value: unknown): value is AgentEvent {
  */
 export const defaultAgentClient: AgentClient = {
   async *stream(input: string, options?: StreamOptions): AsyncIterable<AgentEvent> {
+    // 🆕 Day 09: 多轮对话 —— 把 messages 一并发给 server
+    const body: { input: string; messages?: readonly Message[] } = { input };
+    if (options?.messages !== undefined) {
+      body.messages = options.messages;
+    }
     const response = await fetch('/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input }),
+      body: JSON.stringify(body),
       ...(options?.signal !== undefined ? { signal: options.signal } : {}),
     });
 
