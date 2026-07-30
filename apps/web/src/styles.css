@@ -1,23 +1,38 @@
 @import "tailwindcss";
 /* apps/web/src/styles.css
  *
- * Agent Console 全局样式（从原 apps/api/src/web/index.html 内嵌 CSS 抽出）。
- * 变量集中放在 :root，组件 scoped 样式可引用。
+ * Agent Console 全局 reset + 设计 token。
+ * 组件级样式全部在 Vue 组件内的 Tailwind utility classes。
+ *
+ * 设计基调（参考 LangSmith / Open WebUI / Claude Code）：
+ * - 深底 #0a0b0f 衬 #11141a 高一阶
+ * - 一条 emerald 主调（accent），避免全灰单调
+ * - 圆角小 (rounded 4-6px)，padding 紧凑，遵循 IDE 信息密度
  */
 
 :root {
-  --bg: #0f1115;
-  --bg-panel: #171a21;
-  --bg-input: #11141a;
+  /* 中性色阶（10 阶 zinc，但更冷） */
+  --bg: #0a0b0f;
+  --bg-panel: #11141a;
+  --bg-elevated: #161a22;
+  --bg-input: #0d1015;
   --fg: #e5e7eb;
-  --fg-muted: #8b949e;
-  --accent: #4ade80;
-  --accent-blue: #60a5fa;
+  --fg-muted: #8b95a1;
+  --fg-faint: #525a66;
+  --border: #1f242d;
+  --border-strong: #2a313c;
+
+  /* 主色 accent（emerald 主调）—— 状态 / 实时 */
+  --accent: #10b981;
+  --accent-soft: rgba(16, 185, 129, 0.12);
+  --accent-blue: #38bdf8;
+  --accent-blue-soft: rgba(56, 189, 248, 0.12);
+  --accent-violet: #a78bfa;
+  --accent-violet-soft: rgba(167, 139, 250, 0.12);
+  --accent-amber: #f59e0b;
+  --accent-amber-soft: rgba(245, 158, 11, 0.12);
   --accent-red: #f87171;
-  --border: #2a2f3a;
-  --user-bubble: #17263b;
-  --ai-bubble: #16251c;
-  --code-bg: #0b0d11;
+  --accent-red-soft: rgba(248, 113, 113, 0.12);
 }
 
 * {
@@ -35,7 +50,8 @@ body,
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
 #app {
@@ -43,307 +59,43 @@ body,
   flex-direction: column;
 }
 
-/* ============ 顶栏 ============ */
-header.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: #12151b;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+code,
+pre,
+.mono {
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-variant-ligatures: none;
 }
 
-header.app-header .title {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-header.app-header .title .badge {
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--fg-muted);
-  margin-left: 8px;
-}
-
-header.app-header .actions {
-  display: flex;
-  gap: 8px;
-}
-
-header.app-header button {
-  padding: 4px 10px;
-  background: transparent;
-  color: var(--fg);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-header.app-header button:hover {
-  border-color: var(--fg-muted);
-}
-
-header.app-header button.stop {
-  border-color: var(--accent-red);
-  color: var(--accent-red);
-}
-
-header.app-header .status-pill {
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(248, 113, 113, 0.15);
-  color: var(--accent-red);
-  font-size: 11px;
-  margin-right: 8px;
-}
-
-/* ============ 双栏布局 ============ */
-main.panels {
-  flex: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  min-height: 0;
-}
-
-.panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--border);
-}
-
-.panel:last-child {
-  border-right: none;
-}
-
-.panel-header {
-  padding: 10px 16px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--fg-muted);
-  flex-shrink: 0;
-}
-
-.panel-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-/* ============ Message 气泡 ============ */
-.message {
-  max-width: 92%;
-  padding: 10px 12px;
-  border-radius: 2px;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  border: 1px solid transparent;
-}
-
-.message .role {
-  font-size: 11px;
-  color: var(--fg-muted);
-  margin-bottom: 2px;
-}
-
-.message.user {
-  background: var(--user-bubble);
-  margin-left: auto;
-  border-color: rgba(96, 165, 250, 0.15);
-}
-
-.message.assistant {
-  background: var(--ai-bubble);
-  border-color: rgba(74, 222, 128, 0.15);
-}
-
-.message.assistant.streaming .message-body::after {
-  content: '▍';
-  color: var(--accent-blue);
-  animation: blink 1s steps(1) infinite;
-  margin-left: 1px;
-}
-
-@keyframes blink {
+/* 流式光标：MessageBubble assistant streaming */
+@keyframes pulse-cursor {
+  0%, 100% {
+    opacity: 1;
+  }
   50% {
-    opacity: 0;
+    opacity: 0.3;
   }
 }
-
-.message.error {
-  background: rgba(248, 113, 113, 0.15);
-  border: 1px solid var(--accent-red);
-  color: var(--accent-red);
-}
-
-.message.thinking {
-  background: transparent;
-  color: var(--fg-muted);
-  font-style: italic;
-}
-
-.empty-hint {
-  color: var(--fg-muted);
-  text-align: center;
-  padding: 40px 16px;
-  font-size: 13px;
-}
-
-/* ============ Timeline 步骤 ============ */
-.timeline-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--border);
-  border-radius: 2px;
-}
-
-.timeline-item.done {
-  border-left-color: var(--accent);
-}
-
-.timeline-item.active {
-  border-left-color: var(--accent-blue);
-  background: rgba(96, 165, 250, 0.08);
-}
-
-.timeline-item.error {
-  border-left-color: var(--accent-red);
-  background: rgba(248, 113, 113, 0.08);
-}
-
-.timeline-icon {
-  flex-shrink: 0;
-  width: 18px;
-  text-align: center;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--fg-muted);
-  font-size: 14px;
-  line-height: 1.3;
-}
-
-.timeline-item.done .timeline-icon {
+.streaming-cursor::after {
+  content: '▍';
   color: var(--accent);
-}
-
-.timeline-item.active .timeline-icon {
-  color: var(--accent-blue);
-}
-
-.timeline-item.error .timeline-icon {
-  color: var(--accent-red);
-}
-
-.timeline-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.timeline-title {
+  animation: pulse-cursor 1s steps(2, end) infinite;
+  margin-left: 2px;
   font-weight: 600;
-  margin-bottom: 4px;
-  color: var(--fg);
-  font-size: 13px;
 }
 
-.timeline-meta {
-  color: var(--fg-muted);
-  font-size: 11px;
-  margin-bottom: 6px;
+/* Scrollbar 美化（webkit only） */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
-
-.timeline-detail {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  color: #cbd5e1;
-  background: var(--code-bg);
-  padding: 8px 10px;
-  border-radius: 2px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  margin: 0;
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-/* ============ 输入栏 ============ */
-footer.input-bar {
-  padding: 10px 16px;
-  background: var(--bg-panel);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
+*::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
 }
-
-.input-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-end;
-}
-
-textarea {
-  flex: 1;
-  min-height: 38px;
-  max-height: 120px;
-  padding: 8px 12px;
-  background: var(--bg-input);
-  color: var(--fg);
-  border: 1px solid var(--border);
-  border-radius: 2px;
-  resize: none;
-  font-family: inherit;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-textarea:focus {
-  outline: none;
-  border-color: var(--accent-blue);
-}
-
-button.action {
-  padding: 8px 18px;
-  background: var(--accent);
-  color: #0a0a0a;
-  border: none;
-  border-radius: 2px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 13px;
-  height: 38px;
-}
-
-button.action:disabled {
-  background: #4b5563;
-  cursor: not-allowed;
-}
-
-button.stop {
-  background: var(--accent-red);
-  color: #0a0a0a;
-}
-
-button.stop:hover {
-  background: #ef4444;
-}
-
-/* ============ 小屏堆叠 ============ */
-@media (max-width: 720px) {
-  main.panels {
-    grid-template-columns: 1fr;
-  }
-  .panel:first-child {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
 }
