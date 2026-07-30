@@ -823,3 +823,92 @@ plugins: [vue(), tailwindcss()]
 8. **"Agent Loop 怎么防无限循环？"** → `maxIterations` + error yield，详见 [day01-07 §3.3](2026-07-27-day01-07-seven-day-retrospective.md#33-agent-runtime)。
 9. **"ChatClient 抽象为什么不放 SDK 名字？"** → 抽象 ≠ 给 SDK 换名字，调用方"换 provider 零改动"。
 10. **"Tailwind 渐进式迁移怎么保证旧组件不破？"** → ADR-015，新组件 utility + 旧组件 scoped 并存；YAGNI 兑现"未来统一？等真统一时再统一"。
+
+## 🛣 Day 09+ 路线 + 技术债
+
+### Day 09+ 路线（仅 day08.md 已 ack 的 5 个决策）
+
+**推荐**：多轮对话历史（Day 06 复盘路线标 Day 09+，前置条件已全部就绪）。
+
+**前置条件全部就绪**：
+
+- ✅ AbortSignal（Day 07）
+- ✅ message_delta 流式（Day 07）
+- ✅ error yield 终止态（Day 07）
+- ✅ response.usage 累积（Day 07）
+- ✅ context / run_summary 观测（Day 08）
+- ✅ HeaderPill + MetricsSidebar（Day 08）
+
+**关键决策待 ack**（来自 [day08.md §🚀 Day 09 预告](../daily/day08.md#-day-09-预告)）：
+
+1. 持久化策略（in-memory session vs localStorage vs server-side）
+2. session ID 传递方式（cookie / URL param / body field）
+3. message ID 体系（要不要给每条 message 唯一 ID 用于 deduplication）
+4. AbortSignal 跨 turn 行为（同一 turn 内 abort 全部 message，还是 abort 当前 turn）
+5. context / run_summary 在多轮场景下是否需要"按 turn 拆分"（Day 08 当前是按 run 累计，多轮后 run 怎么定义？）
+
+详见 [day01-07 §6.1-§6.5](2026-07-27-day01-07-seven-day-retrospective.md#6-当前不足分析) 不足分析（Memory / Permission / Evaluation / Observability / Workflow）。
+
+### 已知技术债（8 天累计）
+
+| 债 | 位置 | 影响 | 触发修 |
+|---|---|---|---|
+| **chat + stream 双重调用** | `libs/agent/agent.ts:118-141` | final-answer iter 双重 token 计费 | Day 10+ 评估一次 stream 方案 |
+| **In-memory Trace LRU 32** | `apps/api/src/trace-collector.ts` | 重启丢失；32 次以外被 evict | Day 10+ 评估持久化 |
+| **single Agent 单端口绑死** | `apps/api/src/server.ts` | `createAgentApp({ agent })` 一次只能配一个 Agent | 多 Agent 场景 |
+| **web/ 单 HTML 349+ 行** | `apps/web/src/App.vue` | App.vue 已 349 行，组件已拆 HeaderBar/RightPanel/Composer，但还能再加 200 行就要拆 | 引入 framework 时 |
+| **错误事件不区分协议层 vs Runtime 层** | `Agent.runEvents()` | 消费方拿到 error 不知道是 maxIterations 还是 abort | 扩 AgentEvent kind |
+| **usage 是 prompt + completion 之和** | `apps/api/src/server.ts:96-103` | 没有 cached / reasoning tokens 细分 | provider 能力差异大 |
+| **没有 SSE 重连状态机** | `apps/api/src/sse-adapter.ts` | 客户端断线重连后从 message_start 重看 | EventSource 自带，不主动实现 |
+
+### 技术债变化（8 天累计）
+
+```
++ 新增 docs/review/2026-07-29-day01-08 review       —— 维护成本 低，3 年存活率 高
++ 新增 libs/llm/observability/ 模块                   —— 维护成本 低，3 年存活率 高
++ 新增 MODELS 注册表（6 model）                       —— 维护成本 低，3 年存活率 中（价格变动需更新）
++ 新增 countContextTokens 抽象                        —— 维护成本 低，3 年存活率 高
++ 新增 context / run_summary event kinds              —— 维护成本 低，3 年存活率 高
++ 新增 Tailwind 4 集成                                —— 维护成本 中（Tailwind 版本可能带来 breaking class），3 年存活率 高
++ 新增 HeaderBar + RightPanel 组件（Day 08 HeaderPill/MetricsSidebar 已重构）—— 维护成本 中，3 年存活率 高
++ 新增 scroll-to-iteration 互动                       —— 维护成本 低，3 年存活率 高
++ 新增 28 commits（Day 07-08）                        —— 维护成本 中，3 年存活率 高
++ 修复 5 个 error 路径遗漏 run_summary                —— 维护成本 低，3 年存活率 高
++ 修复 trace-collector.test.ts 硬编码数组             —— 维护成本 低，3 年存活率 高
++ 修复 pre-existing Timeline.vue exactOptionalPropertyTypes —— 维护成本 低，3 年存活率 高
+净增：+12 能力 / -0 重复
+反驳记录：
+  - Cost / USD / latency / cache hit / 持久化 / OpenAI count_tokens 全部 YAGNI —— spec 已 ack
+  - Day 07-08 新增 12 kind 中 2 kind（context / run_summary）是有意识扩展（ADR-014），不是悄悄扩张
+  - Day 08 渐进式 UI 迁移是技术栈换血最小风险路径（ADR-015），不是妥协
+```
+
+---
+
+## 🔗 相关引用
+
+- **5 天节奏 review**：[2026-07-22-day01-05-architecture-review.md](2026-07-22-day01-05-architecture-review.md)
+- **7 天完整复盘**：[2026-07-27-day01-07-seven-day-retrospective.md](2026-07-27-day01-07-seven-day-retrospective.md)
+- **Day 笔记**：[day01.md](../daily/day01.md) / [day02.md](../daily/day02.md) / [day03.md](../daily/day03.md) / [day04.md](../daily/day04.md) / [day05.md](../daily/day05.md) / [day06.md](../daily/day06.md) / [day07.md](../daily/day07.md) / [day08.md](../daily/day08.md)
+- **Day 08 spec**：[2026-07-28-day08-context-and-cost-observability-design.md](../docs/superpowers/specs/2026-07-28-day08-context-and-cost-observability-design.md)
+- **Day 08 plan**：[2026-07-28-day08-context-window-tailwind.md](../docs/superpowers/plans/2026-07-28-day08-context-window-tailwind.md)
+- **ADR**：[0001-tool-capability-must-not-embed-in-system-prompt.md](../adr/0001-tool-capability-must-not-embed-in-system-prompt.md)
+- **CLAUDE.md 全局约定**：[../../../CLAUDE.md](../../../CLAUDE.md)
+- **代码锚点**：
+  - [libs/llm/chat-client.ts](../../libs/llm/chat-client.ts) — ChatClient + ChatRequest/Response/Options
+  - [libs/llm/observability/models.ts](../../libs/llm/observability/models.ts) — MODELS 注册表
+  - [libs/llm/observability/context-counter.ts](../../libs/llm/observability/context-counter.ts) — countContextTokens best-effort
+  - [libs/agent/event.ts](../../libs/agent/event.ts) — AgentEvent 12 kind
+  - [libs/agent/agent.ts](../../libs/agent/agent.ts) — runEvents 全 5 终止路径
+  - [apps/api/src/server.ts](../../apps/api/src/server.ts) — Hono + AbortController + TraceCollector
+  - [apps/api/src/sse-adapter.ts](../../apps/api/src/sse-adapter.ts) — framework-agnostic
+  - [apps/api/src/trace-collector.ts](../../apps/api/src/trace-collector.ts) — events[] + meta.usage + meta.context
+  - [apps/web/src/App.vue](../../apps/web/src/App.vue) — Vue 3 + Tailwind 4 IDE 风格布局（HeaderBar + LeftMenu + Main + RightPanel + Composer）
+  - [apps/web/src/components/HeaderBar.vue](../../apps/web/src/components/HeaderBar.vue) — 顶栏（model · in/out · ctx + status pill）
+  - [apps/web/src/components/RightPanel.vue](../../apps/web/src/components/RightPanel.vue) — Trace / Cost 切换面板
+
+---
+
+> **写给未来的自己**：如果你忘了 Agent 怎么工作，先看 [day01-07 §3 核心概念复习](2026-07-27-day01-07-seven-day-retrospective.md#3-核心概念复习)。如果你忘了"为什么这样设计"，看 [day01-07 §4 ADR](2026-07-27-day01-07-seven-day-retrospective.md#4-重要设计决策adr) + 本 review §7 ADR 增量。如果你要接着做，先看 [day01-07 §5 阅读指南](2026-07-27-day01-07-seven-day-retrospective.md#5-当前代码阅读指南) + 本 review §9 路线。如果你要面试，看本 review §8 STAR 法则。
+>
+> 8 天不是结束，是 65 天的地基。
