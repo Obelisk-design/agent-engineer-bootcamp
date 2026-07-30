@@ -4,8 +4,8 @@
  * Vite 配置 —— Agent Console 前端。
  *
  * 核心配置：
- * - dev server 端口 5173
- * - dev proxy：把 /agent /traces 代理到 localhost:3000（apps/api 默认端口）
+ * - dev server 端口由 scripts/with-ports.ts 通过 CLI --port 决定
+ * - dev proxy：把 /agent /traces 代理到 VITE_API_TARGET（默认 http://localhost:3000）
  *   让前端 fetch('/agent') 直接打到 API，不需要 CORS 中间件
  * - 生产构建产物在 apps/web/dist（不污染根 dist）
  */

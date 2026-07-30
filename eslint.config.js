@@ -7,11 +7,13 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      '**/dist/**',
       'build/**',
       'coverage/**',
       'node_modules/**',
       '.husky/**',
       '*.config.{js,ts}',
+      'apps/web/dist/**',
     ],
   },
   js.configs.recommended,

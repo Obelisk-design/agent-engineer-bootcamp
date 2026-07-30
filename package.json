@@ -23,9 +23,9 @@
     "dev": "nodemon",
     "dev:example": "nodemon examples/day01/ex_001_chat_completion.ts",
     "dev:smoke": "nodemon examples/day01/ex_002_nodemon_smoke.ts",
-    "dev:api": "pnpm exec tsx examples/day08/agent_server.ts",
-    "dev:web": "pnpm exec vite --config apps/web/vite.config.ts --host 127.0.0.1",
-    "dev:day08": "concurrently -n api,web -c blue,green --kill-others --success first \"pnpm run dev:api\" \"pnpm run dev:web\"",
+    "dev:api": "pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day08/agent_server.ts",
+    "dev:web": "pnpm exec tsx scripts/with-ports.ts web 5173 -- vite --host 127.0.0.1",
+    "dev:day08": "pnpm exec tsx scripts/dev-day08.ts",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"
   },
