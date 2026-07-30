@@ -23,6 +23,7 @@
 14. ✅ ADR 0002 落地（messages 边界 + systemPrompt 下放 + 入口深拷贝）
 15. ✅ `examples/day09/multi_turn_client.ts` —— 真实 LLM 跑两轮，断言 turn 2 LLM 真的"记住"了 turn 1
 16. ✅ `examples/day09/agent_server.ts` + `scripts/dev-day09.ts` + `dev:day09` 脚本 —— 浏览器 UI 端到端验证路径（Layer 5）
+17. ✅ **Day 09+ 补充**：Session 跨 turn Token 累加 —— HeaderBar 新加 Σin/Σout（暗色 vs 本轮亮色），抽 `lib/sessionUsage.ts` 可单测，8 个反例测试
 
 ---
 
@@ -502,6 +503,84 @@ Day 07 留下了技术债：`runEvents` final-answer iter 先 `chat()` 探测拿
 
 ---
 
+## 📝 Day 09+ 补充：Session 跨 turn Token 累加
+
+### 背景
+
+Day 09 commit 落地后,肥老大问"UI 上层展示的 input 和 output token 数量,如果跟 message 一样,实现持久化,需要改动大么"。
+
+第一反应是 2 个候选路径:
+- **A. 跨 turn 累加**(无持久化,刷页面清零)
+- **B. 持久化到 localStorage**(跨刷新保留)
+
+讨论后结论:**"加而不换"**——保留"本轮 in/out"+"ctx"显示,**新加**"session Σin/Σout"。理由:
+- "本轮"是有意义的语义(用户想看"这一句花了多少",不是"整个对话花了多少")
+- provider billing 是 per request,不是 per conversation —— HeaderPill 显示应跟账单对得上
+- 不替换旧显示,加新 metric,语义最清晰
+- 持久化跟 conversation 一样 YAGNI,等用户报"刷新就没"再加
+
+### 4 个设计决策(全 A 拍板)
+
+| 决策 | 选项 A (拍) | 选项 B | 选项 C |
+|---|---|---|---|
+| Q1 session 生命周期 | 跟 conversation 一致(page refresh 清零) | 永不重置(累到爆) | 加 reset 按钮 |
+| Q2 累加事件源 | `response` 事件(每 LLM 调用 +1) | `run_summary`(累加已累加=重复) | 只 `message_end`(漏 tool_calls) |
+| Q3 peak 跨 turn 语义 | `Math.max`(整个 session 内最大 prompt) | 累加(语义错乱) | 不显示 peak |
+| Q4 显示位置 | HeaderBar 加一组(暗色 vs 本轮亮色) | tooltip 解释挤进 in/out | 放 MetricsSidebar |
+
+### 实现
+
+```
+apps/web/src/lib/sessionUsage.ts   (NEW) — 2 个 pure function
+  accumulateFromResponse(prev, usage)         → 累加 in/out
+  accumulateFromRunSummary(prev, thisTurnPeak) → peak Math.max
+  emptySessionUsage                            → {0, 0, 0}
+
+apps/web/src/App.vue             (MODIFIED)
+  + sessionUsage = ref<SessionUsage>(emptySessionUsage)
+  - response handler: sessionUsage.value = accumulateFromResponse(...)
+  - run_summary handler: sessionUsage.value = accumulateFromRunSummary(...)
+  - resetRunState() 不清 sessionUsage (跟 conversation 一样)
+
+apps/web/src/components/HeaderBar.vue  (MODIFIED)
+  + Props.sessionUsage
+  + template: Σin / Σout (暗色 bg-sky-700 / bg-violet-700) 跟 in/out (亮色) 区分
+```
+
+### 为什么抽 lib (不是 inline 在 App.vue)
+
+不是 YAGNI 提前抽象 —— 是真需求:
+- 同一套累加逻辑在 2 个 handler (response + run_summary) 出现 → **DRY**
+- pure function 可单测,不依赖 Vue runtime → **8 tests 直接覆盖**
+- App.vue dispatch 块变薄,读起来不累
+
+### 反例测试 (8 个 case)
+
+`tests/apps/web/session-usage.test.ts`:
+1. `emptySessionUsage` 初始值全 0
+2. `accumulateFromResponse` 累加 in/out + 不改 peak
+3. `accumulateFromResponse(usage=undefined)` 返回 prev 引用相等(没变)
+4. `accumulateFromResponse` 从 0 起步正确
+5. `accumulateFromRunSummary` 本 turn peak 大就更新
+6. `accumulateFromRunSummary` 本 turn peak 小就保持
+7. **多 turn 累加**:3 turn 后 in/out = sum, peak = session 内最大
+8. **单 turn 多 iteration**:3 次 response 后 in/out sum, peak = run_summary 时的值
+
+### 不做 (YAGNI)
+
+- 不持久化到 localStorage —— 跟 conversation 一致,刷页面清零
+- 不加 reset 按钮 —— 刷页面自然清,Day 10+ 之前不做
+- 不抽 `useConversation` composable —— `sessionUsage` 只有 1 个 caller (App.vue),等第 2 个再抽
+
+### 4 步验证(浏览器)
+
+1. `pnpm run dev:day09` → 浏览器开 http://127.0.0.1:5173/
+2. 第一次 send "我是肥老大" → HeaderBar 显示: in/out (本轮) + Σin/Σout (跟本轮相等)
+3. 第二次 send "请告诉我你刚才听到的名字是什么?" → HeaderBar 显示: in/out (新本轮) + **Σin/Σout (两次累加,比本轮大)**
+4. 视觉对比:Σin/Σout 用暗色 (`bg-sky-700` / `bg-violet-700`),跟本轮亮色 (`bg-sky-400` / `bg-violet-400`) 一眼区分
+
+---
+
 ## 🔗 相关引用
 
 - **ADR**: [0002-run-events-accepts-messages-caller-injects-system-prompt.md](../adr/0002-run-events-accepts-messages-caller-injects-system-prompt.md)
@@ -522,7 +601,10 @@ Day 07 留下了技术债：`runEvents` final-answer iter 先 `chat()` 探测拿
   - `57337d8` — back-end: runEvents 签名 + systemPrompt 删除（15 文件）
   - `21aac38` — back-end: e2e 反例测试（1 文件 +68）
   - `709deb5` — front-end: scrollback + 多轮 UI（3 文件 +105）
-  - `TBD` — docs: ADR 0002 + day09.md + example（待 commit）
+  - `9d5fb55` — fix: 补 709deb5 typecheck gap（multi-turn test iter.next → for-await）
+  - `ed76f90` — docs: ADR 0002 + day09.md + multi_turn_client.ts（CLI 端到端）
+  - `64a4014` — feat: agent_server.ts + dev-day09 + 浏览器 UI 验证路径
+  - `b0388c7` — feat(web): session-level token 跨 turn 累加（lib + HeaderBar Σin/Σout）
 
 ---
 
@@ -537,5 +619,7 @@ Day 07 留下了技术债：`runEvents` final-answer iter 先 `chat()` 探测拿
 如果你要接着做（Day 10+），看本文件 §🛣 Day 10+ 路线 —— 6 个候选方向已排序。
 
 如果你要测今天的改动，看本文件 §🧪 怎么测 —— 4 层覆盖，从 typecheck 到真实 LLM。
+
+如果你忘了"为什么 session Σin/Σout 跨 turn 累加 + 为什么抽 lib"，看本文件 §📝 Day 09+ 补充：4 个设计决策表 + 抽 lib 的 3 个理由 + 8 个反例测试。
 
 > 9 天不是结束，是 65 天的地基。
