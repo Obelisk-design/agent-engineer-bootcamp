@@ -22,6 +22,7 @@
 13. ✅ 反例 2（非法 role）标记 YAGNI，留 TODO 进 Day 10+ 路线
 14. ✅ ADR 0002 落地（messages 边界 + systemPrompt 下放 + 入口深拷贝）
 15. ✅ `examples/day09/multi_turn_client.ts` —— 真实 LLM 跑两轮，断言 turn 2 LLM 真的"记住"了 turn 1
+16. ✅ `examples/day09/agent_server.ts` + `scripts/dev-day09.ts` + `dev:day09` 脚本 —— 浏览器 UI 端到端验证路径（Layer 5）
 
 ---
 
@@ -46,6 +47,10 @@ examples/
   day07/ex_002_streaming_agent_anthropic.ts MODIFIED
   day08/agent_server.ts               MODIFIED
   day09/multi_turn_client.ts          NEW — 真实 LLM 两轮多轮 + 断言
+  day09/agent_server.ts               NEW — 纯 server（浏览器 UI 验证用）
+
+scripts/
+  dev-day09.ts                        NEW — 一行起 api + web（Layer 5 入口）
 
 apps/web/src/
   api/agentClient.ts                  MODIFIED — StreamOptions.messages + body 含 messages
@@ -336,6 +341,26 @@ pnpm exec tsx examples/day09/multi_turn_client.ts
 
 **Layer 4 是 mock 覆盖不到的** —— mock 只验 messages 形状对，不验 LLM 真的"读了"。
 
+### Layer 5：浏览器 UI 端到端（10~30 秒，需要 OPENAI_API_KEY + Chrome）
+
+```bash
+# terminal 1: 一行起 API + 前端
+pnpm run dev:day09
+
+# terminal 2: 浏览器开 http://127.0.0.1:5173/
+#   1. 输入 "我是肥老大" → 点 Send
+#   2. 等 assistant 回复（问候 / 确认名字）
+#   3. 输入 "请告诉我你刚才听到的名字是什么？" → 点 Send
+#   4. 验证 scrollback 显示：turn 1 user / turn 1 assistant / turn 2 user / turn 2 assistant
+#   5. 验证 turn 2 assistant 回答 "肥老大"
+```
+
+`dev:day09` = `dev:api:day09`（API 入口是 `examples/day09/agent_server.ts`）+ `dev:web`（Vite 5173 + proxy /agent 到 3000）。
+
+`dev:api:day09` vs `dev:api` 的区别：API example 文件不同（day09 vs day08）。**后端代码完全相同**（Day 09 的 server.ts 改动向后兼容 day08 example），但用 `dev:day09` 保证验证名实一致。
+
+**Layer 5 是 Layer 4 验不到的场景**：Layer 4 验"后端 + LLM 真的记住"，Layer 5 验"前端 UI 真的 scrollback + 渲染多轮"。
+
 ---
 
 ## ⚠️ 注意事项
@@ -489,6 +514,7 @@ Day 07 留下了技术债：`runEvents` final-answer iter 先 `chat()` 探测拿
   - [apps/web/src/api/agentClient.ts](../../apps/web/src/api/agentClient.ts) — `StreamOptions.messages` + body 含 messages
   - [apps/web/src/App.vue](../../apps/web/src/App.vue) — `resetRunState` + `send` 翻译 `ConversationItem` → `Message[]`
   - [examples/day09/multi_turn_client.ts](../../examples/day09/multi_turn_client.ts) — 真实 LLM 多轮 demo
+  - [examples/day09/agent_server.ts](../../examples/day09/agent_server.ts) — 纯 server（浏览器 UI 验证用）
 - **测试锚点**:
   - [tests/apps/api/end-to-end.test.ts](../../tests/apps/api/end-to-end.test.ts) — 反例 1（多轮）+ 反例 3（空 messages）
   - [tests/apps/web/multi-turn.test.ts](../../tests/apps/web/multi-turn.test.ts) — front-end body 形状
