@@ -168,4 +168,245 @@ tool_calls iter 不流式（仍走 request/response 事件），仅 final-answer
 
 #### 5. chat + stream 双重调用的代价
 
-final-answer iter 双重 LLM 调用 = 双重 token 计费。Day 07 选简化方案（chat 探测 + stream 流式）。**Day 10+ 优化方向**：单次 stream + 在 ChatChunk 加 `usage?` optional —— **今天不引入**（YAGNI，知道 generator return value 拿不到后，“接受 cost 先收口契约”是正确的简化方案）。
+final-answer iter 双重 LLM 调用 = 双重 token 计费。Day 07 选简化方案（chat 探测 + stream 流式）。**Day 10+ 优化方向**：单次 stream + 在 ChatChunk 加 `usage?` optional —— **今天不引入**（YAGNI，知道 generator return value 拿不到后，"接受 cost 先收口契约"是正确的简化方案）。
+
+## 🆕 Day 08 — Context Window 观测 + Tailwind CSS 集成 详细演进
+
+### 学习目标
+
+把 Day 07 留下的 `meta` 扩展点用上 —— 实时观测每次 LLM 调用的 prompt token / context limit 占比；同时引入 Tailwind 4 给 Agent Console 换 UI 技术栈。
+
+### 代码产物（精简版）
+
+- `libs/llm/observability/{models,context-counter,index}.ts`（MODELS 注册表 6 model + countContextTokens best-effort）
+- `libs/agent/event.ts` 加 `context` + `run_summary` 两种 kind（**10 → 12 kind**）
+- `libs/agent/agent.ts` `AgentOptions.model` 字段 + 在每次 chat 前 yield `context` + 5 个 error 路径都 yield `run_summary`
+- `apps/api/src/server.ts` 在 `run_summary` 时 `addMeta({ context: { peakPromptTokens, iterations } })`
+- `apps/web` 集成 Tailwind 4（`@tailwindcss/vite` + `@import "tailwindcss"`，无 PostCSS 配置）
+- `apps/web/src/components/{HeaderPill,MetricsSidebar}.vue`（Tailwind utility classes，无 `<style>` block）
+- `apps/web/src/App.vue` 三栏布局 `grid-cols-[240px_1fr_360px]`
+- `apps/web/src/api/agentClient.ts` `isAgentEvent` 类型守卫扩展（12 kind）
+- 10 个 example 文件 `new Agent({ ..., model })` 加 model 字段
+
+详见 [day08.md §📦 今日产出物](../daily/day08.md#-今日产出物)（完整版表格）。
+
+### 关键 commit 链路（19 commit，5 Phase）
+
+| Phase | Commit | 内容 |
+|---|---|---|
+| 1 抽象层 | `6e77435` | feat(observability): add MODELS registry with contextLimit |
+| 1 抽象层 | `fe2b0e9` | feat(observability): add countContextTokens with anthropic adapter |
+| 1 抽象层 | `daf27c1` | feat(observability): export from libs/llm barrel |
+| 2 Agent 层 | `f35aff9` | feat(agent): add context + run_summary event kinds |
+| 2 Agent 层 | `3b8f975` | feat(agent): yield context + run_summary events |
+| 2 Agent 层 | `0491590` | fix(agent): yield run_summary before all error paths |
+| 2 Agent 层 | `e685221` | test(agent): update run-events for context + run_summary kinds |
+| 3 应用层 | `5ea5e00` | feat(examples): pass model to Agent constructor |
+| 3 应用层 | `47f1725` | feat(api): write run_summary context to TraceCollector meta |
+| 3 应用层 | `1d7cbaf` | test(api): assert meta.context in end-to-end e2e |
+| 4 UI 层 | `d102b58` | feat(web): integrate tailwind css via @tailwindcss/vite |
+| 4 UI 层 | `d072260` | chore: update pnpm-lock.yaml for tailwindcss + @tailwindcss/vite |
+| 4 UI 层 | `fd622b1` | feat(web): add HeaderPill vue component |
+| 4 UI 层 | `0fe59a9` | feat(web): add MetricsSidebar vue component |
+| 4 UI 层 | `9f99f5e` | feat(web): render HeaderPill + MetricsSidebar + three-column layout |
+| 4 UI 层 | `c8bd5ac` | fix(test): narrow possibly undefined latestTrace in e2e assertion |
+| 5 修复合 | `0e72eeb` | test(api): add run_summary to trace-collector expected kinds |
+| 5 修复合 | `555e722` | fix(web): wire scroll-to-iteration + barColor threshold + run_summary test |
+| 5 修复合 | `6210ea1` | docs(day08): document new pnpm run dev:day08 workflow |
+
+### 演进说明（6 块）
+
+#### 1. 派生 vs 源 —— provider 是 source，context/cost 是 derived
+
+`AgentEvent` 12 kind 里，`response.usage` 是**源**（provider SDK 返回），`context` / `run_summary` 是**派生**（从源推导）。
+
+```ts
+// 源：response 事件（每个 LLM 调用的 usage）
+yield { kind: 'response', iteration: 1, usage: { promptTokens: 1234, completionTokens: 56 } };
+
+// 派生：context 事件（每个 LLM 调用前的 count_tokens）
+yield { kind: 'context', iteration: 1, promptTokens: 1234, limit: 200000 };
+
+// 派生：run_summary 事件（累积的总量）
+yield { kind: 'run_summary', totalPromptTokens: 5678, totalCompletionTokens: 123, peakPromptTokens: 5000, iterations: 3 };
+```
+
+**为什么派生不替代源？**
+
+1. provider SDK 的 usage 是事实标准（计费、cache read/write 都从这取）
+2. count_tokens API 是**独立的 API 调用**，可能失败（best-effort）—— 派生不能比源更脆弱
+3. run_summary 是终止态的"快照"，给前端 HeaderPill 用（实时更新）
+
+> **教学点**：任何派生字段都应该有"源"。"派生绝不能替代源"是 CLAUDE.md "第一原则"的延伸 —— 消灭 if 兜住的条件，而是让源稳定。
+
+详见 [§6](#6-核心概念复习day-07-08-增量) 核心概念复习。
+
+#### 2. best-effort 派生的纪律 —— count_tokens 失败不卡死 agent
+
+`countContextTokens` 任何失败都返回 `undefined`，**绝不 throw**：
+
+```ts
+try {
+  // ... call Anthropic client.messages.countTokens
+} catch (err) {
+  console.warn('[countContextTokens] failed:', err instanceof Error ? err.message : String(err));
+  return undefined;  // ← 关键：失败不抛
+}
+```
+
+**三次失败路径都被静默吞掉**：
+
+- 未知 model → `getModelMeta` 返回 undefined → 直接 return
+- `ANTHROPIC_API_KEY` 未设 → 提前 return
+- SDK 抛错（网络 / 4xx / 超时）→ catch → return undefined
+
+**为什么必须吞？** 派生指标是**可选观察**。如果 `count_tokens` 失败但 `chat/stream` 正常，agent 还能跑。**让指标 bug 阻断主流程 = 违反"YAGNI 消灭 if 存在的条件"**。
+
+> **教学点**：best-effort 派生 = 把"派生路径"和"主路径"完全隔离。try/catch 是隔离手段，但 **catch 块必须 return undefined 而不是 rethrow**。
+
+详见 ADR-013（[§7](#7-adr-增量day-07-08-新增-3-条)）。
+
+#### 3. AgentEvent 扩展是 additive —— 12 kind 的扩展策略
+
+```ts
+type AgentEvent =
+  | { readonly kind: 'message_start' }
+  | { readonly kind: 'iteration'; readonly n: number }
+  | { readonly kind: 'request'; readonly iteration: number; readonly messages: ReadonlyArray<Message> }
+  | { readonly kind: 'response'; readonly iteration: number; readonly content?: string; readonly toolCalls?: ReadonlyArray<ToolCallData>; readonly usage?: ChatUsage }
+  | { readonly kind: 'message_delta'; readonly content: string }
+  | { readonly kind: 'context'; readonly iteration: number; readonly promptTokens: number; readonly limit: number }  // 🆕
+  | { readonly kind: 'tool_call'; ... }
+  | { readonly kind: 'tool_result'; ... }
+  | { readonly kind: 'message_end'; readonly content: string }
+  | { readonly kind: 'run_summary'; readonly totalPromptTokens: number; readonly totalCompletionTokens: number; readonly peakPromptTokens: number; readonly iterations: number }  // 🆕
+  | { readonly kind: 'done' }
+  | { readonly kind: 'error'; readonly message: string };
+```
+
+**关键不变量**：
+
+- 加新 variant **不改任何已有 variant**（字段名 / 类型 / 顺序）
+- `isAgentEvent` 类型守卫在 `apps/web/src/api/agentClient.ts` 同步扩展
+- 消费方用 `switch (ev.kind)` 时 TS 自动收窄，老的 default case 仍然工作
+
+> **教学点**：判别联合（discriminated union）扩 variant 是 *additive* 行为。**不会破坏老消费方**。这把"协议演化"的爆炸面从"全网改"降为"新消费方加 case"。
+
+#### 4. run_summary 必须在所有 error 路径前 yield —— 行为契约
+
+Day 07 加了 `error` 事件代替 throw，Day 08 加 `run_summary` 时**必须**在每条 error 路径前 yield 一次：
+
+```ts
+// ✅ 正确
+if (signal?.aborted) {
+  yield { kind: 'run_summary', ... };  // partial 累加
+  yield { kind: 'error', message: 'aborted by signal' };
+  return;
+}
+
+// ❌ 错误（漏了 run_summary）
+if (signal?.aborted) {
+  yield { kind: 'error', message: 'aborted by signal' };
+  return;
+}
+```
+
+**5 个 error 路径全部覆盖**（fix 前的初版漏 4 个，被 reviewer 抓出 → dispatch fix subagent 补全）：
+
+- success (content) → message_end
+- success (empty) → message_end
+- maxIterations → error
+- chat/stream exception → error
+- signal abort (iter start) → error
+- signal abort (after chat) → error
+- signal abort (in stream) → error
+
+> **教学点**：行为变更类 task（Day 07 error yield、Day 08 run_summary 扩展）必须**明示所有终止 case**。Reviewer 兜底 = 一次性抓全。
+
+#### 5. Tailwind 4 + Vue 3 SFC 共存 —— 渐进式迁移策略
+
+`@tailwindcss/vite` 插件 + `@import "tailwindcss"` 一行搞定，**无 PostCSS 配置**：
+
+```ts
+// apps/web/vite.config.ts
+plugins: [vue(), tailwindcss()]
+
+// apps/web/src/styles.css
+@import "tailwindcss";
+/* 旧 :root 变量保留 —— 兼容旧组件 */
+:root { --bg: #0f1115; ... }
+```
+
+**组件级策略**：
+
+- **新组件** (`HeaderPill.vue`, `MetricsSidebar.vue`)：纯 Tailwind utility classes，**无 `<style>` block**
+- **旧组件** (`Conversation.vue`, `Timeline.vue`, `InputBar.vue`)：保留 scoped CSS，**不动**
+
+```vue
+<!-- 新组件：纯 utility -->
+<template>
+  <div class="flex items-center gap-3 px-4 py-2 bg-zinc-900 text-zinc-100 text-sm rounded-md">
+```
+
+```vue
+<!-- 旧组件：保留 scoped -->
+<style scoped>
+.conversation-bubble { ... }
+</style>
+```
+
+**为什么渐进式？**
+
+- 一次性重写 3 个组件 = 24 小时内"美但不工作"风险
+- 渐进式 = 新组件立刻收益（Tailwind 写起来快），旧组件稳如山
+- YAGNI 兑现："未来要不要统一？等真统一时再统一"
+
+详见 ADR-015（[§7](#7-adr-增量day-07-08-新增-3-条)）。
+
+#### 6. 单一 `data-timeline-id` 锚点 —— scroll-to-iteration 的实现
+
+Final review 抓出的 Important：scroll-to-iteration "wired but non-functional"。
+
+**为什么 `querySelector('[data-iteration="N"]')` 找不到？**
+
+```vue
+<!-- Timeline.vue 当前渲染 -->
+<TimelineItemVue :title="..." :detail="..." :status="..." :kind="..." />
+<!-- 没有 data-iteration 属性 -->
+```
+
+**修法**：在 `App.vue` 维护 `iterationToTimelineId: Map<number, number>`，在 `request` 事件触发时记录映射：
+
+```ts
+case 'request': {
+  const timelineId = timelineIdCounter++;
+  iterationToTimelineId.set(ev.iteration, timelineId);
+  createTimelineEntry(`LLM Request · ${ev.iteration}`, ..., 'request', { iteration: ev.iteration, ... });
+  break;
+}
+
+function scrollToIteration(n: number): void {
+  nextTick(() => {
+    const timelineId = iterationToTimelineId.get(n);
+    if (timelineId !== undefined) {
+      const el = document.querySelector(`[data-timeline-id="${timelineId}"]`);
+      if (el !== null) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+}
+```
+
+**为什么不用 `data-iteration` 直接挂在 Timeline 元素？**
+
+- Timeline 可能有多条 event 对应同一 iteration（response, context, ...）→ 用 `data-iteration` 会 hover 到 "随便哪条"
+- 用 `data-timeline-id` 精准锚点 = "跳到 LLM Request 那条"
+
+> **教学点**：**"wired but non-functional"** 是最危险的 bug 类型 —— 代码看起来完整，UI 没崩溃，但功能从来不工作。Day 08 final review 抓出来 = spec 条款不能少。
+
+### 5 个踩坑（精简版，详见 [day08.md §⚠️ 今日踩坑](../daily/day08.md#-今日踩坑)）
+
+1. **Generators don't get exhaustiveness-checked** —— `async *runEvents(...)` 加新 variant 后 TS 不报错，必须手动加 yield site
+2. **run_summary 漏 4 个 error 路径** —— Reviewer 抓出，dispatch fix subagent 补全 5 个终止 case
+3. **tests/apps/api/trace-collector.test.ts 没自动更新** —— 硬编码 kind 数组，加新 kind 时必须 grep `kinds.toEqual` 同步更新
+4. **pnpm-lock.yaml 第一次没 commit** —— 任何 deps 装包必带 lockfile，CI 跑 `pnpm install --frozen-lockfile` 会校验
+5. **`scroll-to-iteration` wired but non-functional** —— 功能链断最后一步，UI 互动 = emit → handler → DOM selector → scroll API 每步单独验证
