@@ -181,6 +181,74 @@ describe('POST /agent end-to-end (CI smoke)', () => {
     expect(lastMessage?.role).toBe('tool');
     expect((lastMessage as { toolCallId?: string } | undefined)?.toolCallId).toBe('tc_1');
   });
+
+  it('multi-turn: second request carries full message history', async () => {
+    // 🆕 Day 09 反例 1：多轮对话 —— 第二轮 messages 含第一轮完整历史
+    const chat = new FakeChatClient([
+      // turn 1 response
+      { content: 'hello back' },
+      // turn 2 response
+      { content: 'you said hi' },
+    ]);
+    const tools = new ToolRegistry();
+    const agent = new Agent({ chat, tools });
+    const app = createAgentApp({ agent });
+
+    // turn 1: 首轮，无 history
+    const res1 = await app.fetch(
+      new Request('http://localhost/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: 'hi' }),
+      }),
+    );
+    await readSSEResponse(res1);
+    expect(chat.requests).toHaveLength(1);
+    expect(chat.requests[0]?.messages).toHaveLength(1); // user only
+
+    // turn 2: 带 history（user + assistant）
+    const history = [
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'hello back' },
+    ];
+    const res2 = await app.fetch(
+      new Request('http://localhost/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: 'what did I say?', messages: history }),
+      }),
+    );
+    await readSSEResponse(res2);
+
+    // 第二轮 LLM 应收到 3 条 messages（历史 2 + 新 user 1）
+    expect(chat.requests).toHaveLength(2);
+    const secondMessages = chat.requests[1]?.messages ?? [];
+    expect(secondMessages).toHaveLength(3);
+    expect(secondMessages[0]).toEqual({ role: 'user', content: 'hi' });
+    expect(secondMessages[1]).toEqual({ role: 'assistant', content: 'hello back' });
+    expect(secondMessages[2]).toEqual({ role: 'user', content: 'what did I say?' });
+  });
+
+  it('empty messages array behaves like single-turn', async () => {
+    // 🆕 Day 09 反例 3：messages: [] 等价于不传 messages
+    const chat = new FakeChatClient([{ content: 'ok' }]);
+    const tools = new ToolRegistry();
+    const agent = new Agent({ chat, tools });
+    const app = createAgentApp({ agent });
+
+    const res = await app.fetch(
+      new Request('http://localhost/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ input: 'hi', messages: [] }),
+      }),
+    );
+    await readSSEResponse(res);
+
+    expect(chat.requests).toHaveLength(1);
+    expect(chat.requests[0]?.messages).toHaveLength(1);
+    expect(chat.requests[0]?.messages[0]).toEqual({ role: 'user', content: 'hi' });
+  });
 });
 
 describe('CI environment independence', () => {
