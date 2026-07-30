@@ -239,7 +239,7 @@ yield { kind: 'run_summary', totalPromptTokens: 5678, totalCompletionTokens: 123
 
 > **教学点**：任何派生字段都应该有"源"。"派生绝不能替代源"是 CLAUDE.md "第一原则"的延伸 —— 消灭 if 兜住的条件，而是让源稳定。
 
-详见 [§6](#6-核心概念复习day-07-08-增量) 核心概念复习。
+详见 [§6](#核心概念复习day-07-08-增量) 核心概念复习。
 
 #### 2. best-effort 派生的纪律 —— count_tokens 失败不卡死 agent
 
@@ -531,3 +531,130 @@ Day 06 立 snapshot 语义（ADR-009）。Day 07-08 加深：
 - `run_summary` 字段全部不拷贝（值类型）
 
 **不变量**：reference type yield 时深拷贝 / 值类型不拷贝 —— 这是消费方看到的"当时"而非"最终"的核心保证。
+
+## 📐 重要设计决策（ADR 增量）
+
+> ADR-001~012 见 [day01-07 §4](2026-07-27-day01-07-seven-day-retrospective.md#4-重要设计决策adr)。本节列 Day 07-08 新增 3 条。
+
+### ADR-013: best-effort 派生（count_tokens 失败不抛）
+
+**背景**：Day 08 加 Context Window 观测。`countContextTokens` 是**独立的 API 调用**（Anthropic `/v1/messages/count_tokens`），可能因网络 / 4xx / 超时 / model 未注册而失败。
+
+**当时的问题**：
+
+- 如果 `count_tokens` 抛错 → agent 主流程挂掉
+- 派生指标是"可选观察"，不是主流程
+- "指标 bug 阻断主流程" = 违反"YAGNI 消灭 if 存在的条件"
+
+**最终选择**：失败路径全部 `return undefined`，**绝不 throw**：
+
+```ts
+export async function countContextTokens(messages, model, signal?): Promise<number | undefined> {
+  if (!process.env.ANTHROPIC_API_KEY) return undefined;
+  const meta = getModelMeta(model);
+  if (!meta) return undefined;
+  try {
+    return await client.messages.countTokens({...});
+  } catch (err) {
+    console.warn('[countContextTokens] failed:', err instanceof Error ? err.message : String(err));
+    return undefined;
+  }
+}
+```
+
+**原因**：
+
+- 派生指标是**可选观察**，失败必须被吞
+- `Agent.runEvents` 在 `countContextTokens` 返回 undefined 时**不 yield context 事件**（前端降级到不显示）
+- 用户体验：context 数字不显示 ≠ agent 跑不动
+
+**未来影响**：
+
+- 所有 best-effort 派生走同一模式：try/catch + return undefined
+- 主流程不感知派生存在
+
+**证据 commit**：`fe2b0e9` feat(observability): add countContextTokens with anthropic adapter / `6e77435` MODELS registry。
+
+---
+
+### ADR-014: derived event vs source event（context / run_summary 与 response.usage 的边界）
+
+**背景**：Day 08 加 `context` / `run_summary` 两种 event kind。两者都是"派生"，但与 `response.usage` 的边界是什么？
+
+**当时的问题**：
+
+- `response.usage` 是 provider SDK 返回的事实
+- `context.promptTokens` 是 `count_tokens` API 返回的事实
+- `run_summary.totalPromptTokens` 是多轮累加的派生
+- 三者关系不清 → 消费方不知道哪个权威
+
+**最终选择**：
+
+| 字段 | 类型 | 来源 | 用途 |
+|---|---|---|---|
+| `response.usage` | source | provider SDK | 计费 / cache read/write 真相 |
+| `context.promptTokens` | source-like | count_tokens API | 实时观测 context 占比（best-effort） |
+| `run_summary` | derived | 多轮累加 | UI 终止态"快照" |
+
+**关键边界**：
+
+- **派生不能替代源**：加 `context` 不删 `response.usage`；加 `run_summary` 不改 `response.usage` 累加逻辑
+- **source 字段永不变**：AgentEvent 联合的已有 variant 不改字段名 / 类型 / 顺序
+- **derived 走新 variant**：每次扩 derived = 新加 kind，老消费方 `default` case 仍然工作
+
+**未来影响**：
+
+- 加 Cost（USD 计价）走新 `cost_summary` kind，不污染 `response.usage`
+- 加 Latency 走新 `latency_summary` kind，不污染 `response` 事件
+- 加 Cache Hit Rate 走新 `cache_summary` kind
+
+**证据 commit**：`f35aff9` feat(agent): add context + run_summary event kinds / `3b8f975` yield context + run_summary / `1d7cbaf` test meta.context e2e。
+
+---
+
+### ADR-015: 渐进式 UI 技术栈迁移（Tailwind 4 + Vue 3 SFC 共存）
+
+**背景**：Day 08 引入 Tailwind 4 给 Agent Console 换 UI 技术栈。旧组件（Conversation.vue / Timeline.vue / InputBar.vue）已用 scoped CSS 写好。
+
+**当时的问题**：
+
+- 一次性重写 3 个组件 = 24 小时内"美但不工作"风险
+- 新组件用 Tailwind + 旧组件用 scoped = 风格不统一
+- 团队还在熟悉 Tailwind utility classes
+
+**考虑过的方案**：
+
+- **方案 A**：渐进式（新组件 Tailwind + 旧组件 scoped 不动）✅ Day 08 选
+- **方案 B**：一次性重写 3 个组件 —— ❌ 风险太高，Day 08 时间窗不够
+- **方案 C**：Day 08 不引入 Tailwind —— ❌ 用户体验升级（HeaderPill + MetricsSidebar 三栏布局）必须做
+
+**最终选择**：方案 A
+
+```ts
+// apps/web/vite.config.ts
+plugins: [vue(), tailwindcss()]
+
+// apps/web/src/styles.css
+@import "tailwindcss";
+/* 旧 :root 变量保留 —— 兼容旧组件 */
+:root { --bg: #0f1115; ... }
+```
+
+**组件级策略**：
+
+- **新组件** (`HeaderPill.vue`, `MetricsSidebar.vue`)：纯 Tailwind utility classes，**无 `<style>` block**
+- **旧组件** (`Conversation.vue`, `Timeline.vue`, `InputBar.vue`)：保留 scoped CSS，**不动**
+
+**原因**：
+
+- 渐进式 = 新组件立刻收益（Tailwind 写起来快），旧组件稳如山
+- YAGNI 兑现："未来要不要统一？等真统一时再统一"
+- 业务稳定 + 团队 ready 之后才能统一（Day 09+ 评估）
+
+**未来影响**：
+
+- 加新组件默认 Tailwind utility classes
+- 旧组件 scoped CSS 不动，等真统一时一次性重写
+- Tailwind 4 升级 breaking class 时，新组件优先调整
+
+**证据 commit**：`d102b58` feat(web): integrate tailwind css via @tailwindcss/vite / `fd622b1` HeaderPill / `0fe59a9` MetricsSidebar / `9f99f5e` three-column layout。
