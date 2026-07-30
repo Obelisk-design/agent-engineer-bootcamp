@@ -410,3 +410,46 @@ function scrollToIteration(n: number): void {
 3. **tests/apps/api/trace-collector.test.ts 没自动更新** —— 硬编码 kind 数组，加新 kind 时必须 grep `kinds.toEqual` 同步更新
 4. **pnpm-lock.yaml 第一次没 commit** —— 任何 deps 装包必带 lockfile，CI 跑 `pnpm install --frozen-lockfile` 会校验
 5. **`scroll-to-iteration` wired but non-functional** —— 功能链断最后一步，UI 互动 = emit → handler → DOM selector → scroll API 每步单独验证
+
+---
+
+## 🏗 当前架构（Day 08 末态）
+
+```
+[Browser fetch / apps/web/src/App.vue (Vue 3 + Tailwind 4)]
+    ↓ POST /agent
+apps/api/src/server.ts
+    ├── AbortController + request.signal
+    ├── apps/api/src/trace-collector.ts (AgentTrace + meta.usage + meta.context)
+    ├── apps/api/src/sse-adapter.ts (framework-agnostic)
+    └── libs/agent/agent.ts (runEvents + 12 kind + signal + error yield + final-iter stream)
+            ├── libs/llm/chat-client.ts (ChatOptions { signal? } + ChatUsage)
+            │   ├── OpenAIChatClient (with toOpenAIMessages)
+            │   └── AnthropicChatClient (with toApiMessages)
+            ├── libs/llm/observability/models.ts (MODELS 注册表 6 model)
+            ├── libs/llm/observability/context-counter.ts (countContextTokens best-effort)
+            └── libs/tools/tool-registry.ts
+                    └── CalculatorTool (无 eval / new Function)
+
+[apps/web 消费 events]
+    ├── HeaderPill.vue (peak / limit / total + 进度条: 绿 < 50% / 黄 50-80% / 红 > 80%)
+    ├── MetricsSidebar.vue (per-iteration + Peak/Total/Iters 合计 + scroll-to-iteration emit)
+    └── Timeline.vue (request/response/tool_call/tool_result + data-timeline-id 锚点)
+
+[GET /traces/:runId]  ←──  TraceCollector (LRU 32, in-memory)
+                              ├── events[] (source: 12 kind 全保存)
+                              └── meta = { usage: ChatUsage, context: { peakPromptTokens, iterations } }
+```
+
+**状态**：Agent Runtime 是 source（12 kind events），apps/api 层是 derived（meta.usage / meta.context），apps/web 层是 rendering（HeaderPill / MetricsSidebar / Timeline）。
+
+**关键纪律**：
+
+- snapshot 语义（yield 时深拷贝累积型数据）
+- source vs derived 双写（Runtime 零感知 Trace / meta.context 存在）
+- framework-agnostic adapter（apps/api/src/sse-adapter.ts 输出 `{event, data}`）
+- final-iter 流式 + message_delta 限定 final-iter
+- best-effort 派生（count_tokens 失败不抛）
+- 渐进式 UI 技术栈（Tailwind 4 + Vue 3 SFC + 旧 scoped CSS 并存）
+
+详见 [day01-07 §3 Day 7 架构图](2026-07-27-day01-07-seven-day-retrospective.md#day-7-当前架构流式-可观测-可中断-可观测) + [day08.md §📚 知识点 5](../daily/day08.md#5-tailwind-4-vue-3-sfc-共存-渐进式迁移策略)。
