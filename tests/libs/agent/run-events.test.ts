@@ -33,7 +33,8 @@ describe('Agent.runEvents — event sequence', () => {
     const agent = new Agent({ chat, tools });
 
     const events = [];
-    for await (const ev of agent.runEvents('compute 1+2')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'compute 1+2' }]))
+      events.push(ev);
 
     // 序列断言：覆盖 11 kind（不含 error / context）—— Day 07 加 message_delta；Day 08 加 run_summary
     // 注：calculator-flow 测试不传 model → 不 yield context 事件
@@ -61,7 +62,7 @@ describe('Agent.runEvents — event sequence', () => {
     const agent = new Agent({ chat, tools });
 
     const events = [];
-    for await (const ev of agent.runEvents('hello')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'hello' }])) events.push(ev);
 
     expect(events[0]?.kind).toBe('message_start');
     const context = events.find((e) => e.kind === 'context');
@@ -98,7 +99,8 @@ describe('Agent.runEvents — event sequence', () => {
 
     // Day 07: 不再 throw，消费方拿到 error 事件，for-await 不抛
     const events = [];
-    for await (const ev of agent.runEvents('infinite')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'infinite' }]))
+      events.push(ev);
 
     const errorEvent = events.find((e) => e.kind === 'error');
     expect(errorEvent).toBeDefined();
@@ -122,7 +124,8 @@ describe('Agent.runEvents — event sequence', () => {
     const agent = new Agent({ chat, tools, maxIterations: 2 });
 
     const events = [];
-    for await (const ev of agent.runEvents('infinite')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'infinite' }]))
+      events.push(ev);
 
     const runSummaryIndex = events.findIndex((e) => e.kind === 'run_summary');
     const errorIndex = events.findIndex((e) => e.kind === 'error');
@@ -137,7 +140,7 @@ describe('Agent.runEvents — event sequence', () => {
     const agent = new Agent({ chat, tools, model: 'claude-opus-5' });
 
     const events = [];
-    for await (const ev of agent.runEvents('hello')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'hello' }])) events.push(ev);
 
     const context = events.find((e) => e.kind === 'context');
     expect(context).toBeDefined();
@@ -159,14 +162,16 @@ describe('Agent.runEvents — request.messages accumulation', () => {
     ]);
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
-    const agent = new Agent({
-      chat,
-      tools,
-      systemPrompt: 'You are a helpful assistant.',
-    });
+    const agent = new Agent({ chat, tools });
+
+    // 🆕 Day 09: messages 由 caller 自己拼（含 system）
+    const messages = [
+      { role: 'system' as const, content: 'You are a helpful assistant.' },
+      { role: 'user' as const, content: 'compute' },
+    ];
 
     // 只消费到第一次 chat 完成
-    for await (const ev of agent.runEvents('compute')) {
+    for await (const ev of agent.runEvents(messages)) {
       if (ev.kind === 'response' && ev.iteration === 1) break;
     }
 
@@ -186,14 +191,16 @@ describe('Agent.runEvents — request.messages accumulation', () => {
     ]);
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
-    const agent = new Agent({
-      chat,
-      tools,
-      systemPrompt: 'You are a helpful assistant.',
-    });
+    const agent = new Agent({ chat, tools });
+
+    // 🆕 Day 09: messages 由 caller 自己拼（含 system）
+    const messages = [
+      { role: 'system' as const, content: 'You are a helpful assistant.' },
+      { role: 'user' as const, content: 'compute' },
+    ];
 
     // 跑完整个流
-    for await (const _ev of agent.runEvents('compute')) {
+    for await (const _ev of agent.runEvents(messages)) {
       // drain
     }
 
@@ -233,7 +240,7 @@ describe('Agent.runEvents — response event payload', () => {
     const agent = new Agent({ chat, tools });
 
     const responses = [];
-    for await (const ev of agent.runEvents('compute')) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'compute' }])) {
       if (ev.kind === 'response') responses.push(ev);
     }
 
@@ -252,7 +259,7 @@ describe('Agent.runEvents — response event payload', () => {
     const agent = new Agent({ chat, tools });
 
     const responses = [];
-    for await (const ev of agent.runEvents('ask')) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'ask' }])) {
       if (ev.kind === 'response') responses.push(ev);
     }
 
@@ -281,7 +288,9 @@ describe('Agent.runEvents — signal and error yield (Day 07)', () => {
     controller.abort(); // 立即 abort
 
     const events = [];
-    for await (const ev of agent.runEvents('hi', { signal: controller.signal })) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'hi' }], {
+      signal: controller.signal,
+    })) {
       events.push(ev);
     }
 
@@ -299,7 +308,7 @@ describe('Agent.runEvents — signal and error yield (Day 07)', () => {
     const agent = new Agent({ chat, tools: new ToolRegistry() });
 
     const events = [];
-    for await (const ev of agent.runEvents('hi')) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'hi' }])) {
       events.push(ev);
     }
 
@@ -315,7 +324,7 @@ describe('Agent.runEvents — signal and error yield (Day 07)', () => {
     const agent = new Agent({ chat, tools: new ToolRegistry() });
 
     const events = [];
-    for await (const ev of agent.runEvents('hello')) events.push(ev);
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'hello' }])) events.push(ev);
 
     const deltas = events.filter((e) => e.kind === 'message_delta');
     expect(deltas).toHaveLength(3);
@@ -334,7 +343,7 @@ describe('Agent.runEvents — usage accumulation (Day 07)', () => {
     const agent = new Agent({ chat, tools: new ToolRegistry() });
 
     const responses = [];
-    for await (const ev of agent.runEvents('q')) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'q' }])) {
       if (ev.kind === 'response') responses.push(ev);
     }
 
@@ -347,7 +356,7 @@ describe('Agent.runEvents — usage accumulation (Day 07)', () => {
 
     let accumulatedDeltas = '';
     let messageEndContent = '';
-    for await (const ev of agent.runEvents('q')) {
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'q' }])) {
       if (ev.kind === 'message_delta') {
         accumulatedDeltas += (ev as { content: string }).content;
       }

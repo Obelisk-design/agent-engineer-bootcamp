@@ -42,9 +42,15 @@ tools.register(calculatorTool);
 const agent = new Agent({
   chat,
   tools,
-  systemPrompt: 'You are a helpful assistant. Prefer using available tools over guessing.',
   model,
 });
+
+// 🆕 Day 09: 多轮对话 —— messages 由 caller 自己拼（含 system）
+const SYSTEM_PROMPT = 'You are a helpful assistant. Prefer using available tools over guessing.';
+const messages = [
+  { role: 'system' as const, content: SYSTEM_PROMPT },
+  { role: 'user' as const, content: '用 calculator 工具计算 1+2*3' },
+];
 
 async function main() {
   // Day 05 起 Agent 推荐用 runEvents() 看完整事件流；这里手动打印 iteration 进度，
@@ -54,7 +60,7 @@ async function main() {
   //   response 事件携带 usage 字段，累积打印 token 用量。
   let answer = '';
   let totalUsage: { promptTokens: number; completionTokens: number } | undefined;
-  for await (const ev of agent.runEvents('用 calculator 工具计算 1+2*3')) {
+  for await (const ev of agent.runEvents(messages)) {
     if (ev.kind === 'iteration') {
       console.log(`[anthropic-calculator] iteration=${ev.n}`);
     } else if (ev.kind === 'tool_call') {

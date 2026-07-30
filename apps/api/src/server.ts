@@ -34,6 +34,7 @@ import { streamSSE } from 'hono/streaming';
 
 import type { Agent } from '../../../libs/agent/index.js';
 import type { ChatUsage } from '../../../libs/llm/chat-client.js';
+import type { Message } from '../../../libs/llm/index.js';
 import { agentEventToSSEMessage } from './sse-adapter.js';
 import { TraceCollector } from './trace-collector.js';
 
@@ -66,11 +67,19 @@ export function createAgentApp(options: AgentAppOptions): Hono {
 
   // Day 05/07: POST /agent + SSE
   app.post('/agent', async (c) => {
-    const body = (await c.req.json().catch(() => null)) as { input?: unknown } | null;
+    const body = (await c.req.json().catch(() => null)) as {
+      input?: unknown;
+      messages?: unknown;
+    } | null;
     const input = body?.input;
     if (typeof input !== 'string' || input.length === 0) {
-      return c.json({ error: 'request body must be { input: string }' }, 400);
+      return c.json({ error: 'request body must be { input: string, messages?: Message[] }' }, 400);
     }
+
+    // 🆕 Day 09: 多轮对话 —— 调用方传入历史 messages，本轮 user 追加在末尾。
+    // 验证 messages 是 Message[] 形状（不严：浅校验，更深交给 Agent 内部）。
+    const incomingMessages = Array.isArray(body?.messages) ? (body.messages as Message[]) : [];
+    const messages: Message[] = [...incomingMessages, { role: 'user', content: input }];
 
     // 🆕 Day 07: AbortController + 监听客户端断线
     const abortController = new AbortController();
@@ -84,7 +93,7 @@ export function createAgentApp(options: AgentAppOptions): Hono {
       let totalUsage: ChatUsage | undefined;
 
       try {
-        for await (const ev of options.agent.runEvents(input, {
+        for await (const ev of options.agent.runEvents(messages, {
           signal: abortController.signal,
         })) {
           collector.collect(runId, ev);

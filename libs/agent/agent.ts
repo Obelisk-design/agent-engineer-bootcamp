@@ -43,6 +43,15 @@
  * - runEvents 在每次 LLM 调用前 yield `context` 事件（best-effort，失败/未知 model 不 yield）
  * - runEvents 在 message_end / error 之前 yield `run_summary` 事件（累积 usage + peak）
  *
+ * Day 09 改造（多轮对话历史前置）：
+ * - runEvents / run 签名改成接收 `messages: readonly Message[]`，不再拼接 userInput。
+ * - AgentOptions 删 systemPrompt 字段：system 消息的注入完全由调用方负责（Day 05
+ *   "同一信息两个出口" 原则延伸到入口）。这样 `runEvents` 不再拥有"拼 messages"
+ *   的责任，调用方拿到的就是 Agent Runtime 实际使用的完整 messages。
+ * - 入口 messages 深拷贝（map {...m}）—— Day 05 request 事件深拷贝规则的
+ *   入口版本：保证内部 workingMessages 上的 push 不会泄露到调用方持有的数组。
+ * - run() 同样改签名，复用 runEvents 的循环实现，承诺同一份代码。
+ *
  * 不做（YAGNI）：
  * - 并行 tool 执行
  * - 流式 tool_calls（tool_calls iter 仍走 request/response，不流式中间态）
@@ -58,7 +67,6 @@ import type { AgentEvent } from './event.js';
 export interface AgentOptions {
   readonly chat: ChatClient;
   readonly tools: ToolRegistry;
-  readonly systemPrompt?: string;
   readonly maxIterations?: number;
   readonly model?: string; // 🆕 Day 08: 必需 if context observability 启用；未知 model → context 事件不 yield
 }
@@ -70,24 +78,27 @@ export interface AgentRunOptions {
 export class Agent {
   constructor(private readonly options: AgentOptions) {}
 
-  async run(userInput: string, options?: AgentRunOptions): Promise<string> {
+  async run(messages: readonly Message[], options?: AgentRunOptions): Promise<string> {
     // 收尾版 run：委托给 runEvents，遇到 message_end 拿 content，遇到 error 转 throw。
     // 这样保证 run() 和 runEvents() 是同一份 loop 实现，不会分叉。
-    for await (const ev of this.runEvents(userInput, options)) {
+    for await (const ev of this.runEvents(messages, options)) {
       if (ev.kind === 'message_end') return ev.content;
       if (ev.kind === 'error') throw new Error(ev.message);
     }
     return '';
   }
 
-  async *runEvents(userInput: string, options?: AgentRunOptions): AsyncIterable<AgentEvent> {
+  async *runEvents(
+    messages: readonly Message[],
+    options?: AgentRunOptions,
+  ): AsyncIterable<AgentEvent> {
     const signal = options?.signal;
-    const messages: Message[] = [
-      ...(this.options.systemPrompt !== undefined
-        ? [{ role: 'system' as const, content: this.options.systemPrompt }]
-        : []),
-      { role: 'user', content: userInput },
-    ];
+
+    // 🆕 Day 09: 调用方传入完整 messages（system + 历史 + 新 user）。
+    // runEvents 不再追加 user、不再注入 systemPrompt —— 那是调用方的责任。
+    // 深拷贝保证不会就地修改调用方持有的数组（Day 05 规则在入口复用）。
+    const workingMessages: Message[] = messages.map((m) => ({ ...m }));
+
     const toolDefs = this.options.tools.toProviderTools();
     const maxIterations = this.options.maxIterations ?? 5;
 
@@ -122,7 +133,7 @@ export class Agent {
       yield {
         kind: 'request',
         iteration: i + 1,
-        messages: messages.map((m) => ({ ...m })),
+        messages: workingMessages.map((m) => ({ ...m })),
       };
 
       // 🆕 Day 08: context 计数（best-effort，失败不打断主流程）
@@ -130,7 +141,7 @@ export class Agent {
       if (model !== undefined) {
         const meta = getModelMeta(model);
         if (meta !== undefined) {
-          const ctxResult = await countContextTokens(messages, model, signal);
+          const ctxResult = await countContextTokens(workingMessages, model, signal);
           if (ctxResult !== undefined) {
             yield {
               kind: 'context',
@@ -146,7 +157,10 @@ export class Agent {
       let response: ChatResponse;
       try {
         // 🆕 Day 07: 先 chat() 探测拿 usage + 判定 iter 类型
-        const probe = await this.options.chat.chat({ messages, tools: toolDefs }, options);
+        const probe = await this.options.chat.chat(
+          { messages: workingMessages, tools: toolDefs },
+          options,
+        );
 
         // chat 后再检查一次 signal
         if (signal?.aborted) {
@@ -165,7 +179,10 @@ export class Agent {
         if (probe.content !== undefined) {
           // 🆕 Day 07: final-answer iter → 重调 stream() 流式 yield message_delta
           let accumulated = '';
-          for await (const chunk of this.options.chat.stream({ messages }, options)) {
+          for await (const chunk of this.options.chat.stream(
+            { messages: workingMessages },
+            options,
+          )) {
             // 流式过程中 signal 检查（每个 chunk 后）
             if (signal?.aborted) {
               // 🆕 Day 08: run_summary 先于 error 发出（partial 累加）
@@ -245,7 +262,7 @@ export class Agent {
       // 工具调用路径
       if (response.toolCalls !== undefined && response.toolCalls.length > 0) {
         // assistant 决定调工具：把 tool_calls 写进历史
-        messages.push({
+        workingMessages.push({
           role: 'assistant',
           content: '',
           toolCalls: response.toolCalls,
@@ -280,7 +297,7 @@ export class Agent {
             output: resultContent,
           };
 
-          messages.push({
+          workingMessages.push({
             role: 'tool',
             content: resultContent,
             toolCallId: tc.id,

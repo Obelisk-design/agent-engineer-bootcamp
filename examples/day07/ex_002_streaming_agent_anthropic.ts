@@ -39,7 +39,6 @@ const tools = new ToolRegistry(); // 空 registry
 const agent = new Agent({
   chat,
   tools,
-  systemPrompt: 'You are a helpful assistant. Keep your answer short (under 100 words).',
   model,
 });
 
@@ -56,8 +55,14 @@ async function main() {
   let messageDeltaCount = 0;
 
   process.stdout.write('[anthropic-stream] answer: ');
+  // 🆕 Day 09: messages 由 caller 自己拼（含 system）
+  const SYSTEM_PROMPT = 'You are a helpful assistant. Keep your answer short (under 100 words).';
+  const messages = [
+    { role: 'system' as const, content: SYSTEM_PROMPT },
+    { role: 'user' as const, content: '用一句话介绍 TypeScript' },
+  ];
   try {
-    for await (const ev of agent.runEvents('用一句话介绍 TypeScript', {
+    for await (const ev of agent.runEvents(messages, {
       signal: abortController.signal,
     })) {
       if (ev.kind === 'message_delta') {

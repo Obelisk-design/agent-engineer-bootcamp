@@ -150,11 +150,10 @@ describe('POST /agent end-to-end (CI smoke)', () => {
     ]);
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
-    // 用 systemPrompt 让第二轮 messages 长度 = 4（system + user + assistant + tool）
+    // 🆕 Day 09: system 消息由 caller 通过 messages 传入
     const agent = new Agent({
       chat,
       tools,
-      systemPrompt: 'You are a helpful assistant.',
     });
     const app = createAgentApp({ agent });
 
@@ -162,7 +161,10 @@ describe('POST /agent end-to-end (CI smoke)', () => {
       new Request('http://localhost/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ input: 'compute' }),
+        body: JSON.stringify({
+          input: 'compute',
+          messages: [{ role: 'system', content: 'You are a helpful assistant.' }],
+        }),
       }),
     );
     await readSSEResponse(res);

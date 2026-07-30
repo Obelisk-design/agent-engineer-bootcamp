@@ -9,7 +9,7 @@ describe('Agent', () => {
     const chat = new FakeChatClient([{ content: 'hi' }]);
     const tools = new ToolRegistry();
     const agent = new Agent({ chat, tools });
-    const answer = await agent.run('hello');
+    const answer = await agent.run([{ role: 'user', content: 'hello' }]);
     expect(answer).toBe('hi');
   });
 
@@ -23,7 +23,7 @@ describe('Agent', () => {
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
     const agent = new Agent({ chat, tools });
-    const answer = await agent.run('compute');
+    const answer = await agent.run([{ role: 'user', content: 'compute' }]);
     expect(answer).toBe('3');
   });
 
@@ -36,7 +36,7 @@ describe('Agent', () => {
     ]);
     const tools = new ToolRegistry();
     const agent = new Agent({ chat, tools });
-    const answer = await agent.run('call missing tool');
+    const answer = await agent.run([{ role: 'user', content: 'call missing tool' }]);
     expect(answer).toBe('done');
   });
 
@@ -52,6 +52,8 @@ describe('Agent', () => {
     const tools = new ToolRegistry();
     tools.register(calculatorTool);
     const agent = new Agent({ chat, tools, maxIterations: 2 });
-    await expect(agent.run('infinite')).rejects.toThrow('exceeded 2 iterations');
+    await expect(agent.run([{ role: 'user', content: 'infinite' }])).rejects.toThrow(
+      'exceeded 2 iterations',
+    );
   });
 });
