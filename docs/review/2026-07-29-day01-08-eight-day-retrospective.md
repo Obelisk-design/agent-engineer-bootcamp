@@ -264,7 +264,7 @@ try {
 
 > **教学点**：best-effort 派生 = 把"派生路径"和"主路径"完全隔离。try/catch 是隔离手段，但 **catch 块必须 return undefined 而不是 rethrow**。
 
-详见 ADR-013（[§7](#7-adr-增量day-07-08-新增-3-条)）。
+详见 ADR-013（[§7](#重要设计决策adr-增量)）。
 
 #### 3. AgentEvent 扩展是 additive —— 12 kind 的扩展策略
 
@@ -361,7 +361,7 @@ plugins: [vue(), tailwindcss()]
 - 渐进式 = 新组件立刻收益（Tailwind 写起来快），旧组件稳如山
 - YAGNI 兑现："未来要不要统一？等真统一时再统一"
 
-详见 ADR-015（[§7](#7-adr-增量day-07-08-新增-3-条)）。
+详见 ADR-015（[§7](#重要设计决策adr-增量)）。
 
 #### 6. 单一 `data-timeline-id` 锚点 —— scroll-to-iteration 的实现
 
