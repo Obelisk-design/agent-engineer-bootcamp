@@ -28,6 +28,12 @@ import LeftMenu from './components/LeftMenu.vue';
 import RightPanel from './components/RightPanel.vue';
 import ConversationPanel from './components/ConversationPanel.vue';
 import ExecutionTimeline from './components/ExecutionTimeline.vue';
+import {
+  accumulateFromResponse,
+  accumulateFromRunSummary,
+  emptySessionUsage,
+  type SessionUsage,
+} from './lib/sessionUsage.js';
 
 const conversation = ref<ConversationItem[]>([]);
 const timeline = ref<TimelineItem[]>([]);
@@ -40,6 +46,11 @@ const errorMessage = ref<string | null>(null);
 const isCancelled = ref(false);
 const rightPanelOpen = ref(true);
 const modelName = ref<string>(import.meta.env.VITE_MODEL_NAME ?? 'deepseek-v4-pro');
+
+// 🆕 Day 09+: session 跨 turn 累计 token —— 跟 conversation 同生命周期
+// (page refresh 时清零；resetRunState 不清)
+// 累加逻辑在 lib/sessionUsage.ts,可单测
+const sessionUsage = ref<SessionUsage>(emptySessionUsage);
 
 let timelineIdCounter = 0;
 let activeAbortController: AbortController | null = null;
@@ -126,6 +137,8 @@ function dispatch(ev: AgentEvent): void {
           promptTokens: ev.usage.promptTokens,
           completionTokens: ev.usage.completionTokens,
         };
+        // 🆕 Day 09+: session 跨 turn 累加 in/out
+        sessionUsage.value = accumulateFromResponse(sessionUsage.value, ev.usage);
       }
       appendTimeline({
         title: `LLM Response · ${String(ev.iteration)}`,
@@ -188,6 +201,9 @@ function dispatch(ev: AgentEvent): void {
         peakPromptTokens: ev.peakPromptTokens,
         iterations: ev.iterations,
       };
+      // 🆕 Day 09+: session 跨 turn 取 Math.max(本 turn peak, 之前 session peak)
+      // 语义:整个 session 内任意一次 LLM 调用的最大 prompt tokens
+      sessionUsage.value = accumulateFromRunSummary(sessionUsage.value, ev.peakPromptTokens);
       break;
     case 'message_delta': {
       const idx = conversation.value.findIndex((c) => c.role === 'assistant' && c.streaming);
@@ -340,6 +356,7 @@ function toggleRightPanel(): void {
       :summary="runSummary"
       :latest-usage="latestUsage"
       :context-limit="contextLimit"
+      :session-usage="sessionUsage"
       :status="status"
     />
 

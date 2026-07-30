@@ -33,6 +33,12 @@ interface Props {
   summary: RunSummary | null;
   latestUsage: LatestUsage | null;
   contextLimit: number;
+  // 🆕 Day 09+: session 跨 turn 累计 token —— 跟 conversation 同生命周期
+  sessionUsage: {
+    readonly promptTokens: number;
+    readonly completionTokens: number;
+    readonly peakPromptTokens: number;
+  };
   status: 'idle' | 'running' | 'completed' | 'error' | 'cancelled';
 }
 const props = defineProps<Props>();
@@ -120,6 +126,24 @@ const barColor = computed(() => {
         <span class="text-zinc-500">out</span>
         <span class="font-mono text-violet-300" data-testid="header-bar-latest-completion">
           {{ formatTokens(latestUsage?.completionTokens) }}
+        </span>
+      </span>
+
+      <span class="w-px h-4 bg-zinc-800" />
+
+      <!-- 🆕 Day 09+: session 跨 turn 累计 in/out (暗色 vs 本轮亮色) -->
+      <span class="flex items-center gap-1.5" title="整个 session 累计 input tokens（跨 turn）">
+        <span class="w-1.5 h-1.5 rounded-full bg-sky-700" />
+        <span class="text-zinc-600">Σin</span>
+        <span class="font-mono text-sky-500" data-testid="header-bar-session-prompt">
+          {{ formatTokens(sessionUsage?.promptTokens) }}
+        </span>
+      </span>
+      <span class="flex items-center gap-1.5" title="整个 session 累计 output tokens（跨 turn）">
+        <span class="w-1.5 h-1.5 rounded-full bg-violet-700" />
+        <span class="text-zinc-600">Σout</span>
+        <span class="font-mono text-violet-500" data-testid="header-bar-session-completion">
+          {{ formatTokens(sessionUsage?.completionTokens) }}
         </span>
       </span>
 
