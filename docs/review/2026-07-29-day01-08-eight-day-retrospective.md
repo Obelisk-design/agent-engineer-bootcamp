@@ -31,37 +31,37 @@
 
 - **代码产物**：`pnpm-workspace.yaml` + `tsconfig.json`（strict + NodeNext + ES2023）+ `examples/day01/ex_001_chat_completion.ts` + CI matrix + Husky pre-commit
 - **关键 commit**：`839ab30` / `17ea51b` / `5385d6b` / `5a06243`
-- **一句话总结**：立 monorepo + 真实 LLM smoke test 工作流。详见 [day01-07 §1 Day 01](2026-07-27-day01-07-seven-day-retrospective.md#day-01--工程脚手架--第一个-llm-调用)。
+- **一句话总结**：立 monorepo + 真实 LLM smoke test 工作流。详见 [day01-07 §1 Day 01](2026-07-27-day01-07-seven-day-retrospective.md#day-01-工程脚手架-第一个-llm-调用)。
 
 ### Day 02 — ChatClient 抽象 + 多 Provider
 
 - **代码产物**：`libs/llm/{message,chat-client,openai-chat-client,anthropic-chat-client,index}.ts`
 - **关键 commit**：`c851ad8` / `0e6bf1f` / `fef2331` / `a7bb68f`
-- **一句话总结**：抽象 ≠ 给 SDK 换名字，调用方"换 provider 零改动"。详见 [day01-07 §1 Day 02](2026-07-27-day01-07-seven-day-retrospective.md#day-02--chatclient-抽象--多-provider)。
+- **一句话总结**：抽象 ≠ 给 SDK 换名字，调用方"换 provider 零改动"。详见 [day01-07 §1 Day 02](2026-07-27-day01-07-seven-day-retrospective.md#day-02-chatclient-抽象-多-provider)。
 
 ### Day 03 — Streaming（additive，不 replace）
 
 - **代码产物**：`libs/llm/chat-client.ts` 加 `stream(messages): AsyncIterable<string>` + OpenAI/Anthropic 实现 + `toApiMessages()` helper
 - **关键 commit**：`471469c` / `4628c01` / `b228718` / `c1e8696` / `7987bac`（抽 helper，review 抓 duplication）
-- **一句话总结**：add `stream()` 赢改 `chat()` 返回 AsyncIterable —— Day 02 调用方 0 行修改。详见 [day01-07 §1 Day 03](2026-07-27-day01-07-seven-day-retrospective.md#day-03--streamingadditive不replace)。
+- **一句话总结**：add `stream()` 赢改 `chat()` 返回 AsyncIterable —— Day 02 调用方 0 行修改。详见 [day01-07 §1 Day 03](2026-07-27-day01-07-seven-day-retrospective.md#day-03-streamingadditive不-replace)。
 
 ### Day 04 — Agent Loop + Tool Calling
 
 - **代码产物**：`libs/tools/{tool,tool-registry,calculator-tool}.ts` + `libs/agent/agent.ts` + ChatRequest/ChatResponse 统一
 - **关键 commit**：`223745c` / `ca9452c` / `3ff54dd`（删 chatWithTools）+ `2585449`（ToolDefinition 上移）+ `32a8ddda`（Agent loop）
-- **一句话总结**：普通聊天和工具调用是同一种能力的不同输入，加字段不方加方法。详见 [day01-07 §1 Day 04](2026-07-27-day01-07-seven-day-retrospective.md#day-04--agent-loop--tool-calling)。
+- **一句话总结**：普通聊天和工具调用是同一种能力的不同输入，加字段不加方法。详见 [day01-07 §1 Day 04](2026-07-27-day01-07-seven-day-retrospective.md#day-04-agent-loop-tool-calling)。
 
 ### Day 05 — AgentEvent + SSE + Web UI（三阶段交付）
 
 - **代码产物**：`libs/agent/event.ts`（AgentEvent 7 kind）+ `apps/api/{server,sse-adapter}.ts` + 单 HTML Web UI
 - **关键 commit**：`09d5589`（CLAUDE.md 协议指令）+ `3e12fd2`（AgentEvent + drop onIteration）+ `7310645`（SSE）+ `a906335`（扩 request/response）+ `a292fdd`（ADR-0001）
-- **一句话总结**：判别联合替代平铺 optional + runEvents() 是 run() 真子集 + ADR-0001 三层职责分离。详见 [day01-07 §1 Day 05](2026-07-27-day01-07-seven-day-retrospective.md#day-05--agentevent--sse--web-ui三阶段交付)。
+- **一句话总结**：判别联合替代平铺 optional + runEvents() 是 run() 真子集 + ADR-0001 三层职责分离。详见 [day01-07 §1 Day 05](2026-07-27-day01-07-seven-day-retrospective.md#day-05-agentevent-sse-web-ui三阶段交付)。
 
 ### Day 06 — CI Smoke Test + Trace Collector
 
 - **代码产物**：`tests/libs/agent/shared/fake-chat-client.ts` + `apps/api/src/trace-collector.ts`（LRU 32）+ `GET /traces/:runId`
 - **关键 commit**：`3ee7ebd`（抽 FakeChatClient）+ `9be48b4`（端到端测试）+ `70bd23b`（docs）+ `a5fed60`（TraceCollector + snapshot）
-- **一句话总结**：Runtime 零感知 Trace 存在 + snapshot 语义（yield 时深拷贝累积型数据）。详见 [day01-07 §1 Day 06](2026-07-27-day01-07-seven-day-retrospective.md#day-06--ci-smoke-test--trace-collector)。
+- **一句话总结**：Runtime 零感知 Trace 存在 + snapshot 语义（yield 时深拷贝累积型数据）。详见 [day01-07 §1 Day 06](2026-07-27-day01-07-seven-day-retrospective.md#day-06-ci-smoke-test-trace-collector)。
 
 ### Day 07 — Streaming Content + AbortSignal + Usage ⭐ 详细见 §3
 
