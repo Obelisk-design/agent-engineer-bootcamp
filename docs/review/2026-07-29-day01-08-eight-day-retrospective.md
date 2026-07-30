@@ -76,3 +76,96 @@
 - **关键 commit**：19 commit，5 Phase 1-5，`6e77435` / `fe2b0e9` / `f35aff9` / `3b8f975` / `0491590`（fix 5 error 路径）/ `d102b58`（Tailwind）/ `9f99f5e`（三栏 UI）/ `555e722`（scroll-to-iteration fix）
 - **一句话总结**：source vs derived 双写落地（meta.context）+ best-effort 派生（count_tokens 失败不抛）+ 渐进式 UI 技术栈迁移。
 - **演进细节**：见 §4
+
+## 🆕 Day 07 — Streaming Content + AbortSignal + Usage 详细演进
+
+### 学习目标
+
+收口 Day 06 留下的 4 个悬挂契约：
+
+1. **AbortSignal 进 ChatClient 契约层** —— 抽象层跟数据走，signal 沿调用链透传
+2. **error throw → yield** —— 所有错误统一 yield error 事件，消费方不 catch
+3. **message_delta 限定 final-answer iter** —— tool_calls iter 不流式，中间态不噪声
+4. **Token Usage 双写** —— ChatResponse.usage 是 source，Trace.meta.usage 是 derived
+
+### 代码产物
+
+- `libs/llm/chat-client.ts` 加 `ChatOptions { signal? }` + `ChatUsage`
+- `libs/llm/openai-chat-client.ts` / `anthropic-chat-client.ts`：signal 透传 + usage parse
+- `libs/agent/event.ts` 加 `message_delta` kind（**10 kind**）+ `response.usage?` optional
+- `libs/agent/agent.ts` 加 signal + **error throw → yield** + final-answer iter 切 `stream()` + usage 累积
+- `apps/api/src/trace-collector.ts` 加 `addMeta(runId, partial)`
+- `apps/api/src/server.ts`：AbortController + 监听 `request.signal` + meta usage 写入 + 删 try/catch
+- `apps/api/src/web/index.html`：打字机 streaming bubble + ▍ 光标 + `finalizeStreamingBubble`
+- Day 04 demos 加 usage 打印 + 流式输出
+- `examples/day07/ex_001_streaming_agent_openai.ts` / `ex_002_streaming_agent_anthropic.ts`
+- `run-events.test.ts` 加 5 个新场景（signal / error / streaming / usage）
+
+### 关键 commit 链路（12 commit）
+
+| Phase | Commit | 内容 |
+|---|---|---|
+| A 抽象层 | `ac369d5` | feat(day07): add signal and usage to ChatClient interface |
+| A 抽象层 | `1009656` | feat(day07): openai provider signal and usage support |
+| A 抽象层 | `765a2be` | feat(day07): anthropic provider signal and usage support |
+| B Agent 层 | `fe9804e` | feat(day07): add message_delta kind and response.usage to AgentEvent |
+| B Agent 层 | `1cae03b` | feat(day07): agent signal, error yield, streaming, and usage |
+| C 消费层 | `79e2a89` | docs(day07): SSE adapter handles message_delta and usage |
+| C 消费层 | `ac08230` | feat(day07): trace collector addMeta for partial meta merge |
+| C 消费层 | `0ff83aa` | feat(day07): server AbortController, signal, and meta usage |
+| D UI & demos | `090922a` | feat(day07): web ui typewriter and streaming bubble |
+| D UI & demos | `b200d2f` | refactor(day07): day 04 demos print usage and stream message_delta |
+| D UI & demos | `520a942` | feat(day07): streaming agent demos for both providers |
+| D UI & demos | `badd1c4` | test(day07): signal abort, error yield, streaming chunks, usage scenarios |
+
+### 演进说明（5 条关键不变量 / 决策）
+
+#### 1. AbortSignal 进 ChatClient 契约层（ADR-011）
+
+`Day 02` 立 ChatClient 时定“抽象层跟数据走”。Day 03 思考题 #3 留了“signal 应该进 ChatClient 还是 apps/api adapter”未答。**Day 07 答：ChatClient 契约层加 `ChatOptions { signal? }`**。
+
+- 抽象层有 signal → provider 透传给 SDK → SDK 终止请求 → 已发 token 不浪费
+- 抽象层无 signal → 消费方只能 break iterator，不能取消已发请求 → 流式 token 计费痛点
+- 不放 Agent 配置：Agent 是长期对象（构造一次用多次），signal 是单次执行的上下文（每次 fetch 独立 AbortController）
+
+调用链：`Browser fetch → request.signal → apps/api AbortController → Agent.runEvents({signal}) → chat/stream({signal}) → SDK`。
+
+#### 2. error throw → yield（行为变更，ADR-012）
+
+`Day 06` 决策点留了 “error throw vs yield” 未决。`Day 07` 拍板：**所有错误统一 yield error 事件**。
+
+```ts
+if (signal?.aborted) yield { kind: 'error', message: 'aborted by signal' };
+try { ... } catch (err) { yield { kind: 'error', message: ... }; }
+yield { kind: 'error', message: `exceeded ${max} iterations ...` };
+```
+
+`Agent.run()` 保持向后兼容：
+
+```ts
+async run(userInput: string, options?: AgentRunOptions): Promise<string> {
+  for await (const ev of this.runEvents(userInput, options)) {
+    if (ev.kind === 'message_end') return ev.content;
+    if (ev.kind === 'error') throw new Error(ev.message);
+  }
+  return '';
+}
+```
+
+- 消费方统一不 catch（`for await` 看不到 throw 就接住）
+- 协议层错误（HTTP 400）走 HTTP status，业务层错误走 SSE event —— 边界清晰
+- 跟 `done` 互斥：error 后不发 done，success 才发 done
+
+#### 3. message_delta 限定 final-answer iter
+
+tool_calls iter 不流式（仍走 request/response 事件），仅 final-answer iter 流式 yield `message_delta`。**Claude Code 风格**：“AI 想 → 调工具 → 看结果 → 打字机答”。中间态 assistant 流式 = 信息噪声。
+
+#### 4. Token Usage 双写（source vs derived）
+
+- `ChatResponse.usage` 是事实源（provider SDK 返回的）
+- `TraceCollector.meta.usage` 是派生（apps/api 层累积多轮之和）
+- **Agent Runtime 不感知 Trace 存在** —— Trace 是消费方关注的事，Agent 只 yield 事件，apps/api 层决定怎么累积
+
+#### 5. chat + stream 双重调用的代价
+
+final-answer iter 双重 LLM 调用 = 双重 token 计费。Day 07 选简化方案（chat 探测 + stream 流式）。**Day 10+ 优化方向**：单次 stream + 在 ChatChunk 加 `usage?` optional —— **今天不引入**（YAGNI，知道 generator return value 拿不到后，“接受 cost 先收口契约”是正确的简化方案）。
