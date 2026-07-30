@@ -33,9 +33,12 @@ describe('AgentClient.stream — multi-turn body shape (Day 09)', () => {
 
     // 调用 stream, 不消费 events (Response 500 → stream 内部抛错也无所谓)
     try {
-      const iter = defaultAgentClient.stream('what did I say?', { messages: history });
-      // 触发第一个 await（fetch）
-      await iter.next();
+      // AsyncIterable 没有 .next() —— 用 for await 触发第一个 yield
+      for await (const _ev of defaultAgentClient.stream('what did I say?', {
+        messages: history,
+      })) {
+        break;
+      }
     } catch {
       // expected
     }
@@ -62,8 +65,9 @@ describe('AgentClient.stream — multi-turn body shape (Day 09)', () => {
     vi.stubGlobal('fetch', mockFetch);
 
     try {
-      const iter = defaultAgentClient.stream('hi');
-      await iter.next();
+      for await (const _ev of defaultAgentClient.stream('hi')) {
+        break;
+      }
     } catch {
       // expected
     }
