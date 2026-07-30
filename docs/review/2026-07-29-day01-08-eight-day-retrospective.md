@@ -453,3 +453,81 @@ apps/api/src/server.ts
 - 渐进式 UI 技术栈（Tailwind 4 + Vue 3 SFC + 旧 scoped CSS 并存）
 
 详见 [day01-07 §3 Day 7 架构图](2026-07-27-day01-07-seven-day-retrospective.md#day-7-当前架构流式-可观测-可中断-可观测) + [day08.md §📚 知识点 5](../daily/day08.md#5-tailwind-4-vue-3-sfc-共存-渐进式迁移策略)。
+
+---
+
+## 📚 核心概念复习（Day 07-08 增量）
+
+> 完整核心概念见 [day01-07 §3](2026-07-27-day01-07-seven-day-retrospective.md#3-核心概念复习)。本节只列 Day 07-08 增量。
+
+### 6.1 ChatUsage 进 ChatResponse（ADR-011 同源）
+
+Day 07 之前 ChatResponse 只有 `content?` / `toolCalls?`。Day 07 加 `usage?`：
+
+```ts
+interface ChatResponse {
+  readonly content?: string;
+  readonly toolCalls?: ReadonlyArray<ToolCallData>;
+  readonly usage?: ChatUsage;
+}
+
+interface ChatUsage {
+  readonly promptTokens: number;
+  readonly completionTokens: number;
+}
+```
+
+- **源**：provider SDK 返回（OpenAI `completion.usage` / Anthropic `message.usage`）
+- **派生**：`TraceCollector.meta.usage` 累积多轮之和（apps/api 层在 SSE 消费时累加）
+- **Runtime 不感知 Trace 存在**：Agent 只 yield 事件，apps/api 层决定怎么累积
+
+### 6.2 MODELS 注册表 + count_tokens best-effort（ADR-013）
+
+`libs/llm/observability/models.ts`：
+
+```ts
+export const MODELS = {
+  'claude-opus-5': { contextLimit: 200000 },
+  'claude-sonnet-5': { contextLimit: 200000 },
+  'claude-haiku-4-5': { contextLimit: 200000 },
+  'gpt-4o': { contextLimit: 128000 },
+  'gpt-4o-mini': { contextLimit: 128000 },
+  'gpt-4-turbo': { contextLimit: 128000 },
+} as const;
+```
+
+`libs/llm/observability/context-counter.ts`：
+
+- Anthropic 适配：调用 `client.messages.count_tokens({model, messages, signal})`
+- OpenAI 适配：返回 `undefined`（OpenAI 无公开 count_tokens 接口，YAGNI 自己造轮子）
+- **失败（API 错误 / 超时）→ 返回 `undefined`，不抛**（best-effort 派生）
+- 未知 model → 直接 return undefined
+
+### 6.3 Source vs Derived 双写（ADR-014 深化）
+
+Day 06 立 `Trace = events[] + meta`（ADR-010）。Day 08 加 `context` / `run_summary` 时**严格遵守 source vs derived 边界**：
+
+| 字段 | 类型 | 来源 |
+|---|---|---|
+| `response.usage` | source | provider SDK 直接返回 |
+| `context.promptTokens` | derived | `count_tokens` API 调用结果（best-effort） |
+| `run_summary.totalPromptTokens` | derived | 多轮 `response.usage.promptTokens` 累加 |
+| `run_summary.peakPromptTokens` | derived | `max(peakPromptTokens, currentIterationContext)` |
+
+**派生不能替代源** —— 这是 CLAUDE.md "第一原则"的延伸。
+
+- 加 `context` 事件时，`response.usage` 不删（仍是事实源）
+- 加 `run_summary` 事件时，`response.usage` 累加逻辑独立（apps/api 层 addMeta）
+- 新增 derived 不改 source —— Runtime 契约零修改
+
+### 6.4 Snapshot 语义（深化）
+
+Day 06 立 snapshot 语义（ADR-009）。Day 07-08 加深：
+
+- `request.messages` 深拷贝（累积型）✓
+- `response.toolCalls` 深拷贝（累积型）✓
+- `response.usage` 不拷贝（值类型）
+- `context.promptTokens` / `context.limit` 不拷贝（值类型）
+- `run_summary` 字段全部不拷贝（值类型）
+
+**不变量**：reference type yield 时深拷贝 / 值类型不拷贝 —— 这是消费方看到的"当时"而非"最终"的核心保证。
