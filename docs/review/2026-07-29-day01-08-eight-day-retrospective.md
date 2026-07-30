@@ -13,7 +13,7 @@
 | 维度 | 数据 |
 |---|---|
 | 学习天数 | 8 / 65 |
-| 累计 commit | 107 |
+| 累计 commit | 107（Day 08 末态；含本 review 12 commit 后当前 119） |
 | 总测试 | **70 / 70 通过**（Day 08 末态） |
 | 引入新依赖 | 4（`openai` / `@anthropic-ai/sdk` / `hono` + `@hono/node-server` / `tailwindcss` + `@tailwindcss/vite`） |
 | 触发的 YAGNI 边界 | 多轮历史 / 持久化 / RAG / MCP / 多 Agent / WebSocket / parallel tool / streaming tool_call / latency-cost / schema validation / Cost-USD / OpenAI count_tokens |
@@ -184,7 +184,7 @@ final-answer iter 双重 LLM 调用 = 双重 token 计费。Day 07 选简化方�
 - `apps/api/src/server.ts` 在 `run_summary` 时 `addMeta({ context: { peakPromptTokens, iterations } })`
 - `apps/web` 集成 Tailwind 4（`@tailwindcss/vite` + `@import "tailwindcss"`，无 PostCSS 配置）
 - `apps/web/src/components/{HeaderPill,MetricsSidebar}.vue`（Tailwind utility classes，无 `<style>` block）
-- `apps/web/src/App.vue` 三栏布局 `grid-cols-[240px_1fr_360px]`
+- `apps/web/src/App.vue` 三栏布局
 - `apps/web/src/api/agentClient.ts` `isAgentEvent` 类型守卫扩展（12 kind）
 - 10 个 example 文件 `new Agent({ ..., model })` 加 model 字段
 
@@ -414,6 +414,8 @@ function scrollToIteration(n: number): void {
 ---
 
 ## 🏗 当前架构（Day 08 末态）
+
+> **本节描述 Day 08 末态架构。** Day 09+ 已重构（commit `7a42187`）为 HeaderBar / LeftMenu / RightPanel IDE 风格布局，详见 [§9 代码锚点](#相关引用)。组件名差异属有意保留 —— 本 review 的时间锚点是 Day 08 末。
 
 ```
 [Browser fetch / apps/web/src/App.vue (Vue 3 + Tailwind 4)]
