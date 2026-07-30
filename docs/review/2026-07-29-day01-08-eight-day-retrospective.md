@@ -658,3 +658,168 @@ plugins: [vue(), tailwindcss()]
 - Tailwind 4 升级 breaking class 时，新组件优先调整
 
 **证据 commit**：`d102b58` feat(web): integrate tailwind css via @tailwindcss/vite / `fd622b1` HeaderPill / `0fe59a9` MetricsSidebar / `9f99f5e` three-column layout。
+
+## 💼 面试视角（STAR 法则）
+
+> 区别于 day01-07 §7 的纯文本版，本节按 STAR 法则（Situation / Task / Action / Result）整理 4 个亮点故事 + 5 分钟回答骨架 + 10 个追问。
+
+### §8.1 项目概述（30 秒 STAR）
+
+**S (Situation)**：8 天从 ChatClient 抽象搭到完整的 Agent Runtime + 可观测 UI。
+
+**T (Task)**：不引 transport / UI 框架到 libs 层；additive 演化不破调用方。
+
+**A (Action)**：5 阶段交付：
+
+1. **Day 01-02**：monorepo + ChatClient 抽象（OpenAI / Anthropic）
+2. **Day 03-04**：Streaming + Tool Calling（ChatRequest 统一）
+3. **Day 05-07**：AgentEvent + SSE + Trace + AbortSignal + Usage
+4. **Day 08**：Context Window 观测 + Tailwind 4 集成
+
+**R (Result)**：107 commit / 70 test 通过 / AgentEvent 12 kind / 15 条 ADR / 0 临时 API 残留。
+
+**30 秒口述**：
+> "我做了 8 天的 Agent Runtime 学习项目。从 ChatClient 抽象开始，逐步建出完整的 Chat → Tool Calling → Streaming → SSE → Trace → Context 观测的 Runtime。总共 107 个 commit，70 个测试通过，**没有引入 transport / UI 框架到 libs 层**。"
+
+### §8.2 4 个 STAR 亮点故事
+
+#### 亮点 1：判别联合 + 增量演化的接口设计（贯穿 8 天）
+
+**S (Situation)**：Day 04 ChatResponse 用 optional 字段表达 "content 或 toolCalls 二选一"，消费方写 `if x !== undefined` 串行判断；加新 kind 旧消费者 TS 不报错。
+
+**T (Task)**：8 天内 AgentEvent 从 0 → 12 kind 不破老调用方。
+
+**A (Action)**：
+
+- 用判别联合 `{ kind: '...' }` 替代 optional
+- `switch (ev.kind)` TS 自动收窄
+- 加新 kind = 显式扩展联合
+- 8 天每加一种 kind 都走"修改五问"
+
+**R (Result)**：
+
+- 加 `context` / `run_summary` 时，`isAgentEvent` 类型守卫同步扩展，老消费方 `default` case 仍然工作
+- `pnpm typecheck` 0 error + 70/70 test 通过
+
+**30 秒口述**：
+> "AgentEvent 是判别联合（discriminated union），8 天从 0 加到 12 kind 没破任何老消费方。秘诀是 `kind` 作为判别字段，TS 自动收窄，加新 kind 时老 `switch (ev.kind)` 的 `default` 仍然成立。这是加字段而非加方法的纪律 —— 字段扩展比方法扩展便宜。"
+
+#### 亮点 2：Source vs Derived 双写（Day 06 + Day 08 联动）
+
+**S (Situation)**：Day 06 加 Trace 收集；只存 events = 没 token 用量；events 塞 derived = 污染契约。
+
+**T (Task)**：设计 `AgentTrace = { events: AgentEvent[]; meta: Record<string, unknown> }` 让 Runtime 零感知 Trace。
+
+**A (Action)**：
+
+- 拆 source vs derived 双层（ADR-010）
+- meta 用 `Record<string, unknown>` 预留扩展点
+- Day 08 复用同一结构：`meta.context = { peakPromptTokens, iterations }`
+
+**R (Result)**：
+
+- Day 06 `meta.usage` 落地 + Day 08 `meta.context` 落地
+- 新增 derived 不改 source
+- typecheck 0 error / 70 test 通过 / Runtime 零感知 Trace
+
+**30 秒口述**：
+> "Trace 设计上我做了 source vs derived 双写：events 是源，meta 是派生。这样 day06 加 token 用量、day08 加 context window 不需要改 Runtime。代价是 meta 用 `Record<string, unknown>` —— 预先不设计具体形状，调用方决定塞什么 key。"
+
+#### 亮点 3：Snapshot 语义 + Yield 时深拷贝（Day 06 + Day 07 加深）
+
+**S (Situation)**：Agent 内部 messages 持续 push，yield `request` 事件时共享同一引用 → 测试断言 `requests[0].messages.length === 2` 失败（实际 4）。
+
+**T (Task)**：所有 yield 出去的 reference-type 数据必须深拷贝，让消费方看到"当时"而非"最终"。
+
+**A (Action)**：
+
+- yield `request` 时 `messages.map((m) => ({ ...m }))`
+- FakeChatClient 也要深拷贝（同源问题）
+- 值类型不需要（content / usage）
+
+**R (Result)**：
+
+- 测试断言稳定（70/70 通过）
+- Trace / SSE / Debug UI 三种消费方依赖同一 invariant
+- reference type 深拷贝 / 值类型浅拷贝 = 不变量
+
+**30 秒口述**：
+> "Snapshot 语义是 Agent Runtime 的核心不变量：yield 时深拷贝累积型数据（messages / toolCalls），值类型不拷贝。这让 Trace、SSE、Debug UI 三种消费方都看到'当时'状态而不是'最终'状态。"
+
+#### 亮点 4：渐进式 UI 技术栈迁移（Tailwind 4 + Vue 3 SFC 共存）
+
+**S (Situation)**：Day 08 要加 HeaderPill + MetricsSidebar，但旧组件（Conversation / Timeline / InputBar）已用 scoped CSS 写好。
+
+**T (Task)**：引入 Tailwind 4 不破坏旧组件。
+
+**A (Action)**：
+
+- `@tailwindcss/vite` 插件 + `@import "tailwindcss"` 一行
+- 无 PostCSS 配置
+- 新组件用 Tailwind utility classes，旧组件保留 scoped CSS
+- YAGNI 兑现：未来统一？等真统一时再统一
+
+**R (Result)**：
+
+- `HeaderPill.vue` / `MetricsSidebar.vue` 无 `<style>` block
+- 旧组件稳如山
+- Vite build 8.89 kB CSS 生成
+
+**30 秒口述**：
+> "技术栈迁移我选渐进式：day08 加 Tailwind 4 时，新组件 HeaderPill/MetricsSidebar 用纯 utility classes，旧组件 Conversation/Timeline 保留 scoped CSS 不动。YAGNI 兑现 —— 未来要不要统一？等业务稳定再说。一次性重写风险是 24 小时内'美但不工作'。"
+
+### §8.3 5 分钟回答骨架
+
+> 模拟面试："你做过 Agent 项目吗？"
+
+```
+[30s] §8.1 项目概述 → 107 commit / 12 kind / 70 test
+[60s] 架构：
+       libs/llm (ChatClient) → libs/agent (AgentEvent 12 kind) → apps/api (SSE) → apps/web (Vue + Tailwind)
+[60s] 技术选型：
+       - 判别联合 > 平铺 optional（亮点 1）
+       - source vs derived 双写（亮点 2）
+       - snapshot 语义（亮点 3）
+       - 渐进式 UI 迁移（亮点 4）
+[60s] 难点：
+       - Provider 协议差异在 SDK 适配层消化（system 顶层化 / content blocks）
+       - tool_call / tool_result 严格 1:1 配对是 Agent Loop 不变量
+       - AbortSignal 穿透整条调用链才能真正取消远端请求
+       - 派生 vs source 边界（亮点 2 深化）
+[60s] Trade-off：
+       - chat + stream 双重调用（最终 token 计费）换 message_delta 收口
+       - In-memory Trace LRU 32 换 CI 闭环的简单性
+       - 零前端框架 → 单 HTML 530 行换零构建工具
+       - error yield（不是 throw）换消费方边界清晰
+[30s] 简历上的 3 个亮点：
+       1. 判别联合 + 增量演化的接口设计
+       2. Source vs Derived 双写
+       3. Snapshot 语义 + Yield 时深拷贝
+```
+
+详见 [day01-07 §7.1-§7.6](2026-07-27-day01-07-seven-day-retrospective.md#7-面试视角总结) Day 01-07 部分。
+
+### §8.4 面试可能追问（10 题，含 Day 07-08 新增）
+
+> Day 01-06 追问见 [day01-07 §7.7](2026-07-27-day01-07-seven-day-retrospective.md#77-面试可能追问)。本节列 Day 07-08 新增 5 题 + Day 01-06 经典 5 题整合。
+
+**Day 07-08 新增**：
+
+1. **"为什么 AbortSignal 进 ChatClient 契约层而不是 apps/api adapter？"**
+   → 抽象层有 signal → SDK 终止请求 → 已发 token 不浪费；apps/api 层只能 break iterator。
+2. **"为什么 message_delta 限定 final-answer iter？"**
+   → 中间态 assistant 流式 = 信息噪声；tool_calls iter 不流式仍走 request/response 事件。
+3. **"run_summary 在 error 路径也要 yield 吗？"**
+   → 是，5 个 error 路径全部覆盖（Day 08 第一次 review 抓出 4 个漏，dispatch fix subagent 补全）。
+4. **"count_tokens 失败怎么处理？"**
+   → best-effort 永远 return undefined（ADR-013）。派生指标是可选观察，失败必须被吞。
+5. **"为什么派生不替代源？"**
+   → ADR-014，`response.usage` 是事实源，`context` / `run_summary` 是派生。加 derived 不改 source —— Runtime 契约零修改。
+
+**Day 01-06 经典**：
+
+6. **"为什么 AsyncGenerator 不直接给 Vue？"** → 跨进程 + 断线重连 + 类型污染，详见 [day01-07 §3.5](2026-07-27-day01-07-seven-day-retrospective.md#35-streaming)。
+7. **"Tool 不放 systemPrompt 为什么重要？"** → ADR-0001，详见 [day01-07 §3.4](2026-07-27-day01-07-seven-day-retrospective.md#34-tool-system)。
+8. **"Agent Loop 怎么防无限循环？"** → `maxIterations` + error yield，详见 [day01-07 §3.3](2026-07-27-day01-07-seven-day-retrospective.md#33-agent-runtime)。
+9. **"ChatClient 抽象为什么不放 SDK 名字？"** → 抽象 ≠ 给 SDK 换名字，调用方"换 provider 零改动"。
+10. **"Tailwind 渐进式迁移怎么保证旧组件不破？"** → ADR-015，新组件 utility + 旧组件 scoped 并存；YAGNI 兑现"未来统一？等真统一时再统一"。
