@@ -10,6 +10,7 @@
  * - 或 ANTHROPIC_API_KEY（改为 AnthropicChatClient）
  */
 
+import 'dotenv/config';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Agent } from '../../libs/agent/agent.js';
@@ -17,6 +18,14 @@ import { ToolRegistry } from '../../libs/tools/tool-registry.js';
 import { repoIndexTool } from '../../libs/tools/repo/repo-index-tool.js';
 import { repoSearchTool } from '../../libs/tools/repo/repo-search-tool.js';
 import { OpenAIChatClient } from '../../libs/llm/openai-chat-client.js';
+
+const apiKey = process.env.OPENAI_API_KEY;
+const baseURL = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
+const model = process.env.MODEL_NAME ?? 'ai-coding';
+
+if (!apiKey) {
+  throw new Error('OPENAI_API_KEY is required (set in .env or shell env)');
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -26,7 +35,7 @@ async function main(): Promise<void> {
   tools.register(repoIndexTool);
   tools.register(repoSearchTool);
 
-  const chat = new OpenAIChatClient({ model: 'gpt-4o-mini' });
+  const chat = new OpenAIChatClient({ apiKey: apiKey!, baseURL, model });
   const agent = new Agent({ chat, tools, model: 'gpt-4o-mini' });
 
   const messages = [
