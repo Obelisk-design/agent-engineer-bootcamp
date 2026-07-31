@@ -8,3 +8,4 @@
 export type { Tool, ToolParameters, ToolDefinition } from './tool.js';
 export { ToolRegistry } from './tool-registry.js';
 export { calculatorTool } from './calculator-tool.js';
+export * from './repo/index.js';
