@@ -147,6 +147,8 @@ Small > Huge
 已生效的 ADR：
 
 - [0001](docs/adr/0001-tool-capability-must-not-embed-in-system-prompt.md) — Tool capability declaration MUST NOT be embedded into system prompt
+- [0002](docs/adr/0002-run-events-accepts-messages-caller-injects-system-prompt.md) — Agent.runEvents 接受完整 messages；systemPrompt 由 caller 注入
+- [0003](docs/adr/0003-tool-params-single-source-of-truth-zod.md) — Tool 参数契约以 zod schema 为单一事实源（推翻 Day 04「execute 自检」）
 
 ## Teaching Preference
 
