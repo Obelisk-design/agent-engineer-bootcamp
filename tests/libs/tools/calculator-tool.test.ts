@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { calculatorTool, evaluate } from '../../../libs/tools/calculator-tool.js';
+import { runTool } from '../../../libs/tools/tool.js';
 
 describe('evaluate', () => {
   it('computes basic arithmetic', () => {
@@ -37,9 +38,11 @@ describe('calculatorTool', () => {
     expect(result).toEqual({ result: 14 });
   });
 
-  it('throws on non-string expression', async () => {
-    await expect(calculatorTool.execute({ expression: 123 as unknown as string })).rejects.toThrow(
-      'expression must be string',
+  it('rejects non-string expression at the schema boundary', async () => {
+    // Day 11: 校验发生在 runTool（框架层），不在 execute 内。
+    // rawArgs 是 unknown，不再需要 `as unknown as string` 强转来伪装错误输入。
+    await expect(runTool(calculatorTool, { expression: 123 })).rejects.toThrow(
+      /calculator: invalid arguments — expression/,
     );
   });
 });

@@ -7,12 +7,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { repoSearchTool } from '../../libs/tools/repo/repo-search-tool.js';
+import { runTool } from '../../libs/tools/tool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 async function main(): Promise<void> {
-  const result = await repoSearchTool.execute({
+  const result = await runTool(repoSearchTool, {
     rootPath: REPO_ROOT,
     pattern: 'ToolRegistry',
     fileGlob: '**/*.ts',

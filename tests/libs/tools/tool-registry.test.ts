@@ -28,7 +28,7 @@ describe('ToolRegistry', () => {
     expect(registry.list()[0]?.name).toBe('calculator');
   });
 
-  it('converts tools to provider definitions', () => {
+  it('converts tools to provider definitions (JSON Schema derived from zod schema)', () => {
     const registry = new ToolRegistry();
     registry.register(calculatorTool);
     const defs = registry.toProviderTools();
@@ -36,7 +36,12 @@ describe('ToolRegistry', () => {
     expect(defs[0]).toMatchObject({
       name: 'calculator',
       description: calculatorTool.description,
-      parameters: calculatorTool.parameters,
+    });
+    // Day 11: parameters 派生自 schema，不再手写（ADR 0003）
+    expect(defs[0]?.parameters).toMatchObject({
+      type: 'object',
+      properties: { expression: { type: 'string' } },
+      required: ['expression'],
     });
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { repoSearchTool } from '../../../../libs/tools/repo/index.js';
+import { runTool } from '../../../../libs/tools/tool.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE = path.resolve(__dirname, '../../../fixtures/sample-repo');
@@ -9,12 +10,12 @@ const FIXTURE = path.resolve(__dirname, '../../../fixtures/sample-repo');
 describe('repoSearchTool — 反例', () => {
   it('pattern 是无效 regex', async () => {
     await expect(
-      repoSearchTool.execute({ rootPath: FIXTURE, pattern: '[invalid(regex' }),
+      runTool(repoSearchTool, { rootPath: FIXTURE, pattern: '[invalid(regex' }),
     ).rejects.toThrow(/invalid regex pattern/);
   });
 
   it('永不命中的 pattern', async () => {
-    const result = await repoSearchTool.execute({
+    const result = await runTool(repoSearchTool, {
       rootPath: FIXTURE,
       pattern: 'NEVER_MATCH_THIS_XYZ_QQQ_12345',
     });
@@ -25,14 +26,14 @@ describe('repoSearchTool — 反例', () => {
 
   it('maxResults > 500', async () => {
     await expect(
-      repoSearchTool.execute({ rootPath: FIXTURE, pattern: 'foo', maxResults: 1000 }),
-    ).rejects.toThrow(/maxResults too large/);
+      runTool(repoSearchTool, { rootPath: FIXTURE, pattern: 'foo', maxResults: 1000 }),
+    ).rejects.toThrow(/repo_search: invalid arguments — maxResults: Too big/);
   });
 });
 
 describe('repoSearchTool — 正例', () => {
   it('字面匹配命中', async () => {
-    const result = await repoSearchTool.execute({
+    const result = await runTool(repoSearchTool, {
       rootPath: FIXTURE,
       pattern: 'greet',
     });
@@ -43,7 +44,7 @@ describe('repoSearchTool — 正例', () => {
   });
 
   it('fileGlob = *.ts 限定范围', async () => {
-    const result = await repoSearchTool.execute({
+    const result = await runTool(repoSearchTool, {
       rootPath: FIXTURE,
       pattern: 'greet',
       fileGlob: '*.ts',
@@ -52,7 +53,7 @@ describe('repoSearchTool — 正例', () => {
   });
 
   it('contextBefore=1 返回 before 数组', async () => {
-    const result = await repoSearchTool.execute({
+    const result = await runTool(repoSearchTool, {
       rootPath: FIXTURE,
       pattern: 'greet',
       contextBefore: 1,

@@ -7,5 +7,5 @@
  */
 
 export type { ChatResponse, ToolCallData } from '../llm/index.js';
-export type { Tool, ToolDefinition, ToolParameters } from '../tools/index.js';
+export type { Tool, ToolDefinition, ToolJsonSchema } from '../tools/index.js';
 export type { AgentEvent } from './event.js';

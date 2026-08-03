@@ -13,24 +13,45 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
 import type { Tool } from '../tool.js';
 import { shouldIgnore, DEFAULT_IGNORE } from './ignore.js';
 
-export interface RepoIndexArgs {
-  readonly rootPath: string;
-  readonly maxDepth?: number;
-  readonly ignorePatterns?: readonly string[];
-}
+const MAX_FILES = 5000;
+const DEFAULT_MAX_DEPTH = 3;
+const ABSOLUTE_MAX_DEPTH = 10;
+
+/**
+ * 参数契约事实源（Day 11 / ADR 0003）。
+ *
+ * - `maxDepth` 用 `z.coerce.number()`：LLM 偶尔把数字发成 `"3"`，无损转换不该让整个
+ *   tool call 失败。但**必须**带 `.min(1)` —— 实测 `z.coerce.number().parse("")` 返回 0，
+ *   没有下界的话空串会静默变成 0。
+ * - `ignorePatterns` 声明成 `array` 而非 `string`。Day 10 的 bug B 正是因为 schema 说
+ *   string、代码要 array，LLM 老实传 string 后被 `Array.isArray` 静默丢弃。
+ */
+const repoIndexSchema = z.object({
+  rootPath: z.string().describe('Absolute path to repo root'),
+  maxDepth: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(ABSOLUTE_MAX_DEPTH)
+    .default(DEFAULT_MAX_DEPTH)
+    .describe(`Max directory depth to walk, 1-${ABSOLUTE_MAX_DEPTH}`),
+  ignorePatterns: z
+    .array(z.string())
+    .optional()
+    .describe('Override the default ignore list (node_modules, .git, dist, ...)'),
+});
+
+export type RepoIndexArgs = z.infer<typeof repoIndexSchema>;
 
 export interface RepoIndexResult {
   readonly files: readonly string[];
   readonly total: number;
   readonly truncated: boolean;
 }
-
-const MAX_FILES = 5000;
-const DEFAULT_MAX_DEPTH = 3;
-const ABSOLUTE_MAX_DEPTH = 10;
 
 async function walk(
   dir: string,
@@ -69,28 +90,17 @@ async function walk(
   }
 }
 
-export const repoIndexTool: Tool<RepoIndexArgs, RepoIndexResult> = {
+export const repoIndexTool: Tool<typeof repoIndexSchema, RepoIndexResult> = {
   name: 'repo_index',
   description:
     'List files in a repository directory tree (respects .gitignore-style ignores). ' +
     'Use this when you need to know "what files exist in this repo" or "what is the structure". ' +
-    'Input: { rootPath: absolute path, maxDepth?: 1-10, ignorePatterns?: string[] }. ' +
     'Returns: { files: string[]; total: number; truncated: boolean }. ' +
     'Files are POSIX-relative to rootPath. Truncated=true means hit the 5000-file cap.',
-  parameters: {
-    type: 'object',
-    properties: {
-      rootPath: { type: 'string', description: 'Absolute path to repo root' },
-      maxDepth: { type: 'string', description: 'Max depth 1-10 (default 3)' },
-      ignorePatterns: { type: 'string', description: 'Override default ignore list' },
-    },
-    required: ['rootPath'],
-  },
-  execute: async (args) => {
-    const rootPath = (args as Partial<RepoIndexArgs>).rootPath;
-    if (typeof rootPath !== 'string') {
-      throw new Error('repo_index: rootPath must be string');
-    }
+  schema: repoIndexSchema,
+  execute: async ({ rootPath, maxDepth, ignorePatterns }) => {
+    // 类型 / 范围校验已由 ToolRegistry.execute 完成。
+    // 这里只做 zod 管不了的 IO 前置条件检查。
     if (!path.isAbsolute(rootPath)) {
       throw new Error(`repo_index: rootPath must be absolute, got: ${rootPath}`);
     }
@@ -105,21 +115,7 @@ export const repoIndexTool: Tool<RepoIndexArgs, RepoIndexResult> = {
       throw new Error(`repo_index: rootPath is not a directory: ${rootPath}`);
     }
 
-    const maxDepthRaw = (args as Partial<RepoIndexArgs>).maxDepth;
-    const maxDepth = maxDepthRaw !== undefined ? Number(maxDepthRaw) : DEFAULT_MAX_DEPTH;
-    if (!Number.isInteger(maxDepth) || maxDepth < 1) {
-      throw new Error('repo_index: maxDepth must be >= 1');
-    }
-    if (maxDepth > ABSOLUTE_MAX_DEPTH) {
-      throw new Error(
-        `repo_index: maxDepth too large (max ${ABSOLUTE_MAX_DEPTH}, got ${maxDepth})`,
-      );
-    }
-
-    const ignorePatterns = (args as Partial<RepoIndexArgs>).ignorePatterns;
-    const ignore = Array.isArray(ignorePatterns)
-      ? (ignorePatterns as string[])
-      : Array.from(DEFAULT_IGNORE);
+    const ignore = ignorePatterns ?? Array.from(DEFAULT_IGNORE);
 
     const files: string[] = [];
     const truncatedRef = { value: false };

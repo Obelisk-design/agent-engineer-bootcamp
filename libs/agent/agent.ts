@@ -277,17 +277,15 @@ export class Agent {
             args: tc.args,
           };
 
-          const tool = this.options.tools.get(tc.toolName);
+          // Day 11: 走 registry.execute —— 参数校验的唯一入口（ADR 0003）。
+          // tool 不存在 / 参数不合 schema / execute 自身抛错，三类失败统一 throw，
+          // 在这里 catch 成 Error 字符串给 LLM（Day 07 规则：Tool 错误不 throw 出 Agent）。
           let resultContent: string;
-          if (tool === undefined) {
-            resultContent = `Error: tool "${tc.toolName}" not found`;
-          } else {
-            try {
-              const result = await tool.execute(tc.args);
-              resultContent = JSON.stringify(result);
-            } catch (err) {
-              resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
-            }
+          try {
+            const result = await this.options.tools.execute(tc.toolName, tc.args);
+            resultContent = JSON.stringify(result);
+          } catch (err) {
+            resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
           }
 
           yield {

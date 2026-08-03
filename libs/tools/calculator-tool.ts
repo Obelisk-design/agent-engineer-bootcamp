@@ -9,26 +9,20 @@
  * 表达式只允许: 数字 (整数 + 小数) / + - * / / ( ) / 空白。 其他字符 throw。
  */
 
+import { z } from 'zod';
 import type { Tool } from './tool.js';
 
-export const calculatorTool: Tool<{ expression: string }, { result: number }> = {
+const calculatorSchema = z.object({
+  expression: z.string().describe('Arithmetic expression, e.g. "1+2*3"'),
+});
+
+export const calculatorTool: Tool<typeof calculatorSchema, { result: number }> = {
   name: 'calculator',
   description:
     'Evaluate arithmetic expressions with +, -, *, / and parentheses. Input: { expression: string }. Returns { result: number }.',
-  parameters: {
-    type: 'object',
-    properties: {
-      expression: { type: 'string', description: 'e.g. "1+2*3"' },
-    },
-    required: ['expression'],
-  },
-  execute: async (args) => {
-    const { expression } = args;
-    if (typeof expression !== 'string') {
-      throw new Error(`calculator: expression must be string, got ${typeof expression}`);
-    }
-    return { result: evaluate(expression) };
-  },
+  schema: calculatorSchema,
+  // args 已由 ToolRegistry.execute 校验，无需再自检 typeof（Day 11 / ADR 0003）
+  execute: async ({ expression }) => ({ result: evaluate(expression) }),
 };
 
 // ---------------------------------------------------------------------------

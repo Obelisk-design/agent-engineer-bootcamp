@@ -13,19 +13,61 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { z } from 'zod';
 import type { Tool } from '../tool.js';
 import { shouldIgnore, DEFAULT_IGNORE } from './ignore.js';
 import { matchesGlob } from './glob.js';
 
-export interface RepoSearchArgs {
-  readonly rootPath: string;
-  readonly pattern: string;
-  readonly maxResults?: number;
-  readonly fileGlob?: string;
-  readonly includeContent?: boolean;
-  readonly contextBefore?: number;
-  readonly contextAfter?: number;
-}
+const DEFAULT_MAX_RESULTS = 50;
+const ABSOLUTE_MAX_RESULTS = 500;
+const SEARCH_MAX_DEPTH = 10;
+const REGEX_METACHARS = /[.*+?^${}()|[\]\\]/;
+
+/**
+ * 参数契约事实源（Day 11 / ADR 0003）。
+ *
+ * ⚠️ 布尔参数写成 `z.union([z.boolean(), z.stringbool()])`，三种写法都不对：
+ *
+ *   - `z.coerce.boolean()` —— 实测 `parse("false") === true`（JS 非空字符串皆真值），
+ *     原样复现 Day 10 bug A。
+ *   - `z.boolean()` 单用 —— LLM 发 `"false"` 字符串时整个 tool call 失败，一轮 token 白烧。
+ *   - `z.stringbool()` 单用 —— JSON Schema 输出 `type: "string"`，**仍然没告诉 LLM
+ *     这是布尔**；而且实测它**拒绝原生 `true`/`false`**，越聪明的模型越容易踩。
+ *
+ * union 的 JSON Schema 是 `anyOf: [{type:boolean},{type:string}]`：boolean 在前是给
+ * LLM 的主信号，string 分支兜住 `"true"`/`"false"`。`"abc"` 两个分支都不匹配 → 报错。
+ */
+const looseBoolean = z.union([z.boolean(), z.stringbool()]);
+
+const repoSearchSchema = z.object({
+  rootPath: z.string().describe('Absolute path to repo root'),
+  pattern: z.string().describe('String literal or regex to search for'),
+  maxResults: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(ABSOLUTE_MAX_RESULTS)
+    .default(DEFAULT_MAX_RESULTS)
+    .describe(`Max matches to return, 1-${ABSOLUTE_MAX_RESULTS}`),
+  fileGlob: z.string().optional().describe('Glob pattern to filter files, e.g. "*.ts"'),
+  includeContent: looseBoolean
+    .default(true)
+    .describe('Include the matched line content in each result'),
+  contextBefore: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('Lines of context before each match'),
+  contextAfter: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('Lines of context after each match'),
+});
+
+export type RepoSearchArgs = z.infer<typeof repoSearchSchema>;
 
 export interface RepoSearchMatch {
   readonly file: string;
@@ -41,11 +83,6 @@ export interface RepoSearchResult {
   readonly total: number;
   readonly truncated: boolean;
 }
-
-const DEFAULT_MAX_RESULTS = 50;
-const ABSOLUTE_MAX_RESULTS = 500;
-const SEARCH_MAX_DEPTH = 10;
-const REGEX_METACHARS = /[.*+?^${}()|[\]\\]/;
 
 interface CompileResult {
   readonly isRegex: boolean;
@@ -121,35 +158,26 @@ async function collectFiles(
   }
 }
 
-export const repoSearchTool: Tool<RepoSearchArgs, RepoSearchResult> = {
+export const repoSearchTool: Tool<typeof repoSearchSchema, RepoSearchResult> = {
   name: 'repo_search',
   description:
     'Search file contents for a pattern (string literal or regex). ' +
     'Use this when you need to find "where X is defined" or "who calls Y". ' +
-    'Input: { rootPath, pattern, maxResults?: <=500, fileGlob?: "*.ts" etc, includeContent?, contextBefore?, contextAfter? }. ' +
     'Returns: { matches: { file, line, column?, content?, before?, after? }[]; total; truncated }. ' +
     'Pattern auto-detected as regex if contains metachars.',
-  parameters: {
-    type: 'object',
-    properties: {
-      rootPath: { type: 'string', description: 'Absolute path to repo root' },
-      pattern: { type: 'string', description: 'String literal or regex' },
-      maxResults: { type: 'string', description: 'Max matches to return (default 50, max 500)' },
-      fileGlob: { type: 'string', description: 'Glob pattern e.g. *.ts' },
-      includeContent: { type: 'string', description: 'Include line content (default true)' },
-      contextBefore: { type: 'string', description: 'Lines of context before match (default 0)' },
-      contextAfter: { type: 'string', description: 'Lines of context after match (default 0)' },
-    },
-    required: ['rootPath', 'pattern'],
-  },
-  execute: async (args) => {
-    const a = args as Partial<RepoSearchArgs>;
-    const { rootPath, pattern } = a;
-    if (typeof rootPath !== 'string' || !path.isAbsolute(rootPath)) {
-      throw new Error(`repo_search: rootPath must be absolute, got: ${String(rootPath)}`);
-    }
-    if (typeof pattern !== 'string') {
-      throw new Error('repo_search: pattern must be string');
+  schema: repoSearchSchema,
+  execute: async ({
+    rootPath,
+    pattern,
+    maxResults,
+    fileGlob,
+    includeContent,
+    contextBefore,
+    contextAfter,
+  }) => {
+    // 类型 / 范围校验已由 ToolRegistry.execute 完成。这里只做 IO 前置条件检查。
+    if (!path.isAbsolute(rootPath)) {
+      throw new Error(`repo_search: rootPath must be absolute, got: ${rootPath}`);
     }
 
     let stat;
@@ -161,21 +189,6 @@ export const repoSearchTool: Tool<RepoSearchArgs, RepoSearchResult> = {
     if (!stat.isDirectory()) {
       throw new Error(`repo_search: rootPath is not a directory: ${rootPath}`);
     }
-
-    const maxResults = a.maxResults !== undefined ? Number(a.maxResults) : DEFAULT_MAX_RESULTS;
-    if (!Number.isInteger(maxResults) || maxResults < 1) {
-      throw new Error('repo_search: maxResults must be >= 1');
-    }
-    if (maxResults > ABSOLUTE_MAX_RESULTS) {
-      throw new Error(
-        `repo_search: maxResults too large (max ${ABSOLUTE_MAX_RESULTS}, got ${maxResults})`,
-      );
-    }
-
-    const fileGlob = typeof a.fileGlob === 'string' ? a.fileGlob : undefined;
-    const includeContent = a.includeContent !== undefined ? Boolean(a.includeContent) : true;
-    const contextBefore = a.contextBefore !== undefined ? Number(a.contextBefore) : 0;
-    const contextAfter = a.contextAfter !== undefined ? Number(a.contextAfter) : 0;
 
     const compiled = compilePattern(pattern);
     const ignore = Array.from(DEFAULT_IGNORE);
