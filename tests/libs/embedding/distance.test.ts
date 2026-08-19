@@ -18,6 +18,10 @@ describe('cosineSimilarity', () => {
   it('asymmetric dims → throws RangeError', () => {
     expect(() => cosineSimilarity([1, 2], [1, 2, 3])).toThrow(RangeError);
   });
+  it('zero vector → throws RangeError', () => {
+    expect(() => cosineSimilarity([0, 0, 0], [1, 2, 3])).toThrow(RangeError);
+    expect(() => cosineSimilarity([1, 2, 3], [0, 0, 0])).toThrow(RangeError);
+  });
 });
 
 describe('cosineDistance', () => {
