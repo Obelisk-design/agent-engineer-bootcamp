@@ -103,7 +103,7 @@ Day 11 daily 已经把 Day 12 钉成 `FileEditTool`。今天临时换路线学 e
 |---|---|---|---|
 | **A. 距离矩阵热图** | 8-10 个手工挑选文本（4 动物 / 3 水果 / 3 抽象词） | n×n cosine 距离矩阵 HTML 热图 | 同类相聚（颜色浅）、不同类远离（颜色深） |
 | **B. PCA 2D 散点** | 同上 | PCA → 2D scatter SVG | 肉眼能看出 3 簇 |
-| **C. 维度对比** | 同 4-6 文本，分别跑 `embedding-3-small@1536` 和 `@256` | 两个距离矩阵并排 | 维度降低后同类仍聚、不同类仍远 |
+| **C. 维度对比** | 同 4-6 文本，分别跑 `qwen3-embedding-8b@4096` 和 `@256`（Matryoshka 降维） | 两个距离矩阵并排 | 维度降低后同类仍聚、不同类仍远 |
 | **D. 距离梯度** | 1 个 query + 4 个变体（短前缀 / 中前缀 / 长前缀 / 不相关） | query ↔ 4 变体的距离梯度条 | 相关前缀距离递增，不相关突变 |
 
 ---
@@ -112,7 +112,7 @@ Day 11 daily 已经把 Day 12 钉成 `FileEditTool`。今天临时换路线学 e
 
 | 场景 | 处理 |
 |---|---|
-| 缺 `VITE_OPENAI_KEY` | demo 页顶部红 banner："请设置 VITE_OPENAI_KEY in .env" |
+| 缺 `OPENAI_API_KEY`（dev 用 OpenAI gateway） | demo 页顶部红 banner："请设置 OPENAI_API_KEY in .env" |
 | OpenAI 401 / 429 / 5xx | 显示原始 status + message（不包装），按钮可重试 |
 | API key 泄露警告 | console.warn 一次（dev mode） |
 | PCA 输入样本 < 2 | 抛 `RangeError`（不静默回落） |
