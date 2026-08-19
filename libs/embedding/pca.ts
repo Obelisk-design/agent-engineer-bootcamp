@@ -66,7 +66,7 @@ function project(p: number[], mean: number[], axis1: number[], axis2: number[]):
 
 function powerIterate(M: number[][], iters: number): number[] {
   const d = M.length;
-  let v = new Array<number>(d).fill(0).map((_, i) => (i === 0 ? 1 : 0));
+  let v: number[] = Array.from({ length: d }, (_, i) => (i === 0 ? 1 : 0));
   for (let it = 0; it < iters; it++) {
     const nv = new Array<number>(d).fill(0);
     for (let i = 0; i < d; i++) {

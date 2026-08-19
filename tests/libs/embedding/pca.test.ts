@@ -22,4 +22,22 @@ describe('pca2d', () => {
   it('throws RangeError on < 2 samples', () => {
     expect(() => pca2d([[1, 2, 3]])).toThrow(RangeError);
   });
+  it('zero-variance data → throws RangeError', () => {
+    // All points identical → covariance is zero → powerIterate norm === 0
+    expect(() =>
+      pca2d([
+        [1, 2, 3],
+        [1, 2, 3],
+        [1, 2, 3],
+      ]),
+    ).toThrow(RangeError);
+  });
+  it('inconsistent dims → throws RangeError', () => {
+    expect(() =>
+      pca2d([
+        [1, 2, 3],
+        [4, 5],
+      ]),
+    ).toThrow(RangeError);
+  });
 });
