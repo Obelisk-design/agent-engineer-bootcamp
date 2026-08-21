@@ -43,10 +43,17 @@ function fmt(n: number): string {
 }
 
 function numColor(n: number): string {
-  // 正数偏蓝（sky），负数偏红（rose），0 灰色
-  if (n > 0) return `rgba(56, 189, 248, ${Math.min(1, Math.abs(n) * 4)})`;
-  if (n < 0) return `rgba(244, 63, 94, ${Math.min(1, Math.abs(n) * 4)})`;
-  return 'rgba(113, 113, 122, 0.3)';
+  // 正数偏亮蓝，负数偏亮红，0 浅灰
+  // 数值多半落在 [-0.05, 0.05] 范围，把 alpha 曲线压扁一点让小值也能看见
+  if (n > 0) {
+    const a = Math.min(1, 0.45 + Math.abs(n) * 12);
+    return `rgba(125, 211, 252, ${a})`;
+  }
+  if (n < 0) {
+    const a = Math.min(1, 0.45 + Math.abs(n) * 12);
+    return `rgba(251, 113, 133, ${a})`;
+  }
+  return 'rgba(212, 212, 216, 0.7)';
 }
 
 async function run(): Promise<void> {
@@ -90,31 +97,33 @@ async function run(): Promise<void> {
       </button>
 
       <div v-if="showRaw" class="mt-3 space-y-4">
-        <p class="text-xs text-zinc-400">
+        <p class="text-sm text-zinc-300">
           大模型给每个词返回 {{ stats[0]?.dim ?? 0 }} 维向量（数字数组）。
-          正数偏蓝、负数偏红 —— 这就是"语义被编码成数字"的样子。
+          <span class="text-sky-300">正数偏亮蓝</span>、
+          <span class="text-rose-300">负数偏亮红</span> —— 这就是"语义被编码成数字"的样子。
         </p>
         <div
           v-for="s in stats"
           :key="s.label"
-          class="border border-zinc-800 rounded p-2 bg-zinc-950"
+          class="border border-zinc-700 rounded p-3 bg-zinc-900"
         >
           <div class="flex items-baseline justify-between mb-2">
-            <span class="text-zinc-200 text-sm font-medium">{{ s.label }}</span>
-            <span class="text-zinc-500 text-[11px] font-mono">
+            <span class="text-zinc-100 text-base font-semibold">{{ s.label }}</span>
+            <span class="text-zinc-400 text-xs font-mono">
               dim={{ s.dim }} · ‖v‖₂={{ s.norm.toFixed(3) }}
             </span>
           </div>
-          <div class="flex flex-wrap gap-x-2 gap-y-1 font-mono text-[11px]">
+          <div class="flex flex-wrap gap-x-3 gap-y-1 font-mono text-[12px] leading-relaxed">
             <span
               v-for="(n, i) in s.head"
               :key="i"
               :style="{ color: numColor(n) }"
               :title="`dim ${i}: ${fmt(n)}`"
+              class="px-0.5"
             >
               {{ fmt(n) }}
             </span>
-            <span class="text-zinc-600">… +{{ s.dim - SHOW_DIMS }} dims</span>
+            <span class="text-zinc-500 px-1">… +{{ s.dim - SHOW_DIMS }} dims</span>
           </div>
         </div>
       </div>
