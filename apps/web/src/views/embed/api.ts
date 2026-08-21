@@ -40,15 +40,16 @@ export function warnDevKeyOnce(): void {
 
 export async function embedTexts(
   texts: readonly string[],
-  dimensions: 4096 | 256,
+  dimensions?: 4096 | 256,
   signal?: AbortSignal,
 ): Promise<number[][]> {
   const { apiKey, baseUrl, modelName } = getOpenAIConfig();
   if (apiKey === null) throw new RangeError('VITE_OPENAI_API_KEY not set');
-  const result = await embed(
-    { input: texts, dimensions, model: modelName, baseUrl },
-    apiKey,
-    signal,
-  );
+  // Day 12 fix：dev 网关 vLLM/litellm 不支持 dimensions 参数（连原生 4096 也拒）。
+  // 只在 caller 显式传 dimensions 时才下发 —— caller 必须知道该模型支持 Matryoshka。
+  // 默认 undefined 让模型返回原生维度（最稳）。
+  const req: Parameters<typeof embed>[0] = { input: texts, model: modelName, baseUrl };
+  if (dimensions !== undefined) req.dimensions = dimensions;
+  const result = await embed(req, apiKey, signal);
   return result.vectors;
 }
