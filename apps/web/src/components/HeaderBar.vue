@@ -83,6 +83,12 @@ const barColor = computed(() => {
       </span>
       <span>Agent Console</span>
       <span class="text-zinc-500 text-[11px] font-mono">v0.8</span>
+      <a
+        href="#/embed-demo"
+        class="text-zinc-500 hover:text-emerald-300 text-[11px] font-mono"
+        title="Embedding Demo (Day 12 dev)"
+        data-testid="header-bar-dev-embed"
+      >dev:day12</a>
     </div>
 
     <span class="w-px h-5 bg-zinc-800" />

@@ -24,6 +24,7 @@ const items = [
   { key: 'run', label: 'Run', icon: 'chat' as const },
   { key: 'traces', label: 'Traces', icon: 'activity' as const },
   { key: 'logs', label: 'Logs', icon: 'layers' as const },
+  { key: 'embed', label: 'Embed', icon: 'chat' as const, href: '#/embed-demo' },
 ];
 
 const ICON_MAP = {
@@ -31,6 +32,11 @@ const ICON_MAP = {
   activity: IconActivity,
   layers: IconLayers,
 };
+
+function go(href: string | undefined): void {
+  if (href === undefined) return;
+  window.location.hash = href;
+}
 </script>
 
 <template>
@@ -44,21 +50,24 @@ const ICON_MAP = {
     </div>
 
     <!-- Nav items -->
-    <button
+    <component
+      :is="item.href !== undefined ? 'a' : 'button'"
       v-for="item in items"
       :key="item.key"
-      type="button"
+      :href="item.href"
+      :type="item.href !== undefined ? undefined : 'button'"
       :class="[
         'w-10 h-10 rounded-md flex flex-col items-center justify-center gap-0.5 transition-colors',
         item.key === 'run'
           ? 'bg-zinc-800 text-emerald-300 ring-1 ring-emerald-700/30'
           : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/60',
       ]"
-      :title="item.label"
+      :title="item.label + (item.href !== undefined ? ' (dev)' : '')"
+      @click="item.href !== undefined ? go(item.href) : undefined"
     >
       <component :is="ICON_MAP[item.icon]" :size="16" />
       <span class="text-[9px] font-medium tracking-wide">{{ item.label }}</span>
-    </button>
+    </component>
 
     <div class="flex-1" />
 
