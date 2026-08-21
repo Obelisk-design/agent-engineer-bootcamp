@@ -8,8 +8,8 @@
 
 import { embed } from '../../../../../libs/embedding/index.js';
 
-const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
-const DEFAULT_MODEL = 'text-embedding-3-small';
+const DEFAULT_BASE_URL = 'http://10.230.10.242:8000/v1';
+const DEFAULT_MODEL = 'qwen3-embedding-8b';
 
 let warned = false;
 
