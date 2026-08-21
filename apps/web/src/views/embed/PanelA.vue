@@ -1,24 +1,65 @@
 <!--
   apps/web/src/views/embed/PanelA.vue
   Panel A: 距离矩阵热图 (Panel A from spec — 4 animals / 3 fruits / 3 abstracts)
+  额外 toggle 展示前 40 维原始向量（直观看"大模型输出什么"）
 -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { SAMPLE_CORPUS, distanceMatrixHTML } from '../../../../../libs/embedding/index.js';
 import { embedTexts, warnDevKeyOnce } from './api.js';
 
+const SHOW_DIMS = 40; // 4096 维全显示太长；展示前 40 维足够说明"大模型输出是个长数字数组"
+
+interface VectorStats {
+  label: string;
+  dim: number;
+  norm: number; // L2 范数 = sqrt(sum(x^2))
+  head: number[]; // 前 SHOW_DIMS 维
+}
+
 const html = ref<string | null>(null);
+const vectors = ref<number[][] | null>(null);
 const busy = ref(false);
 const err = ref<string | null>(null);
+const showRaw = ref(false);
+
+const stats = computed<VectorStats[]>(() => {
+  if (vectors.value === null) return [];
+  return vectors.value.map((v, i) => {
+    const norm = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    return {
+      label: SAMPLE_CORPUS[i] ?? '',
+      dim: v.length,
+      norm,
+      head: v.slice(0, SHOW_DIMS),
+    };
+  });
+});
+
+function fmt(n: number): string {
+  // 保留3位有效数字，避免 -0.00023456 这种噪声
+  if (Math.abs(n) < 1e-4) return '0';
+  return n.toFixed(4);
+}
+
+function numColor(n: number): string {
+  // 正数偏蓝（sky），负数偏红（rose），0 灰色
+  if (n > 0) return `rgba(56, 189, 248, ${Math.min(1, Math.abs(n) * 4)})`;
+  if (n < 0) return `rgba(244, 63, 94, ${Math.min(1, Math.abs(n) * 4)})`;
+  return 'rgba(113, 113, 122, 0.3)';
+}
 
 async function run(): Promise<void> {
   busy.value = true;
   err.value = null;
   html.value = null;
+  vectors.value = null;
+  showRaw.value = false;
   warnDevKeyOnce();
   try {
-    const vectors = await embedTexts(SAMPLE_CORPUS);
-    html.value = distanceMatrixHTML(SAMPLE_CORPUS, vectors);
+    const v = await embedTexts(SAMPLE_CORPUS);
+    vectors.value = v;
+    html.value = distanceMatrixHTML(SAMPLE_CORPUS, v);
   } catch (e) {
     err.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -33,8 +74,50 @@ async function run(): Promise<void> {
     <button class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50" :disabled="busy" @click="run">
       {{ busy ? 'Running…' : 'Run' }}
     </button>
+
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>
     <p v-else-if="busy" class="embed-loading mt-3">embedding 10 texts…</p>
-    <div v-else-if="html" class="mt-3 overflow-auto" v-html="html" />
+
+    <template v-else-if="html">
+      <div class="mt-3 overflow-auto" v-html="html" />
+
+      <button
+        type="button"
+        class="mt-4 text-xs px-3 py-1 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        @click="showRaw = !showRaw"
+      >
+        {{ showRaw ? '▼' : '▶' }} 查看原始 4096 维向量（前 {{ SHOW_DIMS }} 维）
+      </button>
+
+      <div v-if="showRaw" class="mt-3 space-y-4">
+        <p class="text-xs text-zinc-400">
+          大模型给每个词返回 {{ stats[0]?.dim ?? 0 }} 维向量（数字数组）。
+          正数偏蓝、负数偏红 —— 这就是"语义被编码成数字"的样子。
+        </p>
+        <div
+          v-for="s in stats"
+          :key="s.label"
+          class="border border-zinc-800 rounded p-2 bg-zinc-950"
+        >
+          <div class="flex items-baseline justify-between mb-2">
+            <span class="text-zinc-200 text-sm font-medium">{{ s.label }}</span>
+            <span class="text-zinc-500 text-[11px] font-mono">
+              dim={{ s.dim }} · ‖v‖₂={{ s.norm.toFixed(3) }}
+            </span>
+          </div>
+          <div class="flex flex-wrap gap-x-2 gap-y-1 font-mono text-[11px]">
+            <span
+              v-for="(n, i) in s.head"
+              :key="i"
+              :style="{ color: numColor(n) }"
+              :title="`dim ${i}: ${fmt(n)}`"
+            >
+              {{ fmt(n) }}
+            </span>
+            <span class="text-zinc-600">… +{{ s.dim - SHOW_DIMS }} dims</span>
+          </div>
+        </div>
+      </div>
+    </template>
   </section>
 </template>
