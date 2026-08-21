@@ -17,7 +17,7 @@ async function run(): Promise<void> {
   html.value = null;
   warnDevKeyOnce();
   try {
-    const vectors = await embedTexts(SAMPLE_CORPUS, 4096);
+    const vectors = await embedTexts(SAMPLE_CORPUS);
     html.value = distanceMatrixHTML(SAMPLE_CORPUS, vectors);
   } catch (e) {
     err.value = e instanceof Error ? e.message : String(e);

@@ -67,7 +67,7 @@ async function run(): Promise<void> {
   eucMat.value = null;
   warnDevKeyOnce();
   try {
-    const vectors = await embedTexts(SAMPLE_CORPUS, 4096);
+    const vectors = await embedTexts(SAMPLE_CORPUS);
     cosMat.value = buildMatrix(vectors, cosineDistance);
     eucMat.value = buildMatrix(vectors, euclideanDistance);
   } catch (e) {

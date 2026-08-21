@@ -30,7 +30,7 @@ async function run(): Promise<void> {
   warnDevKeyOnce();
   try {
     const all = [QUERY, ...QUERY_WITH_PREFIXES.map((p) => p.text)];
-    const vectors = await embedTexts(all, 4096);
+    const vectors = await embedTexts(all);
     const queryVec = vectors[0]!;
     rows.value = QUERY_WITH_PREFIXES.map((p, i) => ({
       name: p.name,
