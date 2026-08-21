@@ -1,7 +1,7 @@
-# Day 12 — Embedding Demo：4 个可视化面板（4096→256 Matryoshka）
+# Day 12 — Embedding Demo：4 个可视化面板（cos vs euc on 4096-dim）
 
 > 65 天 AI Agent 工程师训练营 · Day 12 / 65
-> 主题：学 embedding，看向量空间长什么样。Cosine / Euclidean / PCA / Matryoshka 一次看到。
+> 主题：学 embedding，看向量空间长什么样。Cosine / Euclidean / PCA 一次看到。
 
 ---
 
@@ -16,6 +16,8 @@
 3. 学习顺序决定先学 embedding —— 要先看到向量空间长什么样，才能判断未来要不要 / 怎么接 RAG。
 4. FileEditTool 不会丢 —— 依赖 file_read 的 cat -n 行号（Day 11 已就绪），顺延即可。
 
+**⚠️ 第二轮修正（spec 假设错误，已修正）**：原 spec 假设 `qwen3-embedding-8b` 支持 Matryoshka 嵌套维度（4096→256）。**实测 dev 网关 vLLM/litellm 拒绝 `dimensions` 参数**（连原生 4096 也拒，见 `ex_002_probe_dims`）。Panel C 改为同维度 cosine vs euclidean 对比 —— 这反而是更基础的"方向 vs 距离"教学。
+
 ---
 
 ## 🎯 今日目标
@@ -29,12 +31,13 @@
 7. ✅ `apps/web/src/views/embed/api.ts` — 前端 import.meta.env 适配 + warnDevKeyOnce
 8. ✅ `PanelA.vue` — 距离矩阵热图（10 词 × 4096 维 cosine）
 9. ✅ `PanelB.vue` — PCA → 2D 散点图（同 10 词 × 4096 维）
-10. ✅ `PanelC.vue` — 4096 vs 256 维度对比（Matryoshka 降维）
+10. ⚠️ `PanelC.vue` — **原计划 4096 vs 256 Matryoshka，实测不支持，改为同维度 cosine vs euclidean 距离矩阵对比**
 11. ✅ `PanelD.vue` — 距离梯度（query + 4 前缀变体）
 12. ✅ `EmbedDemo.vue` — 4 panel 容器 + 缺 key 红 banner
 13. ✅ `/embed-demo` 路由 — App.vue hash switch（path B，无 vue-router）
 14. ✅ `LeftMenu` 加 Embed 入口 + `HeaderBar` 加 `dev:day12` 标识
-15. ✅ dev OpenAI 兼容网关 + `qwen3-embedding-8b`（4096 维 Matryoshka）作为默认
+15. ✅ dev OpenAI 兼容网关 + `qwen3-embedding-8b`（4096 维）作为默认
+16. ✅ `examples/day12/ex_001_embed_only.ts` + `ex_002_probe_dims.ts`（真跑通）
 
 ---
 
@@ -56,7 +59,7 @@ tests/libs/embedding/                  🆕
 apps/web/src/views/embed/              🆕 4 panel + 容器
   PanelA.vue                                距离矩阵热图
   PanelB.vue                                PCA 2D 散点
-  PanelC.vue                                4096 vs 256 对比
+  PanelC.vue                                cos vs euc 对比（4096 维同向量）
   PanelD.vue                                距离梯度
   EmbedDemo.vue                             4 panel 容器 + key-missing 红 banner
   api.ts                                    import.meta.env 适配 + warnDevKeyOnce
@@ -89,11 +92,15 @@ apps/web/src/components/HeaderBar.vue   MODIFIED — 加 dev:day12 标识
 找"方差最大方向"，把高维投影到 2D 让我们肉眼看到"聚类"。
 **手写 vs 引库**：这次选 power iteration + deflate 手写（不引 ml/reduce 包）—— 19 行核心，TS 类型安全，5 个反例覆盖 zero-variance / dim-mismatch / convergence。
 
-### 4. Matryoshka 降维（重要！）
+### 4. cosine vs euclidean：方向 vs 距离（Day 12 主修）
 
-`qwen3-embedding-8b` 原生 4096 维，但支持训练时学到的"嵌套维度"：可以请求 256 维输出，仍保留大部分语义。
-- Panel C 让用户**亲眼对比** 4096 vs 256 的距离矩阵。
-- 实际意义：256 维够用 99% 场景，存储/算力省 16×。
+`cosine` 看"方向"（angle），对长度不敏感 → 文本向量长度反映"信息量"，方向反映"语义" → 文本相似度 = cosine。
+`euclidean` 看"距离"，对长度敏感 → 更适合图像 / 坐标。
+**Panel C 现在让用户亲眼对比**两个距离公式在同一组向量上的差异 —— 同类词 cosine 小但 euclidean 不一定小。
+
+> ~~Matryoshka 降维~~（取消）：原计划对比 4096 vs 256，**实测 dev 网关不支持**。`qwen3-embedding-8b` 通过 vLLM/litellm 跑时 litellm 主动拒绝 `dimensions` 参数（即使原生的 4096），担心"未训练 Matryoshka 的模型乱输出质量差"。详见 `examples/day12/ex_002_probe_dims.ts` 4 个探针。
+>
+> 这给我们的教训：**spec 时只跑一次真 API 就能避免 4096 vs 256 这种"看似合理的架构假设"** —— spec 阶段要至少跑一次"零碎的真网关调用"，再下笔写 Panel C。
 
 ### 5. fixture 是单一事实源
 
