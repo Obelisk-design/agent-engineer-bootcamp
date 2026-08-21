@@ -18,7 +18,7 @@ async function run(): Promise<void> {
   warnDevKeyOnce();
   try {
     const vectors = await embedTexts(SAMPLE_CORPUS);
-    svg.value = scatterSVG(SAMPLE_CORPUS, vectors);
+    svg.value = scatterSVG(SAMPLE_CORPUS, vectors, 640, 480);
   } catch (e) {
     err.value = e instanceof Error ? e.message : String(e);
   } finally {
