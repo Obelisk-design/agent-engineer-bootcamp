@@ -99,3 +99,6 @@ pre,
 *::-webkit-scrollbar-thumb:hover {
   background: var(--border-strong);
 }
+
+/* Day 12: Embedding demo 专用样式（矩阵 / 散点 / loading / error） */
+@import "./views/embed/styles.css";
