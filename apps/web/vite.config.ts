@@ -18,6 +18,12 @@ const API_TARGET = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
+  // Day 12 fix：vite 默认从 cwd 读 .env，但 vite 从根目录启、cwd 也是 apps/web，
+  // 根 .env 读不到 → 前端 import.meta.env.VITE_OPENAI_API_KEY 为 undefined。
+  // 显式指定 envDir 回到项目根，让前后端共用同一份 .env。
+  // ⚠️ 不要加 envPrefix: ['OPENAI_'] —— 那会让前端任意位置 import.meta.env.OPENAI_API_KEY
+  //    把 key 打进生产 bundle，违反 Vite 安全原则。强制走 VITE_* 前缀。
+  envDir: '../..',
   server: {
     port: 5173,
     strictPort: false,
