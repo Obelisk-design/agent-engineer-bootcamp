@@ -178,6 +178,77 @@ vite 默认只暴露 `import.meta.env.VITE_*` 给 client。`.env` 只有 `OPENAI
 
 ---
 
+## 🌐 Web 浏览器验证指南（How to test Day 12 in browser）
+
+Day 12 的核心交付是 4 个可视化 panel（浏览器里看）。下面是从 0 到 1 的 7 步手测。
+
+### 准备
+
+1. **确认 `.env` 三件事都在**（gitignored，本地）：
+   ```
+   VITE_OPENAI_API_KEY=sk-...
+   VITE_OPENAI_BASE_URL=http://10.230.10.242:8000/v1
+   VITE_OPENAI_EMBEDDING_MODEL=qwen3-embedding-8b
+   ```
+
+2. **起 dev server**：
+   ```bash
+   pnpm dev:web
+   ```
+   看到 `Local: http://localhost:5173/` 表示成功。
+
+### 验证主链路没坏
+
+3. **打开 `http://localhost:5173/`**（默认 `#/`）→ 看到 Agent Console，**Agent 还能对话**（Day 12 没破坏 Day 02-11 主链路）。
+
+### 进入 Embedding Demo
+
+4. **点击 HeaderBar 右上 `dev:day12` 标识** → URL 跳到 `#/embed-demo`，整屏切换为 Embedding Demo。
+
+   或者：点击 LeftMenu 底部的 `Embed` 按钮 → 同样跳到 `#/embed-demo`。
+
+### 4 个 Panel 各点一次 Run
+
+每个 Panel 都是按需触发（不自动跑，省 API 调用）：
+
+| Panel | 期望看到的 |
+|---|---|
+| **A · 距离矩阵热图** | 10×10 红色渐变表格，同类词格子更红（更相似）。对角线全黑（自己↔自己=0）。`cat↔dog` 比 `cat↔apple` 红。|
+| **B · PCA 2D 散点** | 动物（cat/dog/elephant/lion）+ 水果（apple/banana/grape）+ 抽象词（happy/sad/love）大致分成 3 堆，PCA 把高维投影到 2D 让我们肉眼看到聚类。|
+| **C · 同维度 cos vs euc** | 左右两个热图。同向量但不同距离公式 —— cosine 看方向（同语义更小），euclidean 看距离（数值差距更显著）。|
+| **D · 距离梯度** | 4 条横向条形，4 个前缀变体（short / medium / long prefix + 1 不相关）相对于 query 的距离。预期 `long prefix`（语义相近）最短，不相关最长。|
+
+### 验证 key-missing 红 banner
+
+5. **测试错误路径**：把 `.env` 里 `VITE_OPENAI_API_KEY=` 清空 → 重新 `pnpm dev:web` → 访问 `#/embed-demo` → 顶部应看到红 banner：
+   > 请设置 `VITE_OPENAI_API_KEY` in `.env` 后重启 `pnpm dev:web`。
+
+   恢复 `.env` 后再测一次，banner 应消失。
+
+### 调试技巧
+
+6. **打开 DevTools (F12) Console**：第一次跑 Panel 时会看到：
+   ```
+   [embed-demo] VITE_OPENAI_API_KEY is exposed in the browser — dev-only.
+   ```
+   这是 `warnDevKeyOnce()` 主动告警（确认 key 在用，没静默失败）。
+
+7. **Network 标签**：每次 Run 应该看到一个 POST `/v1/embeddings` 请求，状态 200。
+
+### 不想起 dev:web？用 examples 直接验
+
+```bash
+npx tsx examples/day12/ex_001_embed_only.ts   # 5 步真跑（embed + cosine 同类相聚 + cos vs euc）
+npx tsx examples/day12/ex_002_probe_dims.ts   # 4 探针：Matryoshka 是否被网关支持
+```
+
+### 已知限制
+
+- Panel C **不能对比 4096 vs 256 维度**（dev 网关 vLLM/litellm 不支持 `dimensions` 参数，详见 `ex_002_probe_dims`）。
+- 4 个 Panel 各自独立 embed，10 词 × 4 panel ≈ 13 次 API 调用；可观察 token 用量。
+
+---
+
 ## 🔮 Day 13 路线
 
 ### `FileEditTool`（顺延）
