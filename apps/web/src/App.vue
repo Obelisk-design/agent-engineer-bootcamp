@@ -11,7 +11,7 @@
 -->
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import type { AgentEvent } from '../../../libs/agent/index.js';
 import type { Message } from '../../../libs/llm/index.js';
 import { defaultAgentClient } from './api/agentClient.js';
@@ -28,12 +28,24 @@ import LeftMenu from './components/LeftMenu.vue';
 import RightPanel from './components/RightPanel.vue';
 import ConversationPanel from './components/ConversationPanel.vue';
 import ExecutionTimeline from './components/ExecutionTimeline.vue';
+import EmbedDemo from './views/embed/EmbedDemo.vue';
 import {
   accumulateFromResponse,
   accumulateFromRunSummary,
   emptySessionUsage,
   type SessionUsage,
 } from './lib/sessionUsage.js';
+
+// Day 12 hash route — `#/embed-demo` swaps Agent Console for EmbedDemo fullscreen.
+// No vue-router: kept minimal (one route, dev-only). See CLAUDE.md Day 12 daily note.
+const route = ref<string>(
+  typeof window === 'undefined' ? '/' : (window.location.hash.slice(1) || '/'),
+);
+function syncRoute(): void {
+  route.value = window.location.hash.slice(1) || '/';
+}
+onMounted(() => window.addEventListener('hashchange', syncRoute));
+onUnmounted(() => window.removeEventListener('hashchange', syncRoute));
 
 const conversation = ref<ConversationItem[]>([]);
 const timeline = ref<TimelineItem[]>([]);
@@ -350,7 +362,10 @@ function toggleRightPanel(): void {
 </script>
 
 <template>
-  <div class="flex flex-col h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
+  <div v-if="route === '/embed-demo'" class="flex-1 min-h-0 overflow-auto">
+    <EmbedDemo />
+  </div>
+  <div v-else class="flex flex-col h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
     <HeaderBar
       :model-name="modelName"
       :summary="runSummary"
