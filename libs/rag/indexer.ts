@@ -187,14 +187,31 @@ export async function openMetaStore(uri?: string): Promise<MetaStore> {
  * 增量入库主流程
  * ============================================================ */
 
+export interface IncrementalIndexPhases {
+  /** 读 mtime + 计算 hash（fs.stat + SHA-256，CPU+IO 混合） */
+  readonly statMs: number;
+  /** lancedb delete('source IN (...)') 累计（含 meta 表） */
+  readonly deleteMs: number;
+  /** embed() 实测调用累计（一次 embed 多个 chunk 计 1 次） */
+  readonly embedMs: number;
+  readonly embedCalls: number;
+  /** lancedb add() 累计（含 meta 表 upsert） */
+  readonly addMs: number;
+  /** open / loadAll / close 等 */
+  readonly ioMs: number;
+  readonly totalMs: number;
+}
+
 export interface IncrementalIndexReport {
   readonly added: readonly string[];
   readonly modified: readonly string[];
   readonly removed: readonly string[];
   readonly skipped: readonly string[];
+  /** added + modified + removed 的并集（顺序：added → modified → removed）—— 给调用方一行打印 */
+  readonly changedFiles: readonly string[];
   readonly headingChunksAdded: number;
   readonly paragraphChunksAdded: number;
-  readonly elapsedMs: number;
+  readonly phases: IncrementalIndexPhases;
 }
 
 export interface IncrementalIndexOptions {
@@ -211,18 +228,43 @@ export async function incrementalIndex(
   opts: IncrementalIndexOptions,
 ): Promise<IncrementalIndexReport> {
   const t0 = Date.now();
+  let statMs = 0;
+  let deleteMs = 0;
+  let embedMs = 0;
+  let addMs = 0;
+  let ioMs = 0;
+  let embedCalls = 0;
+
+  const timed = async <T>(acc: { ms: number }, fn: () => Promise<T>): Promise<T> => {
+    const t = Date.now();
+    const out = await fn();
+    acc.ms += Date.now() - t;
+    return out;
+  };
+  const statAcc = { ms: 0 };
+  const deleteAcc = { ms: 0 };
+  const embedAcc = { ms: 0 };
+  const addAcc = { ms: 0 };
+  const ioAcc = { ms: 0 };
+
   const tablePrefix = opts.tablePrefix ?? 'chunks';
-  const headingStore = await openVectorStore(opts.storeUri, `${tablePrefix}_heading`);
-  const paragraphStore = await openVectorStore(opts.storeUri, `${tablePrefix}_paragraph`);
-  const meta = await openMetaStore(opts.storeUri);
-  const cached = await meta.loadAll();
+  const headingStore = await timed(ioAcc, () =>
+    openVectorStore(opts.storeUri, `${tablePrefix}_heading`),
+  );
+  const paragraphStore = await timed(ioAcc, () =>
+    openVectorStore(opts.storeUri, `${tablePrefix}_paragraph`),
+  );
+  const meta = await timed(ioAcc, () => openMetaStore(opts.storeUri));
+  const cached = await timed(ioAcc, () => meta.loadAll());
 
   // 1. 给 docs 补 mtimeMs + hash
-  const enriched = await Promise.all(
-    docs.map(async (d) => {
-      const stat = await fs.stat(d.absPath);
-      return { source: d.relPath, mtimeMs: stat.mtimeMs, hash: hashText(d.content) };
-    }),
+  const enriched = await timed(statAcc, () =>
+    Promise.all(
+      docs.map(async (d) => {
+        const stat = await fs.stat(d.absPath);
+        return { source: d.relPath, mtimeMs: stat.mtimeMs, hash: hashText(d.content) };
+      }),
+    ),
   );
 
   // 2. diff
@@ -247,17 +289,17 @@ export async function incrementalIndex(
   // 3. removed → 清掉所有旧 chunk + meta 记录
   if (removed.length > 0) {
     const filter = inListFilter(removed);
-    await headingStore.delete(filter);
-    await paragraphStore.delete(filter);
-    await meta.deleteSources(removed);
+    await timed(deleteAcc, () => headingStore.delete(filter));
+    await timed(deleteAcc, () => paragraphStore.delete(filter));
+    await timed(deleteAcc, () => meta.deleteSources(removed));
   }
 
   // 4. toReindex（added + modified）→ 先清掉旧 chunk（保证幂等）
   const toReindex = [...added, ...modified];
   if (toReindex.length > 0) {
     const filter = inListFilter(toReindex);
-    await headingStore.delete(filter);
-    await paragraphStore.delete(filter);
+    await timed(deleteAcc, () => headingStore.delete(filter));
+    await timed(deleteAcc, () => paragraphStore.delete(filter));
   }
 
   // 5. 重新切 + embed + 入库
@@ -276,7 +318,7 @@ export async function incrementalIndex(
       const headingChunks = dropEmptyChunks(chunkByHeading(doc.content, doc.relPath, doc.kind));
       const paragraphChunks = dropEmptyChunks(chunkByParagraph(doc.content, doc.relPath, doc.kind));
 
-      const [headingRes, paragraphRes] = await Promise.all([
+      const headingRes = await timed(embedAcc, () =>
         embed(
           {
             input: headingChunks.map((c) => c.text),
@@ -285,6 +327,8 @@ export async function incrementalIndex(
           },
           opts.apiKey,
         ),
+      );
+      const paragraphRes = await timed(embedAcc, () =>
         embed(
           {
             input: paragraphChunks.map((c) => c.text),
@@ -293,13 +337,14 @@ export async function incrementalIndex(
           },
           opts.apiKey,
         ),
-      ]);
+      );
+      embedCalls += 2; // 一次 heading + 一次 paragraph
 
       const headingRecords = buildRecords(headingChunks, headingRes.vectors, headingRes.fallbackFlags);
       const paragraphRecords = buildRecords(paragraphChunks, paragraphRes.vectors, paragraphRes.fallbackFlags);
 
-      if (headingRecords.length > 0) await headingStore.add(headingRecords);
-      if (paragraphRecords.length > 0) await paragraphStore.add(paragraphRecords);
+      if (headingRecords.length > 0) await timed(addAcc, () => headingStore.add(headingRecords));
+      if (paragraphRecords.length > 0) await timed(addAcc, () => paragraphStore.add(paragraphRecords));
 
       headingChunksAdded += headingRecords.length;
       paragraphChunksAdded += paragraphRecords.length;
@@ -310,20 +355,29 @@ export async function incrementalIndex(
         chunkCount: { heading: headingRecords.length, paragraph: paragraphRecords.length },
       });
     }
-    await meta.upsert(newMetas);
+    await timed(addAcc, () => meta.upsert(newMetas));
   }
 
-  await headingStore.close();
-  await paragraphStore.close();
+  await timed(ioAcc, async () => {
+    await headingStore.close();
+    await paragraphStore.close();
+  });
+
+  statMs = statAcc.ms;
+  deleteMs = deleteAcc.ms;
+  embedMs = embedAcc.ms;
+  addMs = addAcc.ms;
+  ioMs = ioAcc.ms;
 
   return {
     added,
     modified,
     removed,
     skipped,
+    changedFiles: [...added, ...modified, ...removed],
     headingChunksAdded,
     paragraphChunksAdded,
-    elapsedMs: Date.now() - t0,
+    phases: { statMs, deleteMs, embedMs, embedCalls, addMs, ioMs, totalMs: Date.now() - t0 },
   };
 }
 

@@ -6,7 +6,9 @@
  *   - prefix='chunks'        → chunks_heading + chunks_paragraph（main 语料）
  *   - prefix='chunks_test'   → chunks_test_heading + chunks_test_paragraph（test-corpus）
  *
- * 第二次再跑会跳过未变文档（mtime + hash 双重判断），只重 embed 新增 / 修改 / 删除。
+ * 报告解读：
+ *   - changedFiles=[] + embedCalls=0 → 真正"零变更"（第二次跑无修改）
+ *   - changedFiles=[...] + phase 表 → 一眼看出哪篇改了 / 各阶段耗时
  *
  * 跑法：npx tsx examples/day13/ex_001_index_corpus.ts
  * 准备：.env 里 OPENAI_API_KEY / OPENAI_BASE_URL / EMBEDDING_MODEL_NAME。
@@ -20,6 +22,26 @@ import {
   loadTestCorpus,
 } from '../../libs/rag/index.js';
 
+function printReport(label: string, r: ReturnType<typeof incrementalIndex> extends Promise<infer R> ? R : never): void {
+  console.log(`\n=== ${label} ===`);
+  console.log(`changedFiles=${r.changedFiles.length}  (added=${r.added.length} modified=${r.modified.length} removed=${r.removed.length})`);
+  console.log(`skipped=${r.skipped.length}  chunksAdded=${r.headingChunksAdded}h/${r.paragraphChunksAdded}p`);
+  console.log('phases:');
+  console.log(`  stat   ${String(r.phases.statMs).padStart(6)}ms`);
+  console.log(`  delete ${String(r.phases.deleteMs).padStart(6)}ms`);
+  console.log(`  embed  ${String(r.phases.embedMs).padStart(6)}ms  (calls=${r.phases.embedCalls})`);
+  console.log(`  add    ${String(r.phases.addMs).padStart(6)}ms`);
+  console.log(`  io     ${String(r.phases.ioMs).padStart(6)}ms`);
+  console.log(`  total  ${String(r.phases.totalMs).padStart(6)}ms`);
+
+  if (r.changedFiles.length > 0) {
+    console.log('files:');
+    for (const f of r.added) console.log(`  + added   ${f}`);
+    for (const f of r.modified) console.log(`  ~ modified ${f}`);
+    for (const f of r.removed) console.log(`  - removed ${f}`);
+  }
+}
+
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL;
@@ -31,7 +53,6 @@ async function main(): Promise<void> {
   console.log(`loaded ${mainDocs.length} docs`);
 
   console.log('\n--- 2. incremental index main ---');
-  const t1 = Date.now();
   const mainReport = await incrementalIndex(mainDocs, {
     apiKey,
     ...(baseUrl !== undefined ? { baseUrl } : {}),
@@ -39,12 +60,7 @@ async function main(): Promise<void> {
     storeUri: '.lancedb/rag',
     tablePrefix: 'chunks',
   });
-  console.log(
-    `main: added=${mainReport.added.length} modified=${mainReport.modified.length} ` +
-      `removed=${mainReport.removed.length} skipped=${mainReport.skipped.length} ` +
-      `+${mainReport.headingChunksAdded}h/${mainReport.paragraphChunksAdded}p chunks ` +
-      `in ${Date.now() - t1}ms (indexer: ${mainReport.elapsedMs}ms)`,
-  );
+  printReport('main', mainReport);
 
   console.log('\n--- 3. load test-corpus ---');
   const testDocs = await loadTestCorpus();
@@ -55,7 +71,6 @@ async function main(): Promise<void> {
 
   if (testDocs.length > 0) {
     console.log('\n--- 4. incremental index test-corpus ---');
-    const t2 = Date.now();
     const testReport = await incrementalIndex(testDocs, {
       apiKey,
       ...(baseUrl !== undefined ? { baseUrl } : {}),
@@ -63,12 +78,7 @@ async function main(): Promise<void> {
       storeUri: '.lancedb/rag',
       tablePrefix: 'chunks_test',
     });
-    console.log(
-      `test: added=${testReport.added.length} modified=${testReport.modified.length} ` +
-        `removed=${testReport.removed.length} skipped=${testReport.skipped.length} ` +
-        `+${testReport.headingChunksAdded}h/${testReport.paragraphChunksAdded}p chunks ` +
-        `in ${Date.now() - t2}ms (indexer: ${testReport.elapsedMs}ms)`,
-    );
+    printReport('test', testReport);
   } else {
     console.log('\n--- 4. test-corpus empty, skip ---');
   }
