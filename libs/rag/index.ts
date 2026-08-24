@@ -35,3 +35,14 @@ export {
 } from './evaluate.js';
 
 export { loadDocsCorpus, loadTestCorpus, loadAllCorpus, REPO_ROOT, type DocEntry } from './fixtures/docs-corpus.js';
+
+export {
+  incrementalIndex,
+  diffDocs,
+  hashText,
+  openMetaStore,
+  type DocMeta,
+  type DiffResult,
+  type IncrementalIndexReport,
+  type IncrementalIndexOptions,
+} from './indexer.js';

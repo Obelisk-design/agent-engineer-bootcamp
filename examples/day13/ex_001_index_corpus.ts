@@ -1,83 +1,24 @@
 /**
  * examples/day13/ex_001_index_corpus.ts
  *
- * 加载真文档 → 切分 → 嵌入 → 入库。
- * 4 个 lancedb 表：
- *   - chunks_heading       (daily+adr, heading 切)
- *   - chunks_paragraph     (daily+adr, paragraph 切)
- *   - chunks_test_corpus   (test-corpus, heading 切 —— 评测专用)
- *   - chunks_test_paragraph (test-corpus, paragraph 切 —— 评测专用)
+ * 加载真文档 → 调用 incrementalIndex 增量入库。
+ * 2 次调用：
+ *   - prefix='chunks'        → chunks_heading + chunks_paragraph（main 语料）
+ *   - prefix='chunks_test'   → chunks_test_heading + chunks_test_paragraph（test-corpus）
+ *
+ * 第二次再跑会跳过未变文档（mtime + hash 双重判断），只重 embed 新增 / 修改 / 删除。
  *
  * 跑法：npx tsx examples/day13/ex_001_index_corpus.ts
- *
- * 准备：需要 .env 里 OPENAI_API_KEY / OPENAI_BASE_URL / EMBEDDING_MODEL_NAME。
+ * 准备：.env 里 OPENAI_API_KEY / OPENAI_BASE_URL / EMBEDDING_MODEL_NAME。
  * 产物：仓库根 .lancedb/rag（gitignored）。
  */
 
 import 'dotenv/config';
 import {
-  chunkByHeading,
-  chunkByParagraph,
-  dropEmptyChunks,
+  incrementalIndex,
   loadDocsCorpus,
   loadTestCorpus,
-  openVectorStore,
-  type Chunk,
-  type DocEntry,
-  type VectorRecord,
 } from '../../libs/rag/index.js';
-
-function toRecords(chunks: readonly Chunk[], vectors: number[][], fallbackFlags: readonly boolean[]): VectorRecord[] {
-  const out: VectorRecord[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    const v = vectors[i]!;
-    if (v.length === 0) {
-      console.log(`  skip chunk[${i}] (${chunks[i]!.source}) — placeholder fallback failed`);
-      continue;
-    }
-    void fallbackFlags;
-    const c = chunks[i]!;
-    out.push({
-      id: `${c.source}#${c.byteStart}-${c.byteEnd}`,
-      vector: v,
-      text: c.text,
-      source: c.source,
-      sourceKind: c.sourceKind,
-    });
-  }
-  return out;
-}
-
-async function indexOne(
-  label: string,
-  docs: readonly DocEntry[],
-  strategy: 'heading' | 'paragraph',
-  tableName: string,
-  apiKey: string,
-  model: string | undefined,
-  baseUrl: string | undefined,
-): Promise<void> {
-  const chunks = dropEmptyChunks(
-    docs.flatMap((d) =>
-      strategy === 'heading'
-        ? chunkByHeading(d.content, d.relPath, d.kind)
-        : chunkByParagraph(d.content, d.relPath, d.kind),
-    ),
-  );
-  const { embed } = await import('../../libs/embedding/embed.js');
-  const t = Date.now();
-  const er = await embed(
-    { input: chunks.map((c) => c.text), ...(model ? { model } : {}), ...(baseUrl ? { baseUrl } : {}) },
-    apiKey,
-  );
-  const fb = er.fallbackFlags.filter(Boolean).length;
-  console.log(`${label} embed: ${er.vectors.length} × ${er.dimensions} dim in ${Date.now() - t}ms (fallbacks=${fb})`);
-  const store = await openVectorStore('.lancedb/rag', tableName);
-  const records = toRecords(chunks, er.vectors, er.fallbackFlags);
-  await store.add(records);
-  console.log(`${label} store size: ${await store.size()}`);
-  await store.close();
-}
 
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -89,21 +30,45 @@ async function main(): Promise<void> {
   const mainDocs = await loadDocsCorpus();
   console.log(`loaded ${mainDocs.length} docs`);
 
-  console.log('\n--- 2. load test-corpus ---');
+  console.log('\n--- 2. incremental index main ---');
+  const t1 = Date.now();
+  const mainReport = await incrementalIndex(mainDocs, {
+    apiKey,
+    ...(baseUrl !== undefined ? { baseUrl } : {}),
+    ...(model !== undefined ? { model } : {}),
+    storeUri: '.lancedb/rag',
+    tablePrefix: 'chunks',
+  });
+  console.log(
+    `main: added=${mainReport.added.length} modified=${mainReport.modified.length} ` +
+      `removed=${mainReport.removed.length} skipped=${mainReport.skipped.length} ` +
+      `+${mainReport.headingChunksAdded}h/${mainReport.paragraphChunksAdded}p chunks ` +
+      `in ${Date.now() - t1}ms (indexer: ${mainReport.elapsedMs}ms)`,
+  );
+
+  console.log('\n--- 3. load test-corpus ---');
   const testDocs = await loadTestCorpus();
   console.log(`loaded ${testDocs.length} docs`);
   for (const d of testDocs) {
     console.log(`  - ${d.relPath} (${d.content.length} chars)`);
   }
 
-  console.log('\n--- 3. index main heading + paragraph ---');
-  await indexOne('main:heading', mainDocs, 'heading', 'chunks_heading', apiKey, model, baseUrl);
-  await indexOne('main:paragraph', mainDocs, 'paragraph', 'chunks_paragraph', apiKey, model, baseUrl);
-
   if (testDocs.length > 0) {
-    console.log('\n--- 4. index test-corpus ---');
-    await indexOne('test:heading', testDocs, 'heading', 'chunks_test_corpus', apiKey, model, baseUrl);
-    await indexOne('test:paragraph', testDocs, 'paragraph', 'chunks_test_paragraph', apiKey, model, baseUrl);
+    console.log('\n--- 4. incremental index test-corpus ---');
+    const t2 = Date.now();
+    const testReport = await incrementalIndex(testDocs, {
+      apiKey,
+      ...(baseUrl !== undefined ? { baseUrl } : {}),
+      ...(model !== undefined ? { model } : {}),
+      storeUri: '.lancedb/rag',
+      tablePrefix: 'chunks_test',
+    });
+    console.log(
+      `test: added=${testReport.added.length} modified=${testReport.modified.length} ` +
+        `removed=${testReport.removed.length} skipped=${testReport.skipped.length} ` +
+        `+${testReport.headingChunksAdded}h/${testReport.paragraphChunksAdded}p chunks ` +
+        `in ${Date.now() - t2}ms (indexer: ${testReport.elapsedMs}ms)`,
+    );
   } else {
     console.log('\n--- 4. test-corpus empty, skip ---');
   }

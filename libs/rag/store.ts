@@ -39,6 +39,9 @@ export interface VectorStore {
   add(records: readonly VectorRecord[]): Promise<void>;
   search(query: readonly number[], k: number): Promise<readonly SearchHit[]>;
   size(): Promise<number>;
+  /** 删除匹配 filter 的所有记录。filter 语法同 lancedb SQL where 子句（如 'source = "x.md"'）。
+   *  返回被删除的行数。Day 13 增量入库依赖此接口。 */
+  delete(filter: string): Promise<number>;
   close(): Promise<void>;
 }
 
@@ -127,6 +130,16 @@ class LanceStore implements VectorStore {
     this.cached = null;
     // lancedb JS 没有显式 close —— native handle 由 GC 释放
   }
+
+  async delete(filter: string): Promise<number> {
+    const existing = await this.db.tableNames();
+    if (!existing.includes(this.tableName)) return 0;
+    const t = await this.tbl();
+    const before = await t.countRows();
+    await t.delete(filter);
+    const after = await t.countRows();
+    return before - after;
+  }
 }
 
 /* ============================================================
@@ -173,6 +186,18 @@ class MemoryStore implements VectorStore {
 
   async close(): Promise<void> {
     this.records = [];
+  }
+
+  async delete(filter: string): Promise<number> {
+    // 简化版：只支持 'source = "x.md"' 形式（indexer 只用这种）
+    const m = /^source\s*=\s*"([^"]*)"\s*$/.exec(filter);
+    if (m === null) {
+      throw new RangeError(`memory store: only 'source = "x.md"' filter supported, got: ${filter}`);
+    }
+    const target = m[1]!;
+    const before = this.records.length;
+    this.records = this.records.filter((r) => r.source !== target);
+    return before - this.records.length;
   }
 }
 
