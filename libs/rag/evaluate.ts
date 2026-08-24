@@ -38,6 +38,8 @@ export interface EvalQuery {
   readonly expectedKeywords: readonly string[];
   /** "all"（默认，全中）| "any"（任一中）—— Q3 跨文档型用 any 更合理 */
   readonly matchMode?: 'all' | 'any';
+  /** "main"（daily+adr）| "test"（test-corpus）—— 默认 main */
+  readonly corpus?: 'main' | 'test';
 }
 
 export const DEFAULT_EVAL_QUERIES: readonly EvalQuery[] = [
@@ -69,6 +71,12 @@ export const DEFAULT_EVAL_QUERIES: readonly EvalQuery[] = [
     id: 'Q5',
     query: 'Agent.runEvents messages 边界',
     expectedKeywords: ['runEvents'],
+  },
+  {
+    id: 'Q6',
+    query: '紫光云是什么',
+    expectedKeywords: ['紫光云'],
+    corpus: 'test',
   },
 ];
 

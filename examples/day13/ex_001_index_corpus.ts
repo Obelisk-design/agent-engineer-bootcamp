@@ -1,23 +1,26 @@
 /**
  * examples/day13/ex_001_index_corpus.ts
  *
- * 加载 docs/daily/*.md + docs/adr/*.md 真文档 → 两种 chunk 策略切分 → 嵌入 → 入库。
- * 打印 corpus 统计：文档数、两种策略各自的 chunk 数、总字符。
+ * 加载真文档 → 切分 → 嵌入 → 入库。
+ * 4 个 lancedb 表：
+ *   - chunks_heading       (daily+adr, heading 切)
+ *   - chunks_paragraph     (daily+adr, paragraph 切)
+ *   - chunks_test_corpus   (test-corpus, heading 切 —— 评测专用)
+ *   - chunks_test_paragraph (test-corpus, paragraph 切 —— 评测专用)
  *
  * 跑法：npx tsx examples/day13/ex_001_index_corpus.ts
  *
  * 准备：需要 .env 里 OPENAI_API_KEY / OPENAI_BASE_URL / EMBEDDING_MODEL_NAME。
- * 产物：仓库根 .lancedb/rag（gitignored），目录里 4 个 table：chunks_heading / chunks_paragraph / rag_eval_heading / rag_eval_paragraph
+ * 产物：仓库根 .lancedb/rag（gitignored）。
  */
 
 import 'dotenv/config';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import {
   chunkByHeading,
   chunkByParagraph,
   dropEmptyChunks,
   loadDocsCorpus,
+  loadTestCorpus,
   openVectorStore,
   type Chunk,
   type DocEntry,
@@ -29,11 +32,10 @@ function toRecords(chunks: readonly Chunk[], vectors: number[][], fallbackFlags:
   for (let i = 0; i < chunks.length; i++) {
     const v = vectors[i]!;
     if (v.length === 0) {
-      // placeholder 二次失败 —— 跳过不入库（lancedb 拒绝空 vector）
       console.log(`  skip chunk[${i}] (${chunks[i]!.source}) — placeholder fallback failed`);
       continue;
     }
-    void fallbackFlags; // fallbackFlags 由调用方在打印里引用，这里保留以便 trace
+    void fallbackFlags;
     const c = chunks[i]!;
     out.push({
       id: `${c.source}#${c.byteStart}-${c.byteEnd}`,
@@ -46,75 +48,64 @@ function toRecords(chunks: readonly Chunk[], vectors: number[][], fallbackFlags:
   return out;
 }
 
+async function indexOne(
+  label: string,
+  docs: readonly DocEntry[],
+  strategy: 'heading' | 'paragraph',
+  tableName: string,
+  apiKey: string,
+  model: string | undefined,
+  baseUrl: string | undefined,
+): Promise<void> {
+  const chunks = dropEmptyChunks(
+    docs.flatMap((d) =>
+      strategy === 'heading'
+        ? chunkByHeading(d.content, d.relPath, d.kind)
+        : chunkByParagraph(d.content, d.relPath, d.kind),
+    ),
+  );
+  const { embed } = await import('../../libs/embedding/embed.js');
+  const t = Date.now();
+  const er = await embed(
+    { input: chunks.map((c) => c.text), ...(model ? { model } : {}), ...(baseUrl ? { baseUrl } : {}) },
+    apiKey,
+  );
+  const fb = er.fallbackFlags.filter(Boolean).length;
+  console.log(`${label} embed: ${er.vectors.length} × ${er.dimensions} dim in ${Date.now() - t}ms (fallbacks=${fb})`);
+  const store = await openVectorStore('.lancedb/rag', tableName);
+  const records = toRecords(chunks, er.vectors, er.fallbackFlags);
+  await store.add(records);
+  console.log(`${label} store size: ${await store.size()}`);
+  await store.close();
+}
+
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL;
   const model = process.env.EMBEDDING_MODEL_NAME;
   if (!apiKey) throw new Error('OPENAI_API_KEY not set');
 
-  console.log('--- 1. load docs corpus ---');
-  const docs = await loadDocsCorpus();
-  console.log(`loaded ${docs.length} docs`);
-  for (const d of docs) {
+  console.log('--- 1. load main corpus (daily + adr) ---');
+  const mainDocs = await loadDocsCorpus();
+  console.log(`loaded ${mainDocs.length} docs`);
+
+  console.log('\n--- 2. load test-corpus ---');
+  const testDocs = await loadTestCorpus();
+  console.log(`loaded ${testDocs.length} docs`);
+  for (const d of testDocs) {
     console.log(`  - ${d.relPath} (${d.content.length} chars)`);
   }
 
-  console.log('\n--- 2. chunk by heading ---');
-  const headingChunks = dropEmptyChunks(
-    docs.flatMap((d: DocEntry) => chunkByHeading(d.content, d.relPath, d.kind)),
-  );
-  console.log(`heading chunks: ${headingChunks.length}`);
+  console.log('\n--- 3. index main heading + paragraph ---');
+  await indexOne('main:heading', mainDocs, 'heading', 'chunks_heading', apiKey, model, baseUrl);
+  await indexOne('main:paragraph', mainDocs, 'paragraph', 'chunks_paragraph', apiKey, model, baseUrl);
 
-  console.log('\n--- 3. chunk by paragraph ---');
-  const paragraphChunks = dropEmptyChunks(
-    docs.flatMap((d: DocEntry) => chunkByParagraph(d.content, d.relPath, d.kind)),
-  );
-  console.log(`paragraph chunks: ${paragraphChunks.length}`);
-
-  console.log('\n--- 4. embed + index both ---');
-  const { embed } = await import('../../libs/embedding/embed.js');
-
-  const tH = Date.now();
-  const headingEmbed = await embed(
-    { input: headingChunks.map((c) => c.text), ...(model ? { model } : {}), ...(baseUrl ? { baseUrl } : {}) },
-    apiKey,
-  );
-  const headingFallbacks = headingEmbed.fallbackFlags.filter(Boolean).length;
-  console.log(`heading embed: ${headingEmbed.vectors.length} × ${headingEmbed.dimensions} dim in ${Date.now() - tH}ms (fallbacks=${headingFallbacks})`);
-
-  const headingStore = await openVectorStore('.lancedb/rag', 'chunks_heading');
-  const headingRecords = toRecords(headingChunks, headingEmbed.vectors, headingEmbed.fallbackFlags);
-  await headingStore.add(headingRecords);
-  console.log(`heading store size: ${await headingStore.size()}`);
-  await headingStore.close();
-
-  const tP = Date.now();
-  const paragraphEmbed = await embed(
-    { input: paragraphChunks.map((c) => c.text), ...(model ? { model } : {}), ...(baseUrl ? { baseUrl } : {}) },
-    apiKey,
-  );
-  const paragraphFallbacks = paragraphEmbed.fallbackFlags.filter(Boolean).length;
-  console.log(`paragraph embed: ${paragraphEmbed.vectors.length} × ${paragraphEmbed.dimensions} dim in ${Date.now() - tP}ms (fallbacks=${paragraphFallbacks})`);
-
-  const paragraphStore = await openVectorStore('.lancedb/rag', 'chunks_paragraph');
-  const paragraphRecords = toRecords(paragraphChunks, paragraphEmbed.vectors, paragraphEmbed.fallbackFlags);
-  await paragraphStore.add(paragraphRecords);
-  console.log(`paragraph store size: ${await paragraphStore.size()}`);
-  await paragraphStore.close();
-
-  console.log('\n--- 5. summary ---');
-  const totalCharsH = headingChunks.reduce((s, c) => s + c.text.length, 0);
-  const totalCharsP = paragraphChunks.reduce((s, c) => s + c.text.length, 0);
-  console.log(`heading   ${headingChunks.length} chunks, ${totalCharsH} chars`);
-  console.log(`paragraph ${paragraphChunks.length} chunks, ${totalCharsP} chars`);
-
-  // 删 残留 .lancedb/rag/_temporary —— 探针残留不算脏数据，仅信息
-  try {
-    const items = await fs.readdir(path.join('.lancedb', 'rag'));
-    const temps = items.filter((n) => n.startsWith('_'));
-    if (temps.length > 0) console.log(`note: lancedb temp dirs present: ${temps.length}`);
-  } catch {
-    /* ignore */
+  if (testDocs.length > 0) {
+    console.log('\n--- 4. index test-corpus ---');
+    await indexOne('test:heading', testDocs, 'heading', 'chunks_test_corpus', apiKey, model, baseUrl);
+    await indexOne('test:paragraph', testDocs, 'paragraph', 'chunks_test_paragraph', apiKey, model, baseUrl);
+  } else {
+    console.log('\n--- 4. test-corpus empty, skip ---');
   }
 }
 

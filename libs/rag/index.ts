@@ -34,4 +34,4 @@ export {
   type EvaluateReport,
 } from './evaluate.js';
 
-export { loadDocsCorpus, REPO_ROOT, type DocEntry } from './fixtures/docs-corpus.js';
+export { loadDocsCorpus, loadTestCorpus, loadAllCorpus, REPO_ROOT, type DocEntry } from './fixtures/docs-corpus.js';

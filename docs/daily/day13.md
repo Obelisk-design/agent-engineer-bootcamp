@@ -30,6 +30,7 @@
 9. ✅ 4 个 example（ex_001 入库 / ex_002 evaluate / ex_003 top-K 眼测 / ex_004 单轮 RAG 闭路）
 10. ✅ 18 个反例测试（chunk 9 / store 5 / retrieve 4）
 11. ✅ 4 闸必跑（tsc / vue-tsc / eslint / vitest）全清
+12. ✅ **🆕 test-corpus 支持**：`loadTestCorpus()` + `EvalQuery.corpus` 路由 + 4 表库（main/test × heading/paragraph）
 
 ---
 
