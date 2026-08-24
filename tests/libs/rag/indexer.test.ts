@@ -4,13 +4,14 @@
  * 覆盖：
  * - hashText：确定性 + 顺序敏感
  * - diffDocs：added / modified(mtime) / modified(hash) / unchanged / removed
+ * - openMetaStore namespace 隔离：不同 tablePrefix 互不污染（防止 Day 13 增量入库跨语料串扰 bug 回归）
  *
  * 集成测试（incrementalIndex 端到端 + lancedb delete）走 vitest integration setup，
  * 见 tests/integration/rag-incremental.test.ts（Day 13 follow-up）。
  */
 
 import { describe, expect, it } from 'vitest';
-import { diffDocs, hashText, type DocMeta } from '../../../libs/rag/indexer.js';
+import { diffDocs, hashText, openMetaStore, type DocMeta } from '../../../libs/rag/indexer.js';
 
 describe('hashText', () => {
   it('相同输入 → 相同 hash', () => {
@@ -105,5 +106,54 @@ describe('diffDocs', () => {
     expect(d.modified).toEqual(['change.md']);
     expect(d.unchanged).toEqual(['keep.md']);
     expect(d.removed).toEqual(['gone.md']);
+  });
+});
+
+describe('openMetaStore namespace isolation', () => {
+  // 用临时 lancedb 目录避免污染真实 .lancedb/rag
+  // 每个 case 用独立子目录，避免并测串扰
+  const mkTmpUri = (suffix: string): string => `.lancedb/test-meta-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  it('不同 tablePrefix 写入互不影响', async () => {
+    const uri = mkTmpUri('ns-a');
+    const storeA = await openMetaStore(uri, 'chunks');
+    const storeB = await openMetaStore(uri, 'chunks_test');
+    const meta: DocMeta = {
+      source: 'docs/daily/day01.md',
+      mtimeMs: 1000,
+      hash: 'aaa',
+      chunkCount: { heading: 1, paragraph: 2 },
+    };
+    await storeA.upsert([meta]);
+    const aLoaded = await storeA.loadAll();
+    const bLoaded = await storeB.loadAll();
+    expect(aLoaded.size).toBe(1);
+    expect(bLoaded.size).toBe(0);
+  });
+
+  it('同 tablePrefix 跨实例读到同一份数据', async () => {
+    const uri = mkTmpUri('ns-b');
+    const s1 = await openMetaStore(uri, 'chunks');
+    const s2 = await openMetaStore(uri, 'chunks');
+    await s1.upsert([
+      { source: 'a.md', mtimeMs: 1, hash: 'h1', chunkCount: { heading: 1, paragraph: 1 } },
+    ]);
+    const loaded = await s2.loadAll();
+    expect(loaded.get('a.md')).toBeDefined();
+  });
+
+  it('deleteSources 只影响对应 namespace', async () => {
+    const uri = mkTmpUri('ns-c');
+    const sMain = await openMetaStore(uri, 'chunks');
+    const sTest = await openMetaStore(uri, 'chunks_test');
+    await sMain.upsert([
+      { source: 'shared-name.md', mtimeMs: 1, hash: 'h1', chunkCount: { heading: 1, paragraph: 1 } },
+    ]);
+    await sTest.upsert([
+      { source: 'shared-name.md', mtimeMs: 1, hash: 'h1', chunkCount: { heading: 1, paragraph: 1 } },
+    ]);
+    await sMain.deleteSources(['shared-name.md']);
+    expect((await sMain.loadAll()).size).toBe(0);
+    expect((await sTest.loadAll()).size).toBe(1);
   });
 });

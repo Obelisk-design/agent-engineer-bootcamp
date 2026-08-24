@@ -124,27 +124,30 @@ export function diffDocs(
 
 /* ============================================================
  * Metadata store（lancedb 一张专门表）
+ *
+ * 命名约定：meta 表名 = `${tablePrefix}_meta`（与 chunks_${strategy} 同 namespace）。
+ * 这样多 corpus 共存时（如 main 的 chunks_meta vs test 的 chunks_test_meta）互不污染。
  * ============================================================ */
-
-const META_TABLE = 'rag_meta';
 
 class MetaStore {
   private readonly db: lancedb.Connection;
+  private readonly tableName: string;
   private cached: lancedb.Table | null = null;
 
-  constructor(db: lancedb.Connection) {
+  constructor(db: lancedb.Connection, tableName: string) {
     this.db = db;
+    this.tableName = tableName;
   }
 
   private async tbl(): Promise<lancedb.Table> {
     if (this.cached !== null) return this.cached;
-    this.cached = await this.db.openTable(META_TABLE);
+    this.cached = await this.db.openTable(this.tableName);
     return this.cached;
   }
 
   async loadAll(): Promise<Map<string, DocMeta>> {
     const existing = await this.db.tableNames();
-    if (!existing.includes(META_TABLE)) return new Map();
+    if (!existing.includes(this.tableName)) return new Map();
     const t = await this.tbl();
     const rows = (await t.query().toArray()) as MetaRow[];
     const out = new Map<string, DocMeta>();
@@ -156,8 +159,8 @@ class MetaStore {
     if (metas.length === 0) return;
     const rows = metas.map(metaToRow);
     const existing = await this.db.tableNames();
-    if (!existing.includes(META_TABLE)) {
-      await this.db.createTable(META_TABLE, rows as unknown as Record<string, unknown>[], {
+    if (!existing.includes(this.tableName)) {
+      await this.db.createTable(this.tableName, rows as unknown as Record<string, unknown>[], {
         mode: 'overwrite',
       });
       this.cached = null;
@@ -171,16 +174,21 @@ class MetaStore {
   async deleteSources(sources: readonly string[]): Promise<void> {
     if (sources.length === 0) return;
     const existing = await this.db.tableNames();
-    if (!existing.includes(META_TABLE)) return;
+    if (!existing.includes(this.tableName)) return;
     const t = await this.tbl();
     await t.delete(inListFilter(sources));
   }
 }
 
-export async function openMetaStore(uri?: string): Promise<MetaStore> {
+/**
+ * 打开 metadata store。tableName = `${tablePrefix}_meta` —— 与 chunks_${strategy} 共享 namespace。
+ * @param uri        lancedb 目录
+ * @param tablePrefix 'chunks' | 'chunks_test' | ...
+ */
+export async function openMetaStore(uri?: string, tablePrefix = 'chunks'): Promise<MetaStore> {
   const target = uri ?? '.lancedb/rag';
   const db = await lancedb.connect(target);
-  return new MetaStore(db);
+  return new MetaStore(db, `${tablePrefix}_meta`);
 }
 
 /* ============================================================
@@ -254,7 +262,7 @@ export async function incrementalIndex(
   const paragraphStore = await timed(ioAcc, () =>
     openVectorStore(opts.storeUri, `${tablePrefix}_paragraph`),
   );
-  const meta = await timed(ioAcc, () => openMetaStore(opts.storeUri));
+  const meta = await timed(ioAcc, () => openMetaStore(opts.storeUri, tablePrefix));
   const cached = await timed(ioAcc, () => meta.loadAll());
 
   // 1. 给 docs 补 mtimeMs + hash
