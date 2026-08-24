@@ -78,6 +78,12 @@ export const DEFAULT_EVAL_QUERIES: readonly EvalQuery[] = [
     expectedKeywords: ['紫光云'],
     corpus: 'test',
   },
+  {
+    id: 'Q7',
+    query: '阿里云是什么',
+    expectedKeywords: ['阿里云'],
+    corpus: 'test',
+  },
 ];
 
 /**
@@ -105,7 +111,9 @@ export interface EvalRow {
 export interface EvaluateReport {
   readonly rows: readonly EvalRow[];
   /** "heading" | "paragraph" 各自的命中数 / 总数 */
-  readonly summary: Readonly<Record<ChunkStrategy, { hit: number; total: number; avgElapsedMs: number }>>;
+  readonly summary: Readonly<
+    Record<ChunkStrategy, { hit: number; total: number; avgElapsedMs: number }>
+  >;
 }
 
 export function buildReport(rows: readonly EvalRow[]): EvaluateReport {
@@ -145,7 +153,11 @@ export function formatReport(report: EvaluateReport): string {
     );
   }
   lines.push('');
-  lines.push(`**heading**: ${report.summary.heading.hit}/${report.summary.heading.total} (avg ${report.summary.heading.avgElapsedMs.toFixed(0)}ms)`);
-  lines.push(`**paragraph**: ${report.summary.paragraph.hit}/${report.summary.paragraph.total} (avg ${report.summary.paragraph.avgElapsedMs.toFixed(0)}ms)`);
+  lines.push(
+    `**heading**: ${report.summary.heading.hit}/${report.summary.heading.total} (avg ${report.summary.heading.avgElapsedMs.toFixed(0)}ms)`,
+  );
+  lines.push(
+    `**paragraph**: ${report.summary.paragraph.hit}/${report.summary.paragraph.total} (avg ${report.summary.paragraph.avgElapsedMs.toFixed(0)}ms)`,
+  );
   return lines.join('\n');
 }
