@@ -80,5 +80,5 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# tsbuildinfo
-*.tsbuildinfo
+# lancedb 本地库目录（Day 13）
+.lancedb/

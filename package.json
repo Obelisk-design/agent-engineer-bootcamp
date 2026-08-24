@@ -84,6 +84,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
+    "@lancedb/lancedb": "^0.37.1",
     "gpt-tokenizer": "^3.4.0",
     "hono": "^4.12.31",
     "openai": "^6.47.0",
