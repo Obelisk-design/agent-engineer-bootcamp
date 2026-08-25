@@ -35,7 +35,7 @@ Run again immediately. All pages should be `unchanged`.
    ```bash
    node -e "const l = require('@lancedb/lancedb'); (async () => { const db = await l.connect('.lancedb/rag'); const t = await db.openTable('chunks_notion_heading'); console.log(await t.countRows()); })();"
    ```
-5. Run again — count must be IDENTICAL to step 4. If not, the script is double-writing. Add `mode: 'overwrite'` to the `add()` call in `libs/rag/store.ts` and rerun Task 6.
+5. Run again — count must be IDENTICAL to step 4. If not, the script is double-writing. Add `mode: 'overwrite'` to the `add()` call in `libs/rag/store.ts` and rerun the import.
 
 ## Recovery
 
