@@ -52,7 +52,7 @@
 ### 2.2 Non-Goals（明确不做）
 
 - ❌ 数据库 page 展开（database 行不进库）
-- ❌ 嵌套 child page 递归拉取
+- ⚠️ 嵌套 child page 递归拉取：**受限** — depth=3（parent → child → grandchild）；每个 child_page 生成独立 NotionDoc；带 cycle detection（visited Set<pageId>）。Database 子 page 不进库。
 - ❌ 实时同步 / 后台 watcher
 - ❌ 主动生成 Notion 评测集
 - ❌ Notion web UI / GUI
@@ -217,10 +217,10 @@ byteStart/byteEnd 对 Notion 无意义。`chunkOrdinal` 在 page 内从 0 起，
 | `toggle` | 内嵌子块进父块 |
 | `image` / `file` / `video` | `[image: {caption}]` / `[file]` / `[video]` 占位 |
 | `table` | 每行转 `\| col1 \| col2 \|`，转 k-v 段 |
-| `child_page` | **drop**（不递归）|
+| `child_page` | 在 pageToMarkdown 内 drop；child 抽取由 `extractChildPageIds` 在 orchestrator 层完成 |
 | 其他未知 | `[unsupported: {type}]` |
 
-**关键**：不去递归 `child_page`——避免树爆炸。
+**关键**：`pageToMarkdown` 对单 page 保持纯函数（不递归）；orchestrator 通过 `extractChildPageIds` 识别 child_page、用 `collectPagesRecursive` 在 depth=3 内独立拉取并各自转 markdown。Cycle 由 visited `Set<pageId>` 拦截。
 
 ### 5.3 fetch 限流与重试
 
@@ -445,7 +445,7 @@ EMBEDDING_MODEL_NAME=qwen3-...         # 可选
 | R1 | lancedb 默认 `add` 是 append，不去重；跨 run 重复入库 | 中 | DB 虚胖 | **实施首日验证**：跑 dry-run 验证 id 稳定性；失败改 `mode: 'overwrite'` 或 `merge_insert` |
 | R2 | `@notionhq/client` major 升破坏 API | 低 | fetch.ts 重写 | lock 版本（`^2.2.15`，不锁定 patch）|
 | R3 | 429 限流单 page 重试 3 次不够 | 低 | import 整体失败 | 提高 retries=5、间隔 350→500ms；今天不实现 |
-| R4 | child_page 不递归，导致子 page 永不进库 | 中 | 用户预期偏差 | spec 已声明 + UI 告知 |
+| R4 | child_page 递归导致 lancedb 行数 ×~4、限流压力增 | 中 | import 时间 ×2、触发 429 | `collectPagesRecursive` 内 `--max-children=N` cap；runbook 给出监控钩子；visited Set 防 cycle |
 | R5 | embed `fallback` silent skip，Notion dirty chunk 静默丢失 | 中 | 召回召回不到 | import 报告 `embedFallbacks` 字段 |
 | R6 | DocSource 重构破坏 ex_001 / ex_002 测试 | 中 | bootcamp 路径断 | 实施前跑基线；分 commit；每步回归 |
 | R7 | NOTION_TOKEN 误 commit | 低 | 凭证泄露 | .gitignore 早期加；`git check-ignore .env` 必跑 |
@@ -525,6 +525,9 @@ EMBEDDING_MODEL_NAME=qwen3-...         # 可选
     证据：模拟 403，unreachable 列表里有
 [ ] G. ex_001 / ex_002 跑过，分数不变
     证据：现有 bootcamp 路径 0 影响
+[ ] H. child_page 递归：depth=3 + cycle detect 产出 1 个独立 NotionDoc per child_page
+    证据：seed workspace 跑后 dry-run 输出 `seedPages=N, childPages=M, total=N+M`；M > 0 时存在 parent path 形如 "Daily / 2026 / Day09 Review" 的 sourceLabel；同一 child_page 在 parent A 与 parent B 下不出现两次（visited Set 命中）
+[ ] I. cycle 终止：构造 parent → child → parent 引用，递归到第三层 short-circuit，WARN 输出重复 pageId 且不抛错
 ```
 
 任何一项失败 → 不算完成。
