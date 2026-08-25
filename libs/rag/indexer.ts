@@ -22,10 +22,32 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as lancedb from '@lancedb/lancedb';
-import { chunkByHeading, chunkByParagraph, dropEmptyChunks, type Chunk } from './chunk.js';
+import { chunkByHeading, chunkByParagraph, dropEmptyChunks, type Chunk, type SourceKind } from './chunk.js';
 import type { DocEntry } from './index.js';
 import { embed } from '../embedding/embed.js';
 import { openVectorStore, type VectorRecord } from './store.js';
+
+/* ============================================================
+ * Generalized source abstraction (file or Notion page).
+ *
+ * DocSource decouples incrementalIndex from filesystem-specific concepts.
+ * Today callers feed DocEntry[]; toDocSources() adapts to DocSource[].
+ * Future callers (Notion import) build DocSource[] directly, bypassing
+ * fs.stat.
+ * ============================================================ */
+
+export interface DocSource {
+  /** Primary key — relPath for file-based docs, Notion pageId for page-based docs */
+  readonly sourceKey: string;
+  /** Human-readable label written into lancedb `source` column (was DocEntry.relPath) */
+  readonly sourceLabel: string;
+  readonly content: string;
+  readonly sourceKind: SourceKind;
+  /** Last-modified timestamp (ms). file: fs.stat.mtimeMs; notion: lastEditedMs */
+  readonly updatedMs: number;
+  /** SHA-256 fingerprint of content — guards against mtime-spoof / cross-machine drift */
+  readonly contentHash: string;
+}
 
 /* ============================================================
  * Metadata schema
@@ -76,6 +98,26 @@ function rowToMeta(r: MetaRow): DocMeta {
 /** 计算文本 SHA-256。Node crypto.createHash 比 web crypto 简单（同步、无 import.meta 限制）。 */
 export function hashText(text: string): string {
   return createHash('sha256').update(text, 'utf-8').digest('hex');
+}
+
+/**
+ * 文件型 DocEntry[] → DocSource[]。Notion 类 source 由调用方直接构造 DocSource，
+ * 不经过此 helper（无 fs.stat / absPath 概念）。
+ */
+async function toDocSources(docs: readonly DocEntry[]): Promise<readonly DocSource[]> {
+  return Promise.all(
+    docs.map(async (d) => {
+      const stat = await fs.stat(d.absPath);
+      return {
+        sourceKey: d.relPath,
+        sourceLabel: d.relPath,
+        content: d.content,
+        sourceKind: d.kind,
+        updatedMs: stat.mtimeMs,
+        contentHash: hashText(d.content),
+      };
+    }),
+  );
 }
 
 export interface DiffResult {
@@ -220,6 +262,12 @@ export interface IncrementalIndexReport {
   readonly headingChunksAdded: number;
   readonly paragraphChunksAdded: number;
   readonly phases: IncrementalIndexPhases;
+  /** 本次新增的 chunk 里 fallback 占位的数量（heading / paragraph 各自统计）。
+   *  静默退化路径有了可观测指标 —— 上层可据此决定是否重 embed。 */
+  readonly embedFallbacks: { heading: number; paragraph: number };
+  /** 本次 reindex 但整篇 chunk 全部走 fallback 的 source key 列表（embed 完全失败）。
+   *  这类 source 没写入向量表，检索层不会命中；调用方需要知道丢了哪些。 */
+  readonly failedDocSources: readonly string[];
 }
 
 export interface IncrementalIndexOptions {
@@ -265,26 +313,22 @@ export async function incrementalIndex(
   const meta = await timed(ioAcc, () => openMetaStore(opts.storeUri, tablePrefix));
   const cached = await timed(ioAcc, () => meta.loadAll());
 
-  // 1. 给 docs 补 mtimeMs + hash
-  const enriched = await timed(statAcc, () =>
-    Promise.all(
-      docs.map(async (d) => {
-        const stat = await fs.stat(d.absPath);
-        return { source: d.relPath, mtimeMs: stat.mtimeMs, hash: hashText(d.content) };
-      }),
-    ),
-  );
+  // 1. 给 docs 补 updatedMs + contentHash（DocSource 抽象；file 走 fs.stat，notion 等其他 source 由调用方直接构造 DocSource）
+  const enriched = await timed(statAcc, () => toDocSources(docs));
 
   // 2. diff
   let added: readonly string[];
   let modified: readonly string[];
   let removed: readonly string[];
   if (opts.force === true) {
-    added = enriched.map((e) => e.source);
+    added = enriched.map((e) => e.sourceKey);
     modified = [];
     removed = Array.from(cached.keys());
   } else {
-    const diff = diffDocs(enriched, cached);
+    const diff = diffDocs(
+      enriched.map((e) => ({ source: e.sourceKey, mtimeMs: e.updatedMs, hash: e.contentHash })),
+      cached,
+    );
     added = diff.added;
     modified = diff.modified;
     removed = diff.removed;
@@ -313,10 +357,12 @@ export async function incrementalIndex(
   // 5. 重新切 + embed + 入库
   let headingChunksAdded = 0;
   let paragraphChunksAdded = 0;
+  let embedFallbacks = { heading: 0, paragraph: 0 };
+  const failedDocSources: string[] = [];
   const newMetas: DocMeta[] = [];
   if (toReindex.length > 0) {
     const docMap = new Map(docs.map((d) => [d.relPath, d]));
-    const enrichedMap = new Map(enriched.map((e) => [e.source, e]));
+    const enrichedMap = new Map(enriched.map((e) => [e.sourceKey, e]));
 
     for (const source of toReindex) {
       const doc = docMap.get(source);
@@ -348,6 +394,19 @@ export async function incrementalIndex(
       );
       embedCalls += 2; // 一次 heading + 一次 paragraph
 
+      // 累加 fallback 计数 + 标记整篇失败的 source
+      const headingFallbacks = headingRes.fallbackFlags.filter(Boolean).length;
+      const paragraphFallbacks = paragraphRes.fallbackFlags.filter(Boolean).length;
+      embedFallbacks = {
+        heading: embedFallbacks.heading + headingFallbacks,
+        paragraph: embedFallbacks.paragraph + paragraphFallbacks,
+      };
+      const headingAllFailed = headingRes.vectors.every((v) => v.length === 0);
+      const paragraphAllFailed = paragraphRes.vectors.every((v) => v.length === 0);
+      if (headingAllFailed && paragraphAllFailed && headingChunks.length > 0 && paragraphChunks.length > 0) {
+        failedDocSources.push(source);
+      }
+
       const headingRecords = buildRecords(headingChunks, headingRes.vectors, headingRes.fallbackFlags);
       const paragraphRecords = buildRecords(paragraphChunks, paragraphRes.vectors, paragraphRes.fallbackFlags);
 
@@ -358,8 +417,8 @@ export async function incrementalIndex(
       paragraphChunksAdded += paragraphRecords.length;
       newMetas.push({
         source,
-        mtimeMs: em.mtimeMs,
-        hash: em.hash,
+        mtimeMs: em.updatedMs,
+        hash: em.contentHash,
         chunkCount: { heading: headingRecords.length, paragraph: paragraphRecords.length },
       });
     }
@@ -386,13 +445,16 @@ export async function incrementalIndex(
     headingChunksAdded,
     paragraphChunksAdded,
     phases: { statMs, deleteMs, embedMs, embedCalls, addMs, ioMs, totalMs: Date.now() - t0 },
+    embedFallbacks,
+    failedDocSources,
   };
 }
 
 /* ============================================================
  * 工具：把 Chunk[] + embed 结果合成 VectorRecord[]
  *   - 跳过 fallback 占位（fallback vector 是 '[empty]' 的向量，没语义意义）
- *   - id 形如 `${source}#${byteStart}-${byteEnd}`（自带去重键）
+ *   - id 形如 `${source}#${ordinal}` —— ordinal 是 per-source 顺序号，
+ *     对 file 和 notion 通用（Notion 没 byte 偏移；ordinal 由 chunk.ts 保证 0..N-1）
  * ============================================================ */
 
 function buildRecords(
@@ -407,7 +469,7 @@ function buildRecords(
     const v = vectors[i];
     if (v === undefined || v.length === 0) continue;
     out.push({
-      id: `${c.source}#${c.byteStart}-${c.byteEnd}`,
+      id: `${c.source}#${c.ordinal}`,
       vector: [...v],
       text: c.text,
       source: c.source,

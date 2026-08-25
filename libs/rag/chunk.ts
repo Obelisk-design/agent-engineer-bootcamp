@@ -27,6 +27,8 @@ export interface Chunk {
   readonly heading?: string;
   readonly byteStart: number;
   readonly byteEnd: number;
+  /** 该 source 内顺序号（0..N-1）。chunk id 用 ordinal 而非 byteStart/byteEnd，因为 Notion 等无 byte 偏移的 source 也需要稳定 id。 */
+  readonly ordinal: number;
 }
 
 /**
@@ -37,7 +39,12 @@ export interface Chunk {
  * - 文档无任何 heading → 整篇一个 chunk（不带 heading 字段）
  * - heading 出现在文件末尾 → 仍产生一个 chunk（即使内容为空 — 调用方自行 filter）
  */
-export function chunkByHeading(md: string, source: string, sourceKind: SourceKind = 'daily'): Chunk[] {
+export function chunkByHeading(
+  md: string,
+  source: string,
+  sourceKind: SourceKind = 'daily',
+  startOrdinal = 0,
+): Chunk[] {
   const lines = md.split(/\r?\n/);
   const chunks: Chunk[] = [];
   const headingRe = /^(#{1,3})\s+(.+?)\s*#*\s*$/;
@@ -46,6 +53,7 @@ export function chunkByHeading(md: string, source: string, sourceKind: SourceKin
   let currentBuf: string[] = [];
   let currentStartByte = 0;
   let cursorByte = 0;
+  let ordinalCounter = startOrdinal;
 
   const flush = (endByte: number): void => {
     const text = currentBuf.join('\n').trimEnd();
@@ -58,6 +66,7 @@ export function chunkByHeading(md: string, source: string, sourceKind: SourceKin
       ...(currentHeading !== undefined ? { heading: currentHeading } : {}),
       byteStart: currentStartByte,
       byteEnd: endByte,
+      ordinal: ordinalCounter++,
     });
   };
 
@@ -93,6 +102,7 @@ export function chunkByParagraph(
   source: string,
   sourceKind: SourceKind = 'daily',
   overlapChars = 200,
+  startOrdinal = 0,
 ): Chunk[] {
   if (overlapChars < 0) {
     throw new RangeError(`chunkByParagraph: overlapChars must be >= 0, got ${overlapChars}`);
@@ -168,6 +178,7 @@ export function chunkByParagraph(
   // 长段落硬切 + overlap
   const chunks: Chunk[] = [];
   let carry = '';
+  let ordinalCounter = startOrdinal;
   for (const seg of segments) {
     let text = seg.text;
     if (carry.length > 0) {
@@ -181,6 +192,7 @@ export function chunkByParagraph(
         sourceKind,
         byteStart: seg.startByte,
         byteEnd: seg.endByte,
+        ordinal: ordinalCounter++,
       });
       carry = text.length > overlapChars ? text.slice(-overlapChars) : '';
     } else {
@@ -199,6 +211,7 @@ export function chunkByParagraph(
           sourceKind,
           byteStart: firstWindow ? seg.startByte : seg.startByte + pos,
           byteEnd: seg.startByte + Math.min(text.length, pos + 1500),
+          ordinal: ordinalCounter++,
         });
         firstWindow = false;
         if (pos + 1500 >= text.length) break;
