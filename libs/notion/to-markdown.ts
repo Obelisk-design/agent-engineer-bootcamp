@@ -133,3 +133,26 @@ export function pageToMarkdown(
     markdown: lines.join('\n'),
   };
 }
+
+/**
+ * NotionDoc: the content-shaped intermediate that Task 3's fetch +
+ * Task 2's pageToMarkdown produce, and Task 4's diffNotion consumes.
+ * Lives in to-markdown.ts because it's the *content* carrier (title +
+ * markdown), not the SDK shape (Task 3) or the diff shape (Task 4).
+ */
+export interface NotionDoc {
+  /** Notion page UUID (no hyphens) — diff primary key */
+  readonly pageId: string;
+  /** epoch ms; from `last_edited_time` in Notion API */
+  readonly lastEditedMs: number;
+  /** human-readable ISO; debug / report only */
+  readonly lastEditedIso: string;
+  /** discriminator for DocSource.sourceKind */
+  readonly sourceKind: 'notion';
+  /** human-readable label; from fetch.buildSourceLabel */
+  readonly sourceLabel: string;
+  /** pageToMarkdown output (markdown string) */
+  readonly content: string;
+  /** when true, content is empty + page marked unreachable */
+  readonly unreachable?: boolean;
+}
