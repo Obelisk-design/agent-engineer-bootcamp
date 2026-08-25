@@ -35,10 +35,9 @@ export class FakeChatClient implements ChatClient {
   constructor(private readonly responses: ChatResponse[]) {}
 
   async chat(request: ChatRequest, _options?: ChatOptions): Promise<ChatResponse> {
-    // Deep-copy messages so later Agent mutations (push assistant / tool
-    // messages) don't leak back into earlier recorded requests. Tests
-    // assert against requests[N].messages which would otherwise always
-    // reflect the final accumulated state.
+    // 深拷贝 messages，避免 Agent 之后的 mutation（push assistant / tool message）
+    // 反向污染之前记录的 request。测试会针对 requests[N].messages 断言，
+    // 否则它总是反映最终累计后的状态。
     this.requests.push({
       ...request,
       messages: request.messages.map((m) => ({ ...m })),

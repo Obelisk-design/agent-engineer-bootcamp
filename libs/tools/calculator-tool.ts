@@ -26,7 +26,7 @@ export const calculatorTool: Tool<typeof calculatorSchema, { result: number }> =
 };
 
 // ---------------------------------------------------------------------------
-// Expression evaluator (tokenizer + shunting-yard + RPN eval)
+// 表达式求值器（tokenizer + shunting-yard + RPN eval）
 // ---------------------------------------------------------------------------
 
 type Token =
@@ -129,7 +129,7 @@ function evalRPN(rpn: Token[]): number {
           break;
       }
     }
-    // 'paren' tokens do not appear in RPN (consumed by shunting-yard).
+    // 'paren' 类的 token 不会出现在 RPN 里（shunting-yard 阶段就消化掉了）。
   }
   if (stack.length !== 1) throw new Error('calculator: malformed expression');
   return stack[0]!;

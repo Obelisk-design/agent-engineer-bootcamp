@@ -22,30 +22,35 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as lancedb from '@lancedb/lancedb';
-import { chunkByHeading, chunkByParagraph, dropEmptyChunks, type Chunk, type SourceKind } from './chunk.js';
+import {
+  chunkByHeading,
+  chunkByParagraph,
+  dropEmptyChunks,
+  type Chunk,
+  type SourceKind,
+} from './chunk.js';
 import type { DocEntry } from './index.js';
 import { embed } from '../embedding/embed.js';
 import { openVectorStore, type VectorRecord } from './store.js';
 
 /* ============================================================
- * Generalized source abstraction (file or Notion page).
+ * 通用化的 source 抽象（文件 或 Notion 页面）。
  *
- * DocSource decouples incrementalIndex from filesystem-specific concepts.
- * Today callers feed DocEntry[]; toDocSources() adapts to DocSource[].
- * Future callers (Notion import) build DocSource[] directly, bypassing
- * fs.stat.
+ * DocSource 把 incrementalIndex 和文件系统特有的概念解耦。
+ * 目前调用方传入 DocEntry[]；toDocSources() 会把它适配成 DocSource[]。
+ * 未来的调用方（Notion 导入）直接构造 DocSource[]，绕过 fs.stat。
  * ============================================================ */
 
 export interface DocSource {
-  /** Primary key — relPath for file-based docs, Notion pageId for page-based docs */
+  /** 主键 —— 文件类文档用 relPath，页面类文档用 Notion pageId */
   readonly sourceKey: string;
-  /** Human-readable label written into lancedb `source` column (was DocEntry.relPath) */
+  /** 写到 lancedb `source` 列的人类可读标签（原来就是 DocEntry.relPath） */
   readonly sourceLabel: string;
   readonly content: string;
   readonly sourceKind: SourceKind;
-  /** Last-modified timestamp (ms). file: fs.stat.mtimeMs; notion: lastEditedMs */
+  /** 最后修改时间戳（毫秒）。文件：fs.stat.mtimeMs；Notion：lastEditedMs */
   readonly updatedMs: number;
-  /** SHA-256 fingerprint of content — guards against mtime-spoof / cross-machine drift */
+  /** content 的 SHA-256 指纹 —— 防止 mtime 被伪造 / 跨机器漂移 */
   readonly contentHash: string;
 }
 
@@ -95,7 +100,7 @@ function rowToMeta(r: MetaRow): DocMeta {
  * 纯函数：hash + diff
  * ============================================================ */
 
-/** 计算文本 SHA-256。Node crypto.createHash 比 web crypto 简单（同步、无 import.meta 限制）。 */
+/** 计算文本 SHA-256。Node 的 crypto.createHash 比 web crypto 简单（同步、无 import.meta 限制）。 */
 export function hashText(text: string): string {
   return createHash('sha256').update(text, 'utf-8').digest('hex');
 }
@@ -121,7 +126,7 @@ async function toDocSources(docs: readonly DocEntry[]): Promise<readonly DocSour
 }
 
 export interface DiffResult {
-  readonly added: readonly string[];    // source 路径
+  readonly added: readonly string[]; // source 路径
   readonly modified: readonly string[];
   readonly removed: readonly string[]; // 已删除文档的 source
   readonly unchanged: readonly string[];
@@ -347,7 +352,11 @@ async function runIncrementalIndex(
   const cached = await timed(ioAcc, () => meta.loadAll());
 
   // 1. sources 已带 updatedMs + contentHash（文件走 toDocSources；Notion 由 adapter 直接构造）
-  const sourcesView = sources.map((s) => ({ source: s.sourceKey, mtimeMs: s.updatedMs, hash: s.contentHash }));
+  const sourcesView = sources.map((s) => ({
+    source: s.sourceKey,
+    mtimeMs: s.updatedMs,
+    hash: s.contentHash,
+  }));
 
   // 2. diff
   let added: readonly string[];
@@ -436,15 +445,29 @@ async function runIncrementalIndex(
       };
       const headingAllFailed = headingRes.vectors.every((v) => v.length === 0);
       const paragraphAllFailed = paragraphRes.vectors.every((v) => v.length === 0);
-      if (headingAllFailed && paragraphAllFailed && headingChunks.length > 0 && paragraphChunks.length > 0) {
+      if (
+        headingAllFailed &&
+        paragraphAllFailed &&
+        headingChunks.length > 0 &&
+        paragraphChunks.length > 0
+      ) {
         failedDocSources.push(source);
       }
 
-      const headingRecords = buildRecords(headingChunks, headingRes.vectors, headingRes.fallbackFlags);
-      const paragraphRecords = buildRecords(paragraphChunks, paragraphRes.vectors, paragraphRes.fallbackFlags);
+      const headingRecords = buildRecords(
+        headingChunks,
+        headingRes.vectors,
+        headingRes.fallbackFlags,
+      );
+      const paragraphRecords = buildRecords(
+        paragraphChunks,
+        paragraphRes.vectors,
+        paragraphRes.fallbackFlags,
+      );
 
       if (headingRecords.length > 0) await timed(addAcc, () => headingStore.add(headingRecords));
-      if (paragraphRecords.length > 0) await timed(addAcc, () => paragraphStore.add(paragraphRecords));
+      if (paragraphRecords.length > 0)
+        await timed(addAcc, () => paragraphStore.add(paragraphRecords));
 
       headingChunksAdded += headingRecords.length;
       paragraphChunksAdded += paragraphRecords.length;

@@ -1,25 +1,24 @@
 /**
  * examples/notion_import/main.ts
  *
- * Imports a personal Notion workspace into the local RAG index.
+ * 把个人 Notion workspace 导入到本地 RAG 索引。
  *
- * Usage:
- *   npx tsx examples/notion_import/main.ts                # full import
- *   npx tsx examples/notion_import/main.ts --dry-run      # fetch + diff + convert, NO writes
+ * 用法：
+ *   npx tsx examples/notion_import/main.ts                # 全量导入
+ *   npx tsx examples/notion_import/main.ts --dry-run      # fetch + diff + convert，不写库
  *
- * Required env:
- *   NOTION_TOKEN               Notion internal integration secret
+ * 必需环境变量：
+ *   NOTION_TOKEN               Notion 内部集成的 secret
  *   OPENAI_API_KEY             Embedding API key
- *   OPENAI_BASE_URL            (optional) custom embedding gateway
- *   EMBEDDING_MODEL_NAME       (optional) override model name
+ *   OPENAI_BASE_URL            （可选）自定义 embedding 网关
+ *   EMBEDDING_MODEL_NAME       （可选）覆盖模型名
  *
- * Spec: docs/superpowers/specs/2026-08-25-notion-import-design.md §5.7
+ * Spec：docs/superpowers/specs/2026-08-25-notion-import-design.md §5.7
  *
- * NOTE: This script transitively imports `@notionhq/client` via
- * `libs/notion/index.ts` → `libs/notion/fetch.ts`. Until Task 7 lands
- * the package install, module load will fail with
- * "Cannot find module '@notionhq/client'". Smoke verification is
- * deferred — see `.superpowers/sdd/2026-08-25-notion-import/task-6-report.md`.
+ * NOTE：本脚本通过 `libs/notion/index.ts` → `libs/notion/fetch.ts`
+ * 间接 import `@notionhq/client`。在 Task 7 把这个包安装好之前，
+ * 模块加载会失败并报 "Cannot find module '@notionhq/client'"。
+ * smoke 验证被推迟 —— 见 `.superpowers/sdd/2026-08-25-notion-import/task-6-report.md`。
  */
 
 import 'dotenv/config';
@@ -44,9 +43,9 @@ import { collectPagesRecursive, readMaxChildren, MAX_DEPTH, type CollectOpts } f
  * Constants — searchable + DRY
  * ============================================================ */
 
-/** lancedb store URI (relative to repo root). */
+/** lancedb store URI（相对仓库根目录）。 */
 const STORE_URI = '.lancedb/rag';
-/** namespace for Notion chunk tables; meta table follows as `${TABLE_PREFIX}_meta`. */
+/** Notion chunk 表的 namespace；meta 表名跟它走 `${TABLE_PREFIX}_meta`。 */
 const TABLE_PREFIX = 'chunks_notion';
 
 /* ============================================================
@@ -89,14 +88,13 @@ function readArgs(): Args {
  * ============================================================ */
 
 /**
- * Build a `NotionDoc` for a page that the SDK refused to return blocks for
- * (forbidden / not_found). Content is empty; `unreachable` flag tells the
- * diff + write adapter layers to pin dual-sentinel meta values.
+ * 为 SDK 拒绝返回 blocks 的页面（forbidden / not_found）构造一个 `NotionDoc`。
+ * content 为空；`unreachable` 标记告诉 diff + write adapter 层
+ * 把两个 sentinel 元数据值都固定住。
  *
- * Why a helper, not an inline object literal: Task 4 D1 + Task 5 D3
- * carried-forward findings require BOTH `lastEditedMs: 0` AND
- * `lastEditedIso: ''` to be pinned together — extracting the literal
- * makes the constraint visible at every call site.
+ * 为什么抽成 helper 而不是行内对象字面量：Task 4 D1 + Task 5 D3
+ * 的 carry-forward 结论要求同时固定 `lastEditedMs: 0` 和
+ * `lastEditedIso: ''` 两项 —— 抽出来后这个约束在每个调用点都可见。
  */
 function unreachableNotionDoc(meta: PageMeta, _reason: string): NotionDoc {
   return {
@@ -111,7 +109,7 @@ function unreachableNotionDoc(meta: PageMeta, _reason: string): NotionDoc {
 }
 
 /**
- * Build a `NotionDoc` for a page whose blocks converted successfully.
+ * 为 blocks 转换成功的页面构造 `NotionDoc`。
  */
 function successfulNotionDoc(meta: PageMeta, mdTitle: string, mdBody: string): NotionDoc {
   return {
@@ -125,15 +123,14 @@ function successfulNotionDoc(meta: PageMeta, mdTitle: string, mdBody: string): N
 }
 
 /**
- * Convert `NotionDoc[]` → `DocSource[]` for `incrementalIndexFromSources`.
+ * 把 `NotionDoc[]` 转成 `DocSource[]` 给 `incrementalIndexFromSources` 用。
  *
- * Unreachable pages PIN both `updatedMs: 0` AND `contentHash: 'UNREACHABLE'`
- * — the worker does not special-case unreachable and writes these two
- * fields DIRECTLY into lancedb meta (Task 5 D3 carry-forward).
+ * 不可达页面同时固定 `updatedMs: 0` 和 `contentHash: 'UNREACHABLE'` 两项
+ * —— worker 不对 unreachable 做特殊处理，会把这两个字段直接写入 lancedb meta
+ * （Task 5 D3 carry-forward）。
  *
- * Without the dual-sentinel pin, `diffNotion` reclassifies them as
- * `modified` on the next run (Task 4 D1) and the indexer re-embeds
- * known-empty content every import.
+ * 没有这个双 sentinel 固定，下次运行时 `diffNotion` 会把它们重新归类为
+ * `modified`（Task 4 D1），indexer 会反复把已知为空的内容重新 embed。
  */
 function unreachableDocSource(d: NotionDoc): DocSource {
   return {
@@ -146,7 +143,7 @@ function unreachableDocSource(d: NotionDoc): DocSource {
   };
 }
 
-/** Build DocSource for a reachable NotionDoc (regular content hash). */
+/** 为可达的 NotionDoc 构造 DocSource（用正常的内容 hash）。 */
 function reachableDocSource(d: NotionDoc): DocSource {
   return {
     sourceKey: d.pageId,
@@ -172,8 +169,8 @@ async function buildNotionDocs(args: Args): Promise<readonly NotionDoc[]> {
   const fetchOpts: NotionFetchOptions = { auth: args.token, rateLimitMs: 350 };
   const start = Date.now();
 
-  // Stage 1 — collect (seed + children + grandchildren up to MAX_DEPTH=3,
-  // with cycle detect via visited Set + --max-children safety valve).
+  // Stage 1 — 采集（seed + child + grandchild，最深 MAX_DEPTH=3，
+  // 用 visited Set 做环检测 + --max-children 安全阀）。
   const visited = new Set<string>();
   const collectOpts: CollectOpts = {
     fetchOpts,
@@ -183,9 +180,9 @@ async function buildNotionDocs(args: Args): Promise<readonly NotionDoc[]> {
   };
   const collected = await collectPagesRecursive(listAllPages(fetchOpts), collectOpts);
 
-  // Stage 2 — process each CollectedPage independently into a NotionDoc.
-  // Seed pages keep their own sourceLabel; children/grandchildren carry
-  // the parent path so chunk-level provenance is preserved.
+  // Stage 2 — 把每个 CollectedPage 独立处理成 NotionDoc。
+  // Seed 页面保留自己的 sourceLabel；child / grandchild 携带 parent path，
+  // 让 chunk 级别能保留溯源信息。
   const docs: NotionDoc[] = [];
   for (const cp of collected) {
     const blocksRes = await fetchPageBlocks(cp.meta.pageId, fetchOpts);
@@ -217,7 +214,8 @@ async function buildNotionDocs(args: Args): Promise<readonly NotionDoc[]> {
 
   const seedCount = collected.filter((c) => c.depth === 0).length;
   const childCount = collected.length - seedCount;
-  const apiCalls = docs.length + collected.length; // blocks-fetch + getPageMeta per page
+  // 每页各一次 blocks-fetch + 一次 getPageMeta
+  const apiCalls = docs.length + collected.length;
   const elapsedMs = Date.now() - start;
   const reqPerSec = apiCalls / (elapsedMs / 1000);
   console.log(
@@ -243,8 +241,7 @@ async function loadCachedMeta(): Promise<ReadonlyMap<string, { mtimeMs: number; 
  * ============================================================ */
 
 async function main(): Promise<void> {
-  // Spec §5.7: dry-run banner at top of report so the operator never
-  // confuses a no-write run with a real import.
+  // Spec §5.7：dry-run 横幅放在报告开头，防止操作员把不写库的运行当成真正导入。
 
   const args = readArgs();
 
@@ -258,8 +255,8 @@ async function main(): Promise<void> {
 
   if (DRY_RUN) {
     console.log(`DRY-RUN MODE: no writes to lancedb`);
-    // Sample one reachable + one unreachable doc so the report shows the
-    // shape without flushing the full list to stdout.
+    // 各采一个 reachable + 一个 unreachable 的样例，让报告能看到结构
+    // 又不用把整张列表刷到 stdout 上。
     const sampleReachable = notionDocs.find((d) => d.unreachable !== true);
     const sampleUnreachable = notionDocs.find((d) => d.unreachable === true);
     console.log(

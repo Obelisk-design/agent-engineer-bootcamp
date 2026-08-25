@@ -12,10 +12,10 @@ const baseOpts: NotionFetchOptions = { auth: 'secret_x', rateLimitMs: 0, maxRetr
 
 const asClient = (fake: object): MinimalClient => fake as MinimalClient;
 
-// Seed page id: hyphenated 'aaaa1111-bbbb-2222-cccc-3333dddd4444' → normalized 'aaaa1111bbbb2222cccc3333dddd4444'
+// Seed 页面 id：带连字符的 'aaaa1111-bbbb-2222-cccc-3333dddd4444' → 规范化成 'aaaa1111bbbb2222cccc3333dddd4444'
 const SEED_ID_NORM = 'aaaa1111bbbb2222cccc3333dddd4444';
 const SEED_ID_HYPHEN = 'aaaa1111-bbbb-2222-cccc-3333dddd4444';
-// Child ids (8-4-4-4-12 = 32 chars total)
+// 子页面 id（8-4-4-4-12，共 32 位）
 const C1_HYPHEN = 'c1aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const C1_NORM = 'c1aaaaaabbbbccccddddeeeeeeeeeeee';
 const C2_HYPHEN = 'c2aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
@@ -31,9 +31,9 @@ function makeMetaPage(idHyphen: string, title: string, iso: string): Record<stri
 }
 
 /**
- * Build a MinimalClient fake wired to a child map. Each entry's blocks
- * enumerate `childIds` as `child_page` blocks; each childId resolves
- * via `pages.retrieve` to a meta page with the given title.
+ * 构造一个绑定到 child map 的 MinimalClient fake。每条 entry 的 blocks
+ * 会把 `childIds` 枚举成 `child_page` 块；每个 childId 通过 `pages.retrieve`
+ * 解析成一个带 title 的 meta 页。
  */
 function makeFakeClient(
   blocksByPageId: ReadonlyMap<string, readonly { id: string; title: string }[]>,
@@ -108,12 +108,12 @@ describe('collectPagesRecursive', () => {
       'Daily / Day09 / Review',
     ]);
     expect(collected.map((c) => c.meta.sourceLabel)).toEqual(['Daily', 'Day09', 'Review']);
-    // ids normalized
+    // id 已规范化
     expect(collected.map((c) => c.meta.pageId)).toEqual([SEED_ID_NORM, C1_NORM, C2_NORM]);
   });
 
   it('cycle short-circuit: child_page pointing back to seed is skipped at any depth', async () => {
-    // seed "Daily" has a child_page whose id == seed id (self-ref cycle)
+    // seed "Daily" 有一个 child_page 的 id 等于 seed 自身的 id（自引用环）
     const blocksByPageId = new Map<string, readonly { id: string; title: string }[]>([
       [SEED_ID_NORM, [{ id: SEED_ID_HYPHEN, title: 'Self-ref' }]],
     ]);
@@ -146,7 +146,7 @@ describe('collectPagesRecursive', () => {
   });
 
   it('--max-children cap stops recursion once threshold reached', async () => {
-    // seed has 3 child pages; cap at 2 → expect 1 seed + 2 children
+    // seed 有 3 个子页面；上限设为 2 → 期望 1 个 seed + 2 个 child
     const blocksByPageId = new Map<string, readonly { id: string; title: string }[]>([
       [
         SEED_ID_NORM,
@@ -182,7 +182,7 @@ describe('collectPagesRecursive', () => {
       client,
     };
     const collected = await collectPagesRecursive(seeds(), opts);
-    expect(collected).toHaveLength(3); // 1 seed + 2 children
+    expect(collected).toHaveLength(3); // 1 个 seed + 2 个 child
     expect(collected.map((c) => c.depth)).toEqual([0, 1, 1]);
     expect(collected.map((c) => c.meta.sourceLabel)).toEqual(['Daily', 'C1', 'C2']);
   });

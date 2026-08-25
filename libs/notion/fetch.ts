@@ -1,23 +1,19 @@
 /**
  * libs/notion/fetch.ts
  *
- * Thin wrapper around @notionhq/client with:
- *  - rate limit (default 350ms between calls ≈ 2.8 req/s)
- *  - 429 retry with backoff
- *  - 403/404 → ok=false result; never throw on permission errors
- *  - everything else → throw
+ * @notionhq/client 的薄封装，负责：
+ *  - 限速（默认两次调用间隔 350ms ≈ 2.8 req/s）
+ *  - 429 退避重试
+ *  - 403/404 → ok=false 的结果；权限错误永远不抛
+ *  - 其他错误 → 抛出
  *
- * The module exports both production entry points (listAllPages,
- * fetchPageBlocks) and an injection seam `*WithClient` for testing.
+ * 模块同时导出生产入口（listAllPages、fetchPageBlocks）和用于测试的注入接缝 `*WithClient`。
  *
- * Per spec 7.3: errors never silent; each path either throws or marks a
- * doc unreachable.
+ * 按 spec §7.3：错误绝不能静默；每条路径要么抛出、要么把文档标记为不可达。
  */
 
-// NOTE: @notionhq/client is added to package.json in Task 7. This file
-// only resolves at runtime after that lands. Tests use the
-// fetchPageBlocksWithClient seam with a MinimalClient fake and never
-// trigger this import.
+// NOTE: @notionhq/client 在 Task 7 加入 package.json 之后，本文件才会在运行时被解析。
+// 测试通过 fetchPageBlocksWithClient 接缝 + MinimalClient fake 触发，永远不会真正 import 这个 SDK。
 import { Client, isNotionClientError } from '@notionhq/client';
 
 export interface NotionFetchOptions {
@@ -33,18 +29,15 @@ function sleep(ms: number): Promise<void> {
 function isRateLimited(e: unknown): boolean {
   if (isNotionClientError(e)) {
     if (e.code === 'rate_limited') return true;
-    // HTTPResponseError subtypes (UnknownHTTPResponseError, APIResponseError)
-    // carry `.status`; RequestTimeoutError does not. Narrow with `in`.
+    // HTTPResponseError 的子类（UnknownHTTPResponseError、APIResponseError）
+    // 带 `.status` 字段；RequestTimeoutError 没有。用 `in` 来窄化类型。
     return 'status' in e && e.status === 429;
   }
   const anyE = e as { readonly status?: number; readonly code?: string } | null;
   return anyE?.status === 429 || anyE?.code === 'rate_limited';
 }
 
-async function notionCall<T>(
-  fn: () => Promise<T>,
-  opts: NotionFetchOptions,
-): Promise<T> {
+async function notionCall<T>(fn: () => Promise<T>, opts: NotionFetchOptions): Promise<T> {
   let attempts = 0;
   const max = opts.maxRetries ?? 3;
   while (true) {
@@ -97,7 +90,9 @@ export interface PageMeta {
 }
 
 function buildSourceLabel(page: Record<string, unknown>): string {
-  const titleProp = (page['properties'] as Record<string, Record<string, unknown>> | undefined)?.['title'];
+  const titleProp = (page['properties'] as Record<string, Record<string, unknown>> | undefined)?.[
+    'title'
+  ];
   if (titleProp && (titleProp['type'] as string | undefined) === 'title') {
     const arr = titleProp['title'] as readonly { readonly plain_text: string }[] | undefined;
     if (arr !== undefined) return arr.map((rt) => rt.plain_text).join('');
@@ -105,17 +100,19 @@ function buildSourceLabel(page: Record<string, unknown>): string {
   return (page['id'] as string | undefined) ?? 'untitled';
 }
 
-export async function* listAllPages(
-  opts: NotionFetchOptions,
-): AsyncIterableIterator<PageMeta> {
+export async function* listAllPages(opts: NotionFetchOptions): AsyncIterableIterator<PageMeta> {
   const client = newClient(opts.auth);
   let cursor: string | undefined = undefined;
   while (true) {
-    const res = await notionCall(() => client.search({
-      filter: { property: 'object', value: 'page' },
-      page_size: 100,
-      ...(cursor !== undefined ? { start_cursor: cursor } : {}),
-    }), opts);
+    const res = await notionCall(
+      () =>
+        client.search({
+          filter: { property: 'object', value: 'page' },
+          page_size: 100,
+          ...(cursor !== undefined ? { start_cursor: cursor } : {}),
+        }),
+      opts,
+    );
 
     for (const p of res.results) {
       if (p['object'] !== 'page') continue;
@@ -148,11 +145,15 @@ export async function fetchPageBlocksWithClient(
   let cursor: string | undefined = undefined;
   try {
     while (true) {
-      const res = await notionCall(() => client.blocks.children.list({
-        block_id: pageId,
-        page_size: 100,
-        ...(cursor !== undefined ? { start_cursor: cursor } : {}),
-      }), opts);
+      const res = await notionCall(
+        () =>
+          client.blocks.children.list({
+            block_id: pageId,
+            page_size: 100,
+            ...(cursor !== undefined ? { start_cursor: cursor } : {}),
+          }),
+        opts,
+      );
       for (const b of res.results) blocks.push(b);
       if (!res.has_more) break;
       if (res.next_cursor === null) break;
@@ -181,17 +182,14 @@ export async function fetchPageBlocks(
 }
 
 /**
- * Fetch a single page's meta by id (for child_page recursion where
- * listAllPages hasn't enumerated it). Returns the same PageMeta shape.
+ * 按 pageId 获取单个页面的元信息（用于 child_page 递归时，
+ * 该页面未被 listAllPages 枚举到的场景）。返回与 listAllPages 相同的 PageMeta 结构。
  *
- * Accepts both hyphenated (8-4-4-4-12) and non-hyphenated 32-char UUIDs.
- * Output pageId is normalized to the 32-char form to match listAllPages
- * and the orchestrator's visited Set.
+ * 同时接受带连字符（8-4-4-4-12）和不带连字符的 32 位 UUID。
+ * 输出的 pageId 会被规范化成 32 位不带连字符的形式，以便和
+ * listAllPages 及 orchestrator 的 visited Set 保持一致。
  */
-export async function getPageMeta(
-  pageId: string,
-  opts: NotionFetchOptions,
-): Promise<PageMeta> {
+export async function getPageMeta(pageId: string, opts: NotionFetchOptions): Promise<PageMeta> {
   return getPageMetaWithClient(pageId, newClient(opts.auth), opts);
 }
 
@@ -200,14 +198,12 @@ export async function getPageMetaWithClient(
   client: MinimalClient,
   opts: NotionFetchOptions,
 ): Promise<PageMeta> {
-  // Re-hyphenate if needed (Notion SDK expects 8-4-4-4-12 format).
-  const hyphenId = pageId.length === 32 && !pageId.includes('-')
-    ? `${pageId.slice(0, 8)}-${pageId.slice(8, 12)}-${pageId.slice(12, 16)}-${pageId.slice(16, 20)}-${pageId.slice(20)}`
-    : pageId;
-  const page = await notionCall(
-    () => client.pages.retrieve({ page_id: hyphenId }),
-    opts,
-  );
+  // 必要时重新补上连字符（Notion SDK 期望 8-4-4-4-12 格式）。
+  const hyphenId =
+    pageId.length === 32 && !pageId.includes('-')
+      ? `${pageId.slice(0, 8)}-${pageId.slice(8, 12)}-${pageId.slice(12, 16)}-${pageId.slice(16, 20)}-${pageId.slice(20)}`
+      : pageId;
+  const page = await notionCall(() => client.pages.retrieve({ page_id: hyphenId }), opts);
   const lastEditedTime = (page['last_edited_time'] as string | undefined) ?? '';
   return {
     pageId: ((page['id'] as string) ?? pageId).replace(/-/g, ''),

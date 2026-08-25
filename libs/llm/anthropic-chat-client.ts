@@ -93,7 +93,7 @@ export class AnthropicChatClient implements ChatClient {
       options?.signal !== undefined ? { signal: options.signal } : {},
     );
 
-    // 🆕 Day 07: parse token usage
+    // 🆕 Day 07：解析 token 使用量
     const usage: ChatUsage | undefined = response.usage
       ? {
           promptTokens: response.usage.input_tokens,

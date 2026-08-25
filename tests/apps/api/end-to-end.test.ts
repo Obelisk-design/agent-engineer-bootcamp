@@ -123,9 +123,9 @@ describe('POST /agent end-to-end (CI smoke)', () => {
       }),
     );
     expect(res.status).toBe(200);
-    await readSSEResponse(res); // drain the SSE stream
+    await readSSEResponse(res); // 把 SSE 流读完
 
-    // Get the latest trace
+    // 取出最新一条 trace
     const tracesResponse = await app.fetch(new Request('http://localhost/traces'));
     const traces = (await tracesResponse.json()) as Array<{
       meta: Record<string, unknown>;
@@ -133,7 +133,7 @@ describe('POST /agent end-to-end (CI smoke)', () => {
     const latestTrace = traces[0];
     expect(latestTrace).toBeDefined();
 
-    // Assert meta.context is populated
+    // 断言 meta.context 已被填充
     expect(latestTrace!.meta.context).toBeDefined();
     expect(latestTrace!.meta.context).toMatchObject({
       peakPromptTokens: expect.any(Number),
@@ -185,9 +185,9 @@ describe('POST /agent end-to-end (CI smoke)', () => {
   it('multi-turn: second request carries full message history', async () => {
     // 🆕 Day 09 反例 1：多轮对话 —— 第二轮 messages 含第一轮完整历史
     const chat = new FakeChatClient([
-      // turn 1 response
+      // turn 1 的响应
       { content: 'hello back' },
-      // turn 2 response
+      // turn 2 的响应
       { content: 'you said hi' },
     ]);
     const tools = new ToolRegistry();
