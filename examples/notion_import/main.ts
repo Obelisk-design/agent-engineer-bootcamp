@@ -38,6 +38,13 @@ import {
   openMetaStore,
   type DocSource,
 } from '../../libs/rag/index.js';
+import {
+  collectPagesRecursive,
+  readMaxChildren,
+  MAX_DEPTH,
+  type CollectedPage,
+  type CollectOpts,
+} from './collect.js';
 
 /* ============================================================
  * Constants — searchable + DRY
@@ -53,6 +60,10 @@ const TABLE_PREFIX = 'chunks_notion';
  * ============================================================ */
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const MAX_CHILDREN: number | null = readMaxChildren();
+if (MAX_CHILDREN !== null) {
+  console.log(`--max-children cap: ${MAX_CHILDREN}`);
+}
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -165,42 +176,55 @@ function toDocSources(docs: readonly NotionDoc[]): readonly DocSource[] {
 
 async function buildNotionDocs(args: Args): Promise<readonly NotionDoc[]> {
   const fetchOpts: NotionFetchOptions = { auth: args.token, rateLimitMs: 350 };
-  const docs: NotionDoc[] = [];
-  let apiCalls = 0;
   const start = Date.now();
 
-  for await (const meta of listAllPages(fetchOpts)) {
-    apiCalls += 1;
-    const blocksRes = await fetchPageBlocks(meta.pageId, fetchOpts);
+  // Stage 1 — collect (seed + children + grandchildren up to MAX_DEPTH=3,
+  // with cycle detect via visited Set + --max-children safety valve).
+  const visited = new Set<string>();
+  const collectOpts: CollectOpts = {
+    fetchOpts,
+    maxDepth: MAX_DEPTH,
+    maxChildren: MAX_CHILDREN,
+    visited,
+  };
+  const collected = await collectPagesRecursive(listAllPages(fetchOpts), collectOpts);
+
+  // Stage 2 — process each CollectedPage independently into a NotionDoc.
+  // Seed pages keep their own sourceLabel; children/grandchildren carry
+  // the parent path so chunk-level provenance is preserved.
+  const docs: NotionDoc[] = [];
+  for (const cp of collected) {
+    const blocksRes = await fetchPageBlocks(cp.meta.pageId, fetchOpts);
 
     if (!blocksRes.ok) {
-      // Three failure paths — keep them separate, no silent absorption:
-      //   forbidden / not_found  → unreachable doc, warn + continue
-      //   rate_limited           → throw to fail fast (spec §5.4)
       if (blocksRes.reason === 'forbidden' || blocksRes.reason === 'not_found') {
-        docs.push(unreachableNotionDoc(meta, blocksRes.reason));
-        console.warn(`warn: ${meta.pageId} ${blocksRes.reason}; marked unreachable`);
+        docs.push(unreachableNotionDoc(cp.meta, blocksRes.reason));
+        console.warn(`warn: ${cp.meta.pageId} ${blocksRes.reason}; marked unreachable`);
         continue;
       }
-      throw new Error(`fetchPageBlocks failed for ${meta.pageId}: ${blocksRes.reason}`);
+      throw new Error(`fetchPageBlocks failed for ${cp.meta.pageId}: ${blocksRes.reason}`);
     }
 
-    // Cast: SDK returns `Record<string, unknown>[]`; pageToMarkdown's
-    // `MinimalBlock` interface requires a `type` discriminator. At runtime
-    // every Notion block object carries `type` — the variance check is
-    // a no-UncheckedIndexedAccess strictness artifact. We cannot widen
-    // MinimalBlock without touching libs/notion (out of Task 6 scope).
     const conv = pageToMarkdown(
-      { id: meta.pageId, properties: { title: { type: 'title', title: [] } } },
+      { id: cp.meta.pageId, properties: { title: { type: 'title', title: [] } } },
       blocksRes.blocks as unknown as readonly { readonly type: string; readonly [k: string]: unknown }[],
     );
-    docs.push(successfulNotionDoc(meta, conv.title, conv.markdown));
+    const docMeta: PageMeta = {
+      pageId: cp.meta.pageId,
+      lastEditedMs: cp.meta.lastEditedMs,
+      lastEditedIso: cp.meta.lastEditedIso,
+      sourceLabel: cp.depth === 0 ? cp.meta.sourceLabel : cp.parentPath,
+    };
+    docs.push(successfulNotionDoc(docMeta, conv.title, conv.markdown));
   }
 
+  const seedCount = collected.filter((c) => c.depth === 0).length;
+  const childCount = collected.length - seedCount;
+  const apiCalls = docs.length + collected.length; // blocks-fetch + getPageMeta per page
   const elapsedMs = Date.now() - start;
   const reqPerSec = apiCalls / (elapsedMs / 1000);
   console.log(
-    `>>> Notion import${DRY_RUN ? ' (DRY-RUN)' : ''}: fetch ${docs.length} pages in ${elapsedMs}ms (~${reqPerSec.toFixed(1)} req/s)`,
+    `>>> Notion import${DRY_RUN ? ' (DRY-RUN)' : ''}: seedPages=${seedCount}, childPages=${childCount}, total=${docs.length} pages in ${elapsedMs}ms (~${reqPerSec.toFixed(1)} req/s)`,
   );
   return docs;
 }

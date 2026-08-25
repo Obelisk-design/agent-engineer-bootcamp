@@ -4,6 +4,8 @@ export {
   listAllPages,
   fetchPageBlocks,
   fetchPageBlocksWithClient,
+  getPageMeta,
+  getPageMetaWithClient,
   type MinimalClient,
   type NotionFetchOptions,
   type PageMeta,

@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { fetchPageBlocksWithClient, type MinimalClient, type NotionFetchOptions } from './fetch.js';
+import {
+  fetchPageBlocksWithClient,
+  getPageMetaWithClient,
+  type MinimalClient,
+  type NotionFetchOptions,
+} from './fetch.js';
 
 const baseOpts: NotionFetchOptions = { auth: 'secret_x', rateLimitMs: 0, maxRetries: 2 };
 
@@ -62,5 +67,67 @@ describe('fetchPageBlocks classification', () => {
     await expect(fetchPageBlocksWithClient('p1', fakeClient, { ...baseOpts, maxRetries: 1 }))
       .rejects.toThrow(/rate/);
     expect(calls).toBe(2);
+  });
+});
+
+describe('getPageMeta', () => {
+  // 8-4-4-4-12 UUIDs (32 chars total). hyphenated below; normalized by removing '-'.
+  const CHILD_HYPHEN = 'c1aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+  const CHILD_NORM = 'c1aaaaaabbbbccccddddeeeeeeeeeeee';
+
+  it('normalizes hyphenated pageId, parses lastEdited, builds sourceLabel from title', async () => {
+    let captured: Record<string, unknown> | undefined;
+    const fakeClient = asClient({
+      pages: { retrieve: async (args: Record<string, unknown>) => {
+        captured = args;
+        return {
+          id: CHILD_HYPHEN,
+          last_edited_time: '2026-08-25T11:00:00.000Z',
+          properties: { title: { type: 'title', title: [{ plain_text: 'Day09' }] } },
+        };
+      } },
+    });
+    const out = await getPageMetaWithClient(CHILD_HYPHEN, fakeClient, baseOpts);
+    expect(out.pageId).toBe(CHILD_NORM);
+    expect(out.lastEditedIso).toBe('2026-08-25T11:00:00.000Z');
+    expect(out.lastEditedMs).toBe(Date.parse('2026-08-25T11:00:00.000Z'));
+    expect(out.sourceLabel).toBe('Day09');
+    // SDK received hyphenated form
+    expect(captured).toBeDefined();
+    expect(captured!['page_id']).toBe(CHILD_HYPHEN);
+  });
+
+  it('re-hyphenates a 32-char non-hyphenated input for the SDK call', async () => {
+    let captured: Record<string, unknown> | undefined;
+    const fakeClient = asClient({
+      pages: { retrieve: async (args: Record<string, unknown>) => {
+        captured = args;
+        return {
+          id: CHILD_NORM,
+          last_edited_time: '2026-08-25T11:00:00.000Z',
+          properties: { title: { type: 'title', title: [{ plain_text: 'Day09' }] } },
+        };
+      } },
+    });
+    const out = await getPageMetaWithClient(CHILD_NORM, fakeClient, baseOpts);
+    expect(out.pageId).toBe(CHILD_NORM);
+    // SDK received the re-hyphenated form
+    expect(captured!['page_id']).toBe(CHILD_HYPHEN);
+  });
+
+  it('returns sourceLabel=id fallback when properties.title is absent', async () => {
+    const fakeClient = asClient({
+      pages: { retrieve: async () => ({
+        id: 'aaaa1111-bbbb-2222-cccc-3333dddd4444',
+        last_edited_time: '2026-08-25T10:00:00.000Z',
+        properties: {},
+      }) },
+    });
+    const out = await getPageMetaWithClient(
+      'aaaa1111bbbb2222cccc3333dddd4444',
+      fakeClient,
+      baseOpts,
+    );
+    expect(out.sourceLabel).toBe('aaaa1111-bbbb-2222-cccc-3333dddd4444');
   });
 });

@@ -80,6 +80,9 @@ export interface MinimalClient {
       }>;
     };
   };
+  readonly pages: {
+    readonly retrieve: (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  };
 }
 
 function newClient(auth: string): MinimalClient {
@@ -175,4 +178,41 @@ export async function fetchPageBlocks(
   opts: NotionFetchOptions,
 ): Promise<FetchPageResult> {
   return fetchPageBlocksWithClient(pageId, newClient(opts.auth), opts);
+}
+
+/**
+ * Fetch a single page's meta by id (for child_page recursion where
+ * listAllPages hasn't enumerated it). Returns the same PageMeta shape.
+ *
+ * Accepts both hyphenated (8-4-4-4-12) and non-hyphenated 32-char UUIDs.
+ * Output pageId is normalized to the 32-char form to match listAllPages
+ * and the orchestrator's visited Set.
+ */
+export async function getPageMeta(
+  pageId: string,
+  opts: NotionFetchOptions,
+): Promise<PageMeta> {
+  return getPageMetaWithClient(pageId, newClient(opts.auth), opts);
+}
+
+export async function getPageMetaWithClient(
+  pageId: string,
+  client: MinimalClient,
+  opts: NotionFetchOptions,
+): Promise<PageMeta> {
+  // Re-hyphenate if needed (Notion SDK expects 8-4-4-4-12 format).
+  const hyphenId = pageId.length === 32 && !pageId.includes('-')
+    ? `${pageId.slice(0, 8)}-${pageId.slice(8, 12)}-${pageId.slice(12, 16)}-${pageId.slice(16, 20)}-${pageId.slice(20)}`
+    : pageId;
+  const page = await notionCall(
+    () => client.pages.retrieve({ page_id: hyphenId }),
+    opts,
+  );
+  const lastEditedTime = (page['last_edited_time'] as string | undefined) ?? '';
+  return {
+    pageId: ((page['id'] as string) ?? pageId).replace(/-/g, ''),
+    lastEditedMs: lastEditedTime.length === 0 ? 0 : Date.parse(lastEditedTime),
+    lastEditedIso: lastEditedTime,
+    sourceLabel: buildSourceLabel(page),
+  };
 }
