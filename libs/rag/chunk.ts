@@ -17,7 +17,7 @@
  * - 不做 tokenizer-aware chunking（路线表 Day 16-17 不需要）
  */
 
-export type SourceKind = 'daily' | 'adr' | 'spec' | 'plan' | 'fixture' | 'test-corpus';
+export type SourceKind = 'daily' | 'adr' | 'spec' | 'plan' | 'fixture' | 'test-corpus' | 'notion';
 
 export interface Chunk {
   readonly text: string;

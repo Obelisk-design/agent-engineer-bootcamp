@@ -235,10 +235,17 @@ export async function openMetaStore(uri?: string, tablePrefix = 'chunks'): Promi
 
 /* ============================================================
  * 增量入库主流程
+ *
+ * 两条入口（共用 `runIncrementalIndex` worker）：
+ *   - `incrementalIndex(DocEntry[], opts)`：文件路径（DocEntry[] → DocSource[] 走 `toDocSources`）
+ *   - `incrementalIndexFromSources(DocSource[], opts)`：Notion 等非文件系统 source（无 fs.stat）
+ * worker 只信任 sourcesMap 里现成的 (mtimeMs, contentHash) —— 任何 special-casing
+ * （如 unreachable 的 `mtimeMs: 0, hash: 'UNREACHABLE'`）由调用方在 adapter 里完成。
  * ============================================================ */
 
 export interface IncrementalIndexPhases {
-  /** 读 mtime + 计算 hash（fs.stat + SHA-256，CPU+IO 混合） */
+  /** 读 mtime + 计算 hash（fs.stat + SHA-256，CPU+IO 混合）。
+   *  `incrementalIndexFromSources` 调用方此字段为 0（无 fs.stat）。 */
   readonly statMs: number;
   /** lancedb delete('source IN (...)') 累计（含 meta 表） */
   readonly deleteMs: number;
@@ -283,8 +290,36 @@ export async function incrementalIndex(
   docs: readonly DocEntry[],
   opts: IncrementalIndexOptions,
 ): Promise<IncrementalIndexReport> {
+  const tStat = Date.now();
+  const sources = await toDocSources(docs);
+  const statMs = Date.now() - tStat;
+  const report = await runIncrementalIndex(sources, opts, opts.tablePrefix ?? 'chunks');
+  return { ...report, phases: { ...report.phases, statMs } };
+}
+
+/**
+ * 非文件系统 source 入口（Task 5）。直接接受 `DocSource[]`，无 fs.stat / no DocEntry。
+ * Notion 路径（Task 6）会带 `tablePrefix: 'chunks_notion'` 调这个 —— meta 表名也跟着 namespace。
+ */
+export async function incrementalIndexFromSources(
+  sources: readonly DocSource[],
+  opts: IncrementalIndexOptions,
+): Promise<IncrementalIndexReport> {
+  return runIncrementalIndex(sources, opts, opts.tablePrefix ?? 'chunks');
+}
+
+/**
+ * 共享 worker —— 接受已构造好的 `DocSource[]`，跑 diff → delete → reindex → meta upsert。
+ *
+ * 不调 `fs.stat`；stat/hash 必须由调用方（`toDocSources` 或 Notion adapter）填好。
+ * 不做 unreachable special-casing；任何 sentinel pinning 由 adapter 负责（Task 6）。
+ */
+async function runIncrementalIndex(
+  sources: readonly DocSource[],
+  opts: IncrementalIndexOptions,
+  tablePrefix: string,
+): Promise<IncrementalIndexReport> {
   const t0 = Date.now();
-  let statMs = 0;
   let deleteMs = 0;
   let embedMs = 0;
   let addMs = 0;
@@ -297,13 +332,11 @@ export async function incrementalIndex(
     acc.ms += Date.now() - t;
     return out;
   };
-  const statAcc = { ms: 0 };
   const deleteAcc = { ms: 0 };
   const embedAcc = { ms: 0 };
   const addAcc = { ms: 0 };
   const ioAcc = { ms: 0 };
 
-  const tablePrefix = opts.tablePrefix ?? 'chunks';
   const headingStore = await timed(ioAcc, () =>
     openVectorStore(opts.storeUri, `${tablePrefix}_heading`),
   );
@@ -313,30 +346,28 @@ export async function incrementalIndex(
   const meta = await timed(ioAcc, () => openMetaStore(opts.storeUri, tablePrefix));
   const cached = await timed(ioAcc, () => meta.loadAll());
 
-  // 1. 给 docs 补 updatedMs + contentHash（DocSource 抽象；file 走 fs.stat，notion 等其他 source 由调用方直接构造 DocSource）
-  const enriched = await timed(statAcc, () => toDocSources(docs));
+  // 1. sources 已带 updatedMs + contentHash（文件走 toDocSources；Notion 由 adapter 直接构造）
+  const sourcesView = sources.map((s) => ({ source: s.sourceKey, mtimeMs: s.updatedMs, hash: s.contentHash }));
 
   // 2. diff
   let added: readonly string[];
   let modified: readonly string[];
   let removed: readonly string[];
   if (opts.force === true) {
-    added = enriched.map((e) => e.sourceKey);
+    added = sources.map((s) => s.sourceKey);
     modified = [];
     removed = Array.from(cached.keys());
   } else {
-    const diff = diffDocs(
-      enriched.map((e) => ({ source: e.sourceKey, mtimeMs: e.updatedMs, hash: e.contentHash })),
-      cached,
-    );
+    const diff = diffDocs(sourcesView, cached);
     added = diff.added;
     modified = diff.modified;
     removed = diff.removed;
   }
 
-  const skipped = docs
-    .map((d) => d.relPath)
-    .filter((s) => !added.includes(s) && !modified.includes(s));
+  const sourcesByKey = new Set(sources.map((s) => s.sourceKey));
+  const skipped = sources
+    .map((s) => s.sourceKey)
+    .filter((k) => !added.includes(k) && !modified.includes(k) && sourcesByKey.has(k));
 
   // 3. removed → 清掉所有旧 chunk + meta 记录
   if (removed.length > 0) {
@@ -361,16 +392,18 @@ export async function incrementalIndex(
   const failedDocSources: string[] = [];
   const newMetas: DocMeta[] = [];
   if (toReindex.length > 0) {
-    const docMap = new Map(docs.map((d) => [d.relPath, d]));
-    const enrichedMap = new Map(enriched.map((e) => [e.sourceKey, e]));
+    const sourcesMap = new Map(sources.map((s) => [s.sourceKey, s]));
 
     for (const source of toReindex) {
-      const doc = docMap.get(source);
-      const em = enrichedMap.get(source);
-      if (doc === undefined || em === undefined) continue;
+      const src = sourcesMap.get(source);
+      if (src === undefined) continue;
 
-      const headingChunks = dropEmptyChunks(chunkByHeading(doc.content, doc.relPath, doc.kind));
-      const paragraphChunks = dropEmptyChunks(chunkByParagraph(doc.content, doc.relPath, doc.kind));
+      const headingChunks = dropEmptyChunks(
+        chunkByHeading(src.content, src.sourceLabel, src.sourceKind),
+      );
+      const paragraphChunks = dropEmptyChunks(
+        chunkByParagraph(src.content, src.sourceLabel, src.sourceKind),
+      );
 
       const headingRes = await timed(embedAcc, () =>
         embed(
@@ -417,8 +450,8 @@ export async function incrementalIndex(
       paragraphChunksAdded += paragraphRecords.length;
       newMetas.push({
         source,
-        mtimeMs: em.updatedMs,
-        hash: em.contentHash,
+        mtimeMs: src.updatedMs,
+        hash: src.contentHash,
         chunkCount: { heading: headingRecords.length, paragraph: paragraphRecords.length },
       });
     }
@@ -430,7 +463,6 @@ export async function incrementalIndex(
     await paragraphStore.close();
   });
 
-  statMs = statAcc.ms;
   deleteMs = deleteAcc.ms;
   embedMs = embedAcc.ms;
   addMs = addAcc.ms;
@@ -444,7 +476,7 @@ export async function incrementalIndex(
     changedFiles: [...added, ...modified, ...removed],
     headingChunksAdded,
     paragraphChunksAdded,
-    phases: { statMs, deleteMs, embedMs, embedCalls, addMs, ioMs, totalMs: Date.now() - t0 },
+    phases: { statMs: 0, deleteMs, embedMs, embedCalls, addMs, ioMs, totalMs: Date.now() - t0 },
     embedFallbacks,
     failedDocSources,
   };

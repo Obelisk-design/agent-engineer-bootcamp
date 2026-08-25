@@ -38,11 +38,14 @@ export { loadDocsCorpus, loadTestCorpus, loadAllCorpus, REPO_ROOT, type DocEntry
 
 export {
   incrementalIndex,
+  incrementalIndexFromSources,
   diffDocs,
   hashText,
   openMetaStore,
   type DocMeta,
+  type DocSource,
   type DiffResult,
   type IncrementalIndexReport,
   type IncrementalIndexOptions,
+  type IncrementalIndexPhases,
 } from './indexer.js';
