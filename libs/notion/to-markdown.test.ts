@@ -104,7 +104,7 @@ describe('pageToMarkdown', () => {
     expect(out.markdown).toContain('[video]');
   });
 
-  it('drops child_page blocks (no recursion)', () => {
+  it('drops child_page blocks from page body (recursion lives at orchestrator level)', () => {
     const page = { id: 'p', properties: { title: { type: 'title', title: [] } } } as never;
     const blocks = [block('child_page', { title: 'Nested' })];
     const out = pageToMarkdown(page, blocks);

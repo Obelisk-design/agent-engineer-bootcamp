@@ -10,3 +10,4 @@ export {
   type FetchPageResult,
 } from './fetch.js';
 export { diffNotion } from './diff.js';
+export { extractChildPageIds } from './child-pages.js';

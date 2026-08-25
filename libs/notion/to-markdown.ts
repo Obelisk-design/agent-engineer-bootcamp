@@ -115,7 +115,10 @@ export function pageToMarkdown(
     }
 
     if (type === 'child_page') {
-      // Intentional drop per spec 5.2 — no recursion
+      // Spec §5.2 (post-revision 2026-08-25): drop from this page's markdown.
+      // Recursion + NotionDoc emission is handled by main.ts via
+      // collectPagesRecursive + extractChildPageIds — pageToMarkdown stays
+      // single-page so it remains a pure function (no IO, fully unit-testable).
       continue;
     }
 
