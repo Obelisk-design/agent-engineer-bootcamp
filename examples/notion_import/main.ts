@@ -38,13 +38,7 @@ import {
   openMetaStore,
   type DocSource,
 } from '../../libs/rag/index.js';
-import {
-  collectPagesRecursive,
-  readMaxChildren,
-  MAX_DEPTH,
-  type CollectedPage,
-  type CollectOpts,
-} from './collect.js';
+import { collectPagesRecursive, readMaxChildren, MAX_DEPTH, type CollectOpts } from './collect.js';
 
 /* ============================================================
  * Constants — searchable + DRY
@@ -207,7 +201,10 @@ async function buildNotionDocs(args: Args): Promise<readonly NotionDoc[]> {
 
     const conv = pageToMarkdown(
       { id: cp.meta.pageId, properties: { title: { type: 'title', title: [] } } },
-      blocksRes.blocks as unknown as readonly { readonly type: string; readonly [k: string]: unknown }[],
+      blocksRes.blocks as unknown as readonly {
+        readonly type: string;
+        readonly [k: string]: unknown;
+      }[],
     );
     const docMeta: PageMeta = {
       pageId: cp.meta.pageId,

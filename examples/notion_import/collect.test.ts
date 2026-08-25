@@ -21,7 +21,6 @@ const C1_NORM = 'c1aaaaaabbbbccccddddeeeeeeeeeeee';
 const C2_HYPHEN = 'c2aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const C2_NORM = 'c2aaaaaabbbbccccddddeeeeeeeeeeee';
 const C3_HYPHEN = 'c3aaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-const C3_NORM = 'c3aaaaaabbbbccccddddeeeeeeeeeeee';
 
 function makeMetaPage(idHyphen: string, title: string, iso: string): Record<string, unknown> {
   return {
@@ -63,7 +62,11 @@ function makeFakeClient(
       return makeMetaPage(hyphenId, m.title, m.iso);
     },
   };
-  return asClient({ search: async () => ({ results: [], has_more: false, next_cursor: null }), blocks, pages });
+  return asClient({
+    search: async () => ({ results: [], has_more: false, next_cursor: null }),
+    blocks,
+    pages,
+  });
 }
 
 describe('collectPagesRecursive', () => {
@@ -106,11 +109,7 @@ describe('collectPagesRecursive', () => {
     ]);
     expect(collected.map((c) => c.meta.sourceLabel)).toEqual(['Daily', 'Day09', 'Review']);
     // ids normalized
-    expect(collected.map((c) => c.meta.pageId)).toEqual([
-      SEED_ID_NORM,
-      C1_NORM,
-      C2_NORM,
-    ]);
+    expect(collected.map((c) => c.meta.pageId)).toEqual([SEED_ID_NORM, C1_NORM, C2_NORM]);
   });
 
   it('cycle short-circuit: child_page pointing back to seed is skipped at any depth', async () => {
