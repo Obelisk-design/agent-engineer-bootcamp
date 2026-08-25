@@ -32,7 +32,10 @@ function sleep(ms: number): Promise<void> {
 
 function isRateLimited(e: unknown): boolean {
   if (isNotionClientError(e)) {
-    return e.code === 'rate_limited' || e.status === 429;
+    if (e.code === 'rate_limited') return true;
+    // HTTPResponseError subtypes (UnknownHTTPResponseError, APIResponseError)
+    // carry `.status`; RequestTimeoutError does not. Narrow with `in`.
+    return 'status' in e && e.status === 429;
   }
   const anyE = e as { readonly status?: number; readonly code?: string } | null;
   return anyE?.status === 429 || anyE?.code === 'rate_limited';
@@ -154,7 +157,7 @@ export async function fetchPageBlocksWithClient(
     }
     return { ok: true, blocks };
   } catch (e) {
-    if (isNotionClientError(e)) {
+    if (isNotionClientError(e) && 'status' in e) {
       if (e.status === 403) return { ok: false, reason: 'forbidden' };
       if (e.status === 404) return { ok: false, reason: 'not_found' };
     }

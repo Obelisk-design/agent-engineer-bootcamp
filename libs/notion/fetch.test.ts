@@ -1,15 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
-
-// Mock @notionhq/client so the module top-level import in fetch.ts
-// resolves cleanly even before Task 7 installs the package. The
-// `Client` constructor and `isNotionClientError` helper never run
-// during these tests because we only call fetchPageBlocksWithClient
-// (the structural-typing seam), which receives a fake client object
-// directly.
-vi.mock('@notionhq/client', () => ({
-  Client: class { constructor(_: { auth: string }) {} },
-  isNotionClientError: (_e: unknown): _e is never => false,
-}));
+import { describe, it, expect } from 'vitest';
 
 import { fetchPageBlocksWithClient, type MinimalClient, type NotionFetchOptions } from './fetch.js';
 

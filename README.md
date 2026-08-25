@@ -110,6 +110,26 @@ pnpm exec tsx examples/ex_001_hello.ts  # 或 node examples/ex_001_hello.js
 
 根据前 20 天进展决定（候选：Python 切换 / 继续 TS / 混合 monorepo）。
 
+### Notion import
+
+To import a personal Notion workspace into the same RAG index:
+
+```bash
+# Setup
+echo "NOTION_TOKEN=secret_xxx" >> .env
+# share the pages you want indexed with your internal integration
+
+# First run (verify setup without writing)
+npx tsx examples/notion_import/main.ts --dry-run
+
+# Real run
+npx tsx examples/notion_import/main.ts
+```
+
+Run twice in a row — second run should report `added/modified/removed=0` (idempotent).
+For operator playbook + R1 lancedb idempotency check, see
+[`docs/superpowers/plans/2026-08-25-notion-import-runbook.md`](docs/superpowers/plans/2026-08-25-notion-import-runbook.md).
+
 ## 贡献
 
 本仓库为**个人训练营记录**，欢迎 issue 讨论 / 提问，但不接受外部 PR（保持 commit author 单一）。

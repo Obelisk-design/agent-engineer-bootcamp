@@ -14,6 +14,9 @@ importers:
       '@lancedb/lancedb':
         specifier: ^0.37.1
         version: 0.37.1(@types/node@22.20.1)(apache-arrow@18.1.0)
+      '@notionhq/client':
+        specifier: ^2.3.0
+        version: 2.3.0
       gpt-tokenizer:
         specifier: ^3.4.0
         version: 3.4.0
@@ -1003,6 +1006,10 @@ packages:
 
   '@langchain/protocol@0.0.18':
     resolution: {integrity: sha512-XW1egQtPfsGI41w2AMZNFZrUIwFSQHTjVMZs0OaTpCAvht/QLoaPN8FQcsysMVypOhupG28J29yOorrc70otBQ==}
+
+  '@notionhq/client@2.3.0':
+    resolution: {integrity: sha512-l7WqTCpQqC+HibkB9chghONQTYcxNQT0/rOJemBfmuKQRTu2vuV8B3yA395iKaUdDo7HI+0KvQaz9687Xskzkw==}
+    engines: {node: '>=12'}
 
   '@opentelemetry/api@1.9.1':
     resolution: {integrity: sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q==}
@@ -3847,6 +3854,13 @@ snapshots:
 
   '@langchain/protocol@0.0.18': {}
 
+  '@notionhq/client@2.3.0':
+    dependencies:
+      '@types/node-fetch': 2.6.13
+      node-fetch: 2.7.0
+    transitivePeerDependencies:
+      - encoding
+
   '@opentelemetry/api@1.9.1': {}
 
   '@pkgjs/parseargs@0.11.0':
@@ -4048,7 +4062,6 @@ snapshots:
     dependencies:
       '@types/node': 22.20.1
       form-data: 4.0.6
-    optional: true
 
   '@types/node@18.19.130':
     dependencies:
@@ -4379,8 +4392,7 @@ snapshots:
 
   assertion-error@2.0.1: {}
 
-  asynckit@0.4.0:
-    optional: true
+  asynckit@0.4.0: {}
 
   balanced-match@1.0.2: {}
 
@@ -4416,7 +4428,6 @@ snapshots:
     dependencies:
       es-errors: 1.3.0
       function-bind: 1.1.2
-    optional: true
 
   callsites@3.1.0: {}
 
@@ -4503,7 +4514,6 @@ snapshots:
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
-    optional: true
 
   command-line-args@5.2.1:
     dependencies:
@@ -4593,8 +4603,7 @@ snapshots:
 
   deep-is@0.1.4: {}
 
-  delayed-stream@1.0.0:
-    optional: true
+  delayed-stream@1.0.0: {}
 
   detect-libc@2.1.2: {}
 
@@ -4615,7 +4624,6 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       es-errors: 1.3.0
       gopd: 1.2.0
-    optional: true
 
   eastasianwidth@0.2.0: {}
 
@@ -4640,18 +4648,15 @@ snapshots:
     dependencies:
       is-arrayish: 0.2.1
 
-  es-define-property@1.0.1:
-    optional: true
+  es-define-property@1.0.1: {}
 
-  es-errors@1.3.0:
-    optional: true
+  es-errors@1.3.0: {}
 
   es-module-lexer@1.7.0: {}
 
   es-object-atoms@1.1.2:
     dependencies:
       es-errors: 1.3.0
-    optional: true
 
   es-set-tostringtag@2.1.0:
     dependencies:
@@ -4659,7 +4664,6 @@ snapshots:
       get-intrinsic: 1.3.0
       has-tostringtag: 1.0.2
       hasown: 2.0.4
-    optional: true
 
   esbuild@0.21.5:
     optionalDependencies:
@@ -4914,7 +4918,6 @@ snapshots:
       es-set-tostringtag: 2.1.0
       hasown: 2.0.4
       mime-types: 2.1.35
-    optional: true
 
   formdata-node@4.4.1:
     dependencies:
@@ -4925,8 +4928,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  function-bind@1.1.2:
-    optional: true
+  function-bind@1.1.2: {}
 
   get-caller-file@2.0.5: {}
 
@@ -4944,13 +4946,11 @@ snapshots:
       has-symbols: 1.1.0
       hasown: 2.0.4
       math-intrinsics: 1.1.0
-    optional: true
 
   get-proto@1.0.1:
     dependencies:
       dunder-proto: 1.0.1
       es-object-atoms: 1.1.2
-    optional: true
 
   get-stream@8.0.1: {}
 
@@ -4985,8 +4985,7 @@ snapshots:
 
   globals@15.15.0: {}
 
-  gopd@1.2.0:
-    optional: true
+  gopd@1.2.0: {}
 
   gpt-tokenizer@3.4.0: {}
 
@@ -4999,18 +4998,15 @@ snapshots:
 
   has-flag@4.0.0: {}
 
-  has-symbols@1.1.0:
-    optional: true
+  has-symbols@1.1.0: {}
 
   has-tostringtag@1.0.2:
     dependencies:
       has-symbols: 1.1.0
-    optional: true
 
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
-    optional: true
 
   he@1.2.0: {}
 
@@ -5310,8 +5306,7 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  math-intrinsics@1.1.0:
-    optional: true
+  math-intrinsics@1.1.0: {}
 
   md5@2.3.0:
     dependencies:
@@ -5329,13 +5324,11 @@ snapshots:
       braces: 3.0.3
       picomatch: 2.3.2
 
-  mime-db@1.52.0:
-    optional: true
+  mime-db@1.52.0: {}
 
   mime-types@2.1.35:
     dependencies:
       mime-db: 1.52.0
-    optional: true
 
   mimic-fn@4.0.0: {}
 
@@ -5378,7 +5371,6 @@ snapshots:
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
-    optional: true
 
   nodemon@3.1.14:
     dependencies:
@@ -5793,8 +5785,7 @@ snapshots:
 
   touch@3.1.1: {}
 
-  tr46@0.0.3:
-    optional: true
+  tr46@0.0.3: {}
 
   tree-kill@1.2.2: {}
 
@@ -5949,14 +5940,12 @@ snapshots:
   web-streams-polyfill@4.0.0-beta.3:
     optional: true
 
-  webidl-conversions@3.0.1:
-    optional: true
+  webidl-conversions@3.0.1: {}
 
   whatwg-url@5.0.0:
     dependencies:
       tr46: 0.0.3
       webidl-conversions: 3.0.1
-    optional: true
 
   which@2.0.2:
     dependencies:
