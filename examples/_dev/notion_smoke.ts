@@ -2,8 +2,11 @@
  * examples/_dev/notion_smoke.ts
  *
  * Smoke test for `incrementalIndexFromSources` (Task 5 entry point).
- * NOT part of the bootcamp example suite — lives under `_dev/` so vitest's
- * default include glob (libs/**, tests/**) skips it.
+ * Not part of the bootcamp example suite — vitest's `include` glob is
+ * scoped to test files in `examples/` (suffix-based: must end in
+ * `.test.ts`). This file is excluded because it does not match that
+ * suffix. Lives under `_dev/` to signal "operator-driven smoke, not
+ * regression suite".
  *
  * Run manually: npx tsx examples/_dev/notion_smoke.ts
  */

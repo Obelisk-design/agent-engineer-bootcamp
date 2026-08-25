@@ -224,7 +224,6 @@ async function loadCachedMeta(): Promise<ReadonlyMap<string, { mtimeMs: number; 
 async function main(): Promise<void> {
   // Spec §5.7: dry-run banner at top of report so the operator never
   // confuses a no-write run with a real import.
-  console.log(`DRY-RUN MODE: no writes to lancedb`);
 
   const args = readArgs();
 
@@ -237,6 +236,7 @@ async function main(): Promise<void> {
   );
 
   if (DRY_RUN) {
+    console.log(`DRY-RUN MODE: no writes to lancedb`);
     // Sample one reachable + one unreachable doc so the report shows the
     // shape without flushing the full list to stdout.
     const sampleReachable = notionDocs.find((d) => d.unreachable !== true);
