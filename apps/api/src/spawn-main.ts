@@ -1,0 +1,99 @@
+/**
+ * apps/api/src/spawn-main.ts
+ *
+ * spawn `tsx examples/<ns>_import/main.ts` 子进程，把 stdout 的 phase 行
+ * 解析成 PhaseEvent，stderr 累积为 tail（最后 500 字符）。
+ *
+ * 约束：
+ * - 5 分钟硬超时（300_000 ms），超时 SIGTERM
+ * - 监听外部 AbortSignal，abort 时 SIGTERM
+ * - 不抛错：所有错误返回到 result（让调用方决定怎么 emit SSE error）
+ */
+
+import { spawn } from 'node:child_process';
+import { parsePhaseLine } from './parse-phase.js';
+import type { PhaseEvent } from '../../../libs/api-schema/src/index.js';
+
+const HARD_TIMEOUT_MS = 5 * 60 * 1000;
+const STDERR_TAIL_BYTES = 500;
+const REPO_ROOT = process.cwd();
+
+export interface SpawnMainOptions {
+  readonly namespace: 'notion' | 'md';
+  readonly dryRun: boolean;
+  readonly onPhase: (event: PhaseEvent) => void;
+  readonly onStderr: (chunk: string) => void;
+  readonly signal: AbortSignal;
+}
+
+export interface SpawnMainResult {
+  readonly exitCode: number;
+  readonly stderrTail: string;
+  readonly timedOut: boolean;
+  readonly aborted: boolean;
+}
+
+export function spawnMain(opts: SpawnMainOptions): Promise<SpawnMainResult> {
+  return new Promise((resolve) => {
+    const scriptPath =
+      opts.namespace === 'notion' ? 'examples/notion_import/main.ts' : 'examples/md_import/main.ts';
+
+    const args = ['tsx', scriptPath];
+    if (opts.dryRun) args.push('--dry-run');
+
+    // Windows 上 spawn 默认不解析 .cmd，需要打开 shell 让 Node 找 cmd shim；
+    // macOS/Linux 直接 spawn pnpm 即可。
+    const pnpmBin = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+    const child = spawn(pnpmBin, args, {
+      cwd: REPO_ROOT,
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
+    });
+
+    let stderrBuf = '';
+    let stdoutBuf = '';
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdoutBuf += chunk.toString('utf8');
+      let idx: number;
+      while ((idx = stdoutBuf.indexOf('\n')) >= 0) {
+        const line = stdoutBuf.slice(0, idx);
+        stdoutBuf = stdoutBuf.slice(idx + 1);
+        const ev = parsePhaseLine(line);
+        if (ev !== null) opts.onPhase(ev);
+      }
+    });
+
+    child.stderr.on('data', (chunk: Buffer) => {
+      const s = chunk.toString('utf8');
+      stderrBuf = (stderrBuf + s).slice(-STDERR_TAIL_BYTES);
+      opts.onStderr(s);
+    });
+
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill('SIGTERM');
+    }, HARD_TIMEOUT_MS);
+
+    opts.signal.addEventListener('abort', () => {
+      child.kill('SIGTERM');
+    });
+
+    child.on('exit', (code) => {
+      clearTimeout(timer);
+      // flush 残余 stdout
+      if (stdoutBuf.length > 0) {
+        const ev = parsePhaseLine(stdoutBuf);
+        if (ev !== null) opts.onPhase(ev);
+      }
+      resolve({
+        exitCode: code ?? -1,
+        stderrTail: stderrBuf,
+        timedOut,
+        aborted: opts.signal.aborted,
+      });
+    });
+  });
+}
