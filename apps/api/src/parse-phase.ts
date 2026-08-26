@@ -10,10 +10,12 @@
  *   - `>>> Embed: heading=8 paragraph=15 (fallback: {...})`
  *   - `>>> Write: 23 chunks in 1500ms`
  */
+// 中间的 `(?:\s+\([^)]+\))?` 允许 marker 后挂 `(DRY-RUN)` 之类的 infix；
+// producer (main.ts) 与 consumer (parse-phase) 之间唯一允许的耦合点。
 
 import type { PhaseEvent, PhaseName } from '../../../libs/api-schema/src/index.js';
 
-const PHASE_MARKER = /^>>>\s+(Notion import|Diff|Embed|Write):\s+(.+)$/;
+const PHASE_MARKER = /^>>>\s+(Notion import|Diff|Embed|Write)(?:\s+\([^)]+\))?:\s+(.+)$/;
 
 function extractNumber(input: string, key: string): number | undefined {
   const m = input.match(new RegExp(`${key}=([0-9]+)`));
