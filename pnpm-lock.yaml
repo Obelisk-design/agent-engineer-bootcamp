@@ -11,6 +11,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.111.0
         version: 0.111.0(zod@4.4.3)
+      '@bootcamp/api-schema':
+        specifier: workspace:*
+        version: link:libs/api-schema
       '@lancedb/lancedb':
         specifier: ^0.37.1
         version: 0.37.1(@types/node@22.20.1)(apache-arrow@18.1.0)
@@ -126,6 +129,8 @@ importers:
       vue-tsc:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
+
+  libs/api-schema: {}
 
 packages:
 

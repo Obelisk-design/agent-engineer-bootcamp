@@ -86,6 +86,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
+    "@bootcamp/api-schema": "workspace:*",
     "@lancedb/lancedb": "^0.37.1",
     "@notionhq/client": "^2.3.0",
     "gpt-tokenizer": "^3.4.0",
