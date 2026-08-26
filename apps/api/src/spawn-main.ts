@@ -77,12 +77,16 @@ export function spawnMain(opts: SpawnMainOptions): Promise<SpawnMainResult> {
       child.kill('SIGTERM');
     }, HARD_TIMEOUT_MS);
 
-    opts.signal.addEventListener('abort', () => {
+    // 抽成具名 const：同一 AbortSignal 被复用时，老 listener 会留在 signal 上
+    // 对一个已经退出的 child 触发 SIGTERM。removeEventListener 在 exit handler 中清理。
+    const onAbort = () => {
       child.kill('SIGTERM');
-    });
+    };
+    opts.signal.addEventListener('abort', onAbort);
 
     child.on('exit', (code) => {
       clearTimeout(timer);
+      opts.signal.removeEventListener('abort', onAbort);
       // flush 残余 stdout
       if (stdoutBuf.length > 0) {
         const ev = parsePhaseLine(stdoutBuf);

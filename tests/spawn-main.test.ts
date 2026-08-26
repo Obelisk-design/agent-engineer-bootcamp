@@ -26,7 +26,9 @@ describe('spawnMain', () => {
       onStderr: () => {},
       signal: ac.signal,
     });
-    // exitCode 非 0 或 stderr 标记 abort
+    // abort 后必须看到 aborted === true（显式断言）。
+    // exitCode 检查保留作为 defense-in-depth，但 abort 测试的核心契约是 aborted flag。
+    expect(result.aborted).toBe(true);
     expect(result.exitCode).not.toBe(0);
   });
 });
