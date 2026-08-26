@@ -17,7 +17,8 @@
  * - 不做 tokenizer-aware chunking（路线表 Day 16-17 不需要）
  */
 
-export type SourceKind = 'daily' | 'adr' | 'spec' | 'plan' | 'fixture' | 'test-corpus' | 'notion';
+export type SourceKind =
+  'daily' | 'adr' | 'spec' | 'plan' | 'fixture' | 'test-corpus' | 'notion' | 'md';
 
 export interface Chunk {
   readonly text: string;
@@ -159,7 +160,12 @@ export function chunkByParagraph(
     const block: string[] = [lines[i]!];
     cursorByte += Buffer.byteLength(lines[i]!, 'utf-8') + 1;
     i++;
-    while (i < lines.length && lines[i] !== '' && !/^```/.test(lines[i]!) && !/^\s*\|/.test(lines[i]!)) {
+    while (
+      i < lines.length &&
+      lines[i] !== '' &&
+      !/^```/.test(lines[i]!) &&
+      !/^\s*\|/.test(lines[i]!)
+    ) {
       block.push(lines[i]!);
       cursorByte += Buffer.byteLength(lines[i]!, 'utf-8') + 1;
       i++;
