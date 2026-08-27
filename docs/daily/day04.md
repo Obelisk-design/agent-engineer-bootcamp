@@ -248,6 +248,31 @@ const agent = new Agent({
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 04，不依赖前面的章节。
+
+### 一句话验证
+
+首次出现真正的单元测试（calculator 8 + registry 5 + agent 4 = 20/20）+ 双 provider 真实 agent loop 手跑。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/tools/calculator-tool.test.ts                              # 8 cases
+pnpm test tests/libs/tools/tool-registry.test.ts                                # 5 cases
+pnpm test tests/libs/agent/agent.test.ts                                        # 4 cases（FakeChatClient）
+pnpm test tests/smoke.test.ts                                                  # 3 占位 smoke
+pnpm exec tsx examples/day04/ex_001_calculator_agent_openai.ts                  # iteration=1 tool_calls，iteration=2 content
+pnpm exec tsx examples/day04/ex_002_calculator_agent_anthropic.ts               # 同上
+```
+
+### 已知盲点
+
+`Agent` 单测靠 `FakeChatClient`（当时 inline 在测试文件内，Day 06 才抽 shared helper）。**真实 tool-calling 链路（SDK 消息格式映射、Anthropic tool_result role=user）仍只在手跑 demo 里验证**，无自动化。无 runtime schema validation（Day 11 才补），LLM 传错类型不会被拦。
+
+---
+
 ## 📋 验收清单
 
 - [x] `ToolDefinition` 单一事实源在 `libs/tools/tool.ts`
@@ -273,6 +298,8 @@ const agent = new Agent({
 - [x] `pnpm format:check` 全绿
 - [x] `pnpm test` 20 / 20 passed
 - [x] 未引入并行 tool、streaming tool calling、AbortSignal、runtime schema validation、apps/api/
+
+---
 
 ---
 

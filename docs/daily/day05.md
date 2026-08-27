@@ -316,6 +316,30 @@ if (typeof input !== 'string' || input.length === 0) {
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 05，不依赖前面的章节。
+
+### 一句话验证
+
+单测 + Hono in-process 集成测试（`app.fetch`，不真 listen）+ 真实 listen 自 fetch demo + Chrome MCP 截图肉眼验 Web UI。
+
+### 跑通命令
+
+```bash
+pnpm test tests/apps/api/sse-adapter.test.ts                # 单测 + 流式编码断言
+pnpm test tests/apps/api/server.test.ts                    # Hono app.fetch 集成测试（400 分支 / SSE 帧）
+pnpm test tests/apps/api/web-html.test.ts                  # HTML 关键字段静态断言（防 UI 静默坏）
+pnpm exec tsx examples/day05/ex_001_sse_agent.ts            # 真 listen + self-fetch + SSE 流
+pnpm exec tsx examples/day05/ex_002_web_ui.ts               # 浏览器开 http://127.0.0.1:3000/
+```
+
+### 已知盲点
+
+Web UI 验证是截图肉眼（非交互 e2e）。`ex_001` 需 API key 才能跑完整 loop。SSE 断线 / 取消未验（AbortSignal 是 Day 07）。
+
+---
+
 ## 📋 验收清单
 
 - [x] `libs/agent/event.ts` 定义 `AgentEvent` 判别联合（7 个 kind，不含 message_delta）

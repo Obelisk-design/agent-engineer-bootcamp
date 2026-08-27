@@ -475,6 +475,29 @@ if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 03，不依赖前面的章节。
+
+### 一句话验证
+
+手跑流式 demo，用可量化指标判"真流式"（chunks / chars / elapsedMs）+ Day 02 backward-compat 回跑。
+
+### 跑通命令
+
+```bash
+pnpm exec tsx examples/day03/ex_001_openai_stream.ts                                       # chunks=57~63，elapsedMs=3317~5062，逐块 process.stdout.write
+pnpm exec tsx examples/day03/ex_002_anthropic_stream.ts                                    # chunks=6~7，elapsedMs=1940~3646
+pnpm exec tsx examples/day02/ex_001_chat_client.ts                                         # 回归验 chat() 未破
+pnpm exec tsx examples/day02/ex_002_anthropic_chat_client.ts                              # 回归验 chat() 未破
+```
+
+### 已知盲点
+
+streaming 路径**零单测**（chunk 拼接语义、OpenAI null-delta skip、Anthropic 事件过滤均无自动断言）。"chunks 数"是观测值不是契约，跑一次和跑十次结论不同。需两套 API key。
+
+---
+
 ## 📋 验收清单
 
 - [x] `ChatClient.stream(messages): AsyncIterable<string>` 已加入，`chat()` 返回类型未变

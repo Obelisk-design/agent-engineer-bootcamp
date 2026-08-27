@@ -162,6 +162,32 @@ vite 默认只暴露 `import.meta.env.VITE_*` 给 client。`.env` 只有 `OPENAI
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 12，不依赖前面的章节。
+
+### 一句话验证
+
+纯函数单测（distance / pca）+ 7 步浏览器手测指南（含错误路径 banner）+ 真跑 embedding demo 5 步。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/embedding/distance.test.ts                                 # 10 用例（cosine / euclidean / dim-mismatch / zero-vector）
+pnpm test tests/libs/embedding/pca.test.ts                                      # 5 用例（power iteration / zero-variance / dim-mismatch）
+pnpm dev:web                                                                    # http://localhost:5173/#/embed-demo，Panel A/B/C/D 各点一次 Run，肉眼比对
+# 错误路径手测：清空 .env 的 VITE_OPENAI_API_KEY → 重启 pnpm dev:web → #/embed-demo 顶部出现红 banner；恢复后 banner 消失
+npx tsx examples/day12/ex_001_embed_only.ts                                     # 5 步真跑（embed + cosine 同类相聚 + cos vs euc）
+npx tsx examples/day12/ex_002_probe_dims.ts                                     # 4 探针（Matryoshka 是否被网关支持）
+# DevTools：Console 看 warnDevKeyOnce() 告警；Network 看 POST /v1/embeddings 200
+```
+
+### 已知盲点
+
+4 个 Panel 的视觉输出零自动化断言 —— 热图颜色 / PCA 聚类 / 梯度条形全靠肉眼。需 .env 三项（`VITE_OPENAI_API_KEY` / `VITE_OPENAI_BASE_URL` / `VITE_OPENAI_EMBEDDING_MODEL`）+ dev 网关可达（网关 admin 只放行 `qwen3-embedding-8b`）。Panel C 无法对比 4096 vs 256 维（网关不支持 `dimensions` 参数）。ledger 记录 Task 2 曾出现 vitest 全绿但 `pnpm typecheck` 红（esbuild 不做类型检查），此后每 brief 强制报 typecheck exit code。
+
+---
+
 ## ✅ Acceptance Criteria 核对
 
 每条均为本次实际跑命令验证（不靠推断）：

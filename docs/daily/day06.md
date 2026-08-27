@@ -161,6 +161,30 @@ async *runEvents(userInput: string): AsyncIterable<AgentEvent> {
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 06，不依赖前面的章节。
+
+### 一句话验证
+
+用 FakeChatClient 把整条 agent + SSE 链路搬进 CI，不依赖 `.env`；`OPENAI_API_KEY=""` 必须全绿。
+
+### 跑通命令
+
+```bash
+OPENAI_API_KEY="" pnpm test                                    # 64/64 通过（CI 环境独立显式验证）
+env -u OPENAI_API_KEY pnpm test                                # 同上（部分 shell）
+pnpm test tests/libs/agent/run-events.test.ts                  # 7 tests（覆盖 9 kind 序列 + messages 累积）
+pnpm test tests/apps/api/end-to-end.test.ts                    # 4 tests（SSE 流 + CI 独立）
+pnpm test tests/apps/api/trace-collector.test.ts               # 5 端到端（含 404 / error 入 trace / 跨 app 共享）
+```
+
+### 已知盲点
+
+Fake 覆盖"链路形状"，不覆盖"真 LLM 行为"。这天 `libs/` / `apps/` / `examples/` 零改动（纯测试日），没有独立的手跑 demo。
+
+---
+
 ## 📋 验收清单
 
 - [x] `tests/libs/agent/shared/fake-chat-client.ts` 抽取 helper

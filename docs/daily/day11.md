@@ -155,6 +155,29 @@ Day 04 的决策在当时是对的（唯一 tool 只有 string 参数，自检�
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 11，不依赖前面的章节。
+
+### 一句话验证
+
+结构性契约测试（18 反例，含 5 条防复发）+ 15 个 FileRead 反例 + 真实 LLM demo 真跑并对比根因证据。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/tools/tool-contract.test.ts                                # 18 个契约反例
+pnpm test tests/libs/tools/repo/file-read-tool.test.ts                          # 15 个反例
+pnpm exec tsx examples/day11/ex_001_file_read.ts                                # 手跑（含类型转换演示）
+pnpm exec tsx examples/day11/ex_002_read_agent.ts                               # 真 LLM demo（search → read 闭环）；根因证据：同一 prompt/model，Day 10 LLM 传 {"maxDepth":"1"}（字符串），Day 11 传 {"maxDepth":1}（数字）
+```
+
+### 已知盲点
+
+需 API key 才能跑 `ex_002`（但这天**确实跑了**，还拿到了对比证据）。无覆盖率门槛，"5 条防复发结构性测试"是人工设计的，覆盖全部语义类型靠人判断（daily note §5 明写"漏一种就漏一类 bug"）。
+
+---
+
 ## 🎯 JD 映射
 
 ### JD-1 (Coding Agent 全栈) 命中

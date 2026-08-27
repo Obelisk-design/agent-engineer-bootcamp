@@ -387,6 +387,31 @@ yield { kind: 'request', iteration: i + 1, messages: messages.map(m => ({ ...m }
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 07，不依赖前面的章节。
+
+### 一句话验证
+
+74/74 单测含 5 个新场景（signal / error / streaming / usage）+ 真实流式 demo + 浏览器打字机。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/agent/run-events.test.ts                                   # 含 signal / error / streaming / usage 5 个新场景
+pnpm exec tsx examples/day07/ex_001_streaming_agent_openai.ts                   # message_delta count + 逐字符输出 + usage 打印
+pnpm exec tsx examples/day07/ex_002_streaming_agent_anthropic.ts                # 同上
+pnpm exec tsx examples/day04/ex_001_calculator_agent_openai.ts                  # 回归：改用 message_delta + usage
+pnpm exec tsx examples/day04/ex_002_calculator_agent_anthropic.ts               # 同上
+pnpm exec tsx examples/day05/ex_002_web_ui.ts                                   # 浏览器验打字机
+```
+
+### 已知盲点
+
+AbortSignal 真实取消（网络层 SDK 透传）只在 mock 层验，真实中断浏览器/网络行为靠手测。打字机 UI 靠 `web-html.test.ts` 静态断言 + 肉眼。error `throw → yield` 是行为变更，当时有 12 个测试红掉后改断言（"不是 bug，是 spec 兑现"）。
+
+---
+
 ## 📋 验收清单
 
 - [x] ChatClient 加 `ChatOptions { signal? }` + `ChatUsage`，chat/stream 加 options 参数

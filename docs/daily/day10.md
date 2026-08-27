@@ -120,6 +120,32 @@ Tool 返回 plain object → Agent 层 [JSON.stringify(result)](libs/agent/agent
 **未来可能的 ADR**：
 - ADR-016（Day 12+）：micromatch 引入的决策（如果 Day 12 评估需要 `{a,b}` 字符集）
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 10，不依赖前面的章节。
+
+### 一句话验证
+
+反例驱动单测（8 反例 + 正例）+ fixture repo + Agent 整链路 e2e（fake）+ `ex_003` 真 LLM demo（**Day 10 当日没跑，Day 11 复盘暴露 3 个 bug**）。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/tools/repo/ignore.test.ts                                  # 6 cases
+pnpm test tests/libs/tools/repo/glob.test.ts                                    # 5 cases（含 1 次 glob 边界语义修正）
+pnpm test tests/libs/tools/repo/repo-index-tool.test.ts                         # 7 cases（5 反例 + 2 正例）
+pnpm test tests/libs/tools/repo/repo-search-tool.test.ts                        # 6 cases（3 反例 + 3 正例）
+pnpm test tests/apps/api/repo-tools-e2e.test.ts                                 # Agent 调 repo_index tool 整链路
+pnpm exec tsx examples/day10/ex_001_repo_index.ts                               # 手跑
+pnpm exec tsx examples/day10/ex_002_repo_search.ts                              # 手跑（注意 fileGlob 改 '**/*.ts'）
+```
+
+### 已知盲点
+
+`ex_003_repo_agent.ts`（真实 LLM demo）当日**没跑** —— 环境无 key，代码写好加了 dotenv + 守卫，"等有 key 再补跑"。Day 11 daily note 复盘："Day 10 的测试全绿、8 个反例全过、typecheck/lint 全清，但 `ex_003` 没真跑过"，Day 11 真跑后才发现 3 个 bug。这是本仓库最明确的"验证不够硬"案例。
+
+---
+
 ## 🛣 Day 11+ 路线
 
 - **Day 11**：AST 解析（ts-morph / tree-sitter），抽函数签名 / import graph。新增 `ast_search` tool。**接口契约**：接 Day 10 的 `files: string[]`，只解析 `.ts` / `.tsx`。

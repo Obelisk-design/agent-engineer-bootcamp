@@ -293,6 +293,35 @@ function resetRunState() {
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 09，不依赖前面的章节。
+
+### 一句话验证
+
+本仓库唯一显式定义了 5 层验证金字塔（Layer 1 类型 → Layer 5 浏览器），其中 Layer 1-3 进 CI，Layer 4-5 必 key + Chrome 手跑。
+
+### 跑通命令
+
+```bash
+# Layer 1
+npx tsc --noEmit                                                                # 0 errors
+# Layer 2
+# Layer 3
+pnpm test --run tests/apps/api/end-to-end.test.ts                               # 7 passed（含反例 1 多轮 send via HTTP + 反例 3 空 messages）
+pnpm test --run tests/apps/web/multi-turn.test.ts                               # 2 passed（前端 body 形状 + 单轮 back-compat）
+# Layer 4（需 OPENAI_API_KEY，10~30s）
+pnpm exec tsx examples/day09/multi_turn_client.ts                               # turn 2 answer 应含"肥老大"
+# Layer 5（需 key + Chrome，10~30s）
+pnpm run dev:day09                                                              # 浏览器 http://127.0.0.1:5173/，两轮对话 + Σin/Σout 验证
+```
+
+### 已知盲点
+
+Layer 4 / Layer 5 必须真 key + 人工肉眼，无法进 CI。Layer 5 是纯手工步骤清单，无 Playwright / Chrome MCP 脚本化断言。server 不做 deep schema 校验（daily note 明写），非法 role 场景按 YAGNI 不处理。
+
+---
+
 ## 🧪 怎么测 Day 09 的改动
 
 按粒度分四层：

@@ -393,6 +393,31 @@ function scrollToIteration(n: number): void {
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 08，不依赖前面的章节。
+
+### 一句话验证
+
+`typecheck:web` + `vite build` + 一行起前后端 + 浏览器肉眼验 HeaderPill 进度条 + `GET /traces/:runId` meta。
+
+### 跑通命令
+
+```bash
+pnpm run dev:day08                                                                # concurrently 起 API(3000) + Vite(5173)
+# 或：pnpm exec tsx examples/day08/agent_server.ts + cd apps/web && pnpm exec vite --host 127.0.0.1
+# curl / 浏览器访问 GET /traces/:runId → 断 meta.context 有 peakPromptTokens + iterations
+pnpm test tests/apps/web/observability.test.ts                                   # HeaderPill / MetricsSidebar 组件断言
+pnpm exec vite build                                                             # PASS（Tailwind 生成 8.89 kB CSS）
+# pnpm lint 当日已知：dist/ 报错 pre-existing，无 .eslintignore（daily note 标记）
+```
+
+### 已知盲点
+
+`pnpm lint` 当日**没干净**（`apps/web/dist/` 被 eslint 扫到，daily note 里明写 pre-existing）。真跑 context 需 `ANTHROPIC_API_KEY` + 手改 example 里 model 为 `claude-opus-5`。前端三栏布局 / 进度条变色 / scroll-to-iteration 全是肉眼验（scroll-to-iteration 一度 wired but non-functional，当日修复仍无自动化断言）。
+
+---
+
 ## 📋 验收清单
 
 - [x] `countContextTokens` 抽象 + Anthropic 适配 + 失败降级（永远 return undefined）

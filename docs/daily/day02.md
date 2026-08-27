@@ -418,6 +418,28 @@ Vue / 浏览器                          Node 后端
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 02，不依赖前面的章节。
+
+### 一句话验证
+
+OpenAI + Anthropic 双 provider 的真实 LLM demo 手跑（ChatClient / OpenAIChatClient / AnthropicChatClient 全靠手跑）。
+
+### 跑通命令
+
+```bash
+pnpm test tests/smoke.test.ts                                                          # 3 smoke（libs/llm 零单测）
+pnpm exec tsx examples/day02/ex_001_chat_client.ts                                       # 真发请求，返回 Qwen 真实回复
+pnpm exec tsx examples/day02/ex_002_anthropic_chat_client.ts                            # 真发请求到 Claude Code gateway，返回 MiniMax-M3 回复
+```
+
+### 已知盲点
+
+libs/llm 本身**零单测** —— `ChatClient` / `OpenAIChatClient` / `AnthropicChatClient` 的正确性全靠 typecheck + 手跑 demo。测试计数仍是 Day 01 的 3。需 `OPENAI_API_KEY` + `ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_BASE_URL`。
+
+---
+
 ## 📋 验收清单
 
 - [x] ChatClient 接口设计（`chat` + `setModel` 两个方法，对象传参，空 content=''，setModel void 失败语义）
@@ -433,8 +455,6 @@ Vue / 浏览器                          Node 后端
 - [x] ~~AnthropicChatClient 留 Day 03（TODO）~~ → Day 02 末尾已落地（见[附录](#-day-02-延展anthropicchatclient-在-day-02-落地)）
 - [x] 第一次 commit 走完 commitlint 流程（commit `c851ad8`，5 文件，162 insertions）
 - [x] branch `master`，ahead of `origin/master` by 1 commit（push 节奏待拍）
-
----
 
 ## 🆕 Day 02 延展：AnthropicChatClient 在 Day 02 落地
 

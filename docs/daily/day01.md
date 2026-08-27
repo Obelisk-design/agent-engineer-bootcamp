@@ -168,6 +168,30 @@ const client = new OpenAI({
 **修法**：保留 `examples/index.ts` 作为公共导出点；Day 内的 demo 放 `examples/dayNN/`。
 **设计意图**：未来 `examples/day02/` `examples/day03/` 平铺，按时间维度组织。
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 01，不依赖前面的章节。
+
+### 一句话验证
+
+`pnpm build` 出 `dist/` + CI Node 22/24 全绿 + 人工跑真实 LLM demo 调通义千问 Qwen。
+
+### 跑通命令
+
+```bash
+pnpm build              # tsc -p tsconfig.build.json，输出 dist/
+pnpm dev:example        # 真调通义千问 Qwen，肉眼看回复（约 500 tokens/次）
+pnpm dev:smoke          # nodemon 热重启肉眼验证（改文件 → restart）
+pnpm test tests/smoke.test.ts                                               # 占位 smoke
+# CI：Node 22 + 24 全绿（.github/workflows/ci.yml）
+```
+
+### 已知盲点
+
+唯一自动化测试是 `tests/smoke.test.ts`（占位性质，非业务断言）。LLM demo 是手跑肉眼看，无断言、无 CI 覆盖，需 `OPENAI_API_KEY` + `.env`。nodemon 热更新只能手验。
+
+---
+
 ## 📋 验收清单
 
 - [x] `node --version` ≥ 22

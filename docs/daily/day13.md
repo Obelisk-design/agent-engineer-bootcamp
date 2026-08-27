@@ -184,6 +184,33 @@ ex_001 的 `fallbackFlags` 参数没在函数体用 + chunk.ts 的 `currentStart
 
 ---
 
+## 🎯 如何验证本章（独立可查）
+
+> **这一章独立可查** —— 只看本节就知道怎么跑通 Day 13，不依赖前面的章节。
+
+### 一句话验证
+
+18 个反例单测 + `evaluate.ts` 自动跑分（5 fixed query × 2 chunk 策略 = 10 次 retrieve，输出命中对比表）+ 真 LLM 闭路手测（验收："LLM 未编造"）。
+
+### 跑通命令
+
+```bash
+pnpm test tests/libs/rag/chunk.test.ts                                          # 9 反例（heading / paragraph / dropEmpty）
+pnpm test tests/libs/rag/store.test.ts                                          # 5 反例（memory store 5 种行为）
+pnpm test tests/libs/rag/retrieve.test.ts                                       # 4 反例（mock embedFn 校验）
+npx tsx examples/day13/ex_001_index_corpus.ts                                   # 15 篇真文档，heading 359 chunks / paragraph 1351 chunks 入库
+npx tsx examples/day13/ex_002_chunk_compare.ts                                  # 自动跑分表：heading 4/5 vs paragraph 2/5，平均 870ms vs 212ms
+npx tsx examples/day13/ex_003_query_topk.ts                                     # 单 query top-3 + RAG prompt 完整打印（眼测）
+npx tsx examples/day13/ex_004_rag_loop.ts "4闸必跑是哪4 个"                     # retrieve 3 hits → chat → LLM 总结；验收标准是"LLM 未编造"
+# .lancedb/ 已入 .gitignore
+```
+
+### 已知盲点
+
+`ex_002` 的 `judgeHit` 是人工定义的 5 条 fixed query + 判定规则，不是标准 IR 指标（无 recall@k / MRR / nDCG）。`ex_001~004` 全部需要 embedding key + dev 网关，无一进 CI。`ex_004` 的"LLM 未编造"是主观判定，无断言。Q2 双策略双落榜属已知失败但未回归化。踩坑记录里 2 个 Critical（dev 网关 NaN vector 整批 400、`retrieve.ts` 漏传 model）都是手跑才暴露的。
+
+---
+
 ## ✅ Acceptance Criteria 核对
 
 每条均为本次实际跑命令验证：
