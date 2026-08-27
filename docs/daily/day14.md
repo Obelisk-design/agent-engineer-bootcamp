@@ -288,6 +288,84 @@ case 'rag':
 
 **Why**：ADR 0003 精神扩到 HTTP API。schema 在 `libs/api-schema`，前后端 import 同一份，**不重复定义**。
 
+### R13 — apps/api 缺 dotenv 自动加载
+
+**症状**：`pnpm dev:rag` 起后端，`/health` 显示 `OPENAI_API_KEY not set`。`examples/*` 全部 OK（顶部 `import 'dotenv/config'`）。
+
+**根因**：`apps/api/src/` 早期代码全漏了 `import 'dotenv/config'`，env.ts 等模块没副作用加载 dotenv。父进程 (tsx + with-ports) cwd 是仓库根，dotenv 默认能从 cwd 找到 `.env`，只要**有一个模块**顶部 `import 'dotenv/config'` 就够了。
+
+**修法**：[apps/api/src/env.ts:18](apps/api/src/env.ts#L18) 顶部加 `import 'dotenv/config';`。
+
+**Why**：副作用一次，所有 import 此模块的进程自动加载 .env，无需每 handler 重复。Spec 当时漏了 —— apps/api 是 dev:rag 的入口。
+
+### R14 — spawn 子进程 OOM（lancedb native heap）
+
+**症状**：CLI 跑 `pnpm exec tsx examples/md_import/main.ts` 不管 `--dry-run` 还是真跑都报：
+
+```
+FATAL ERROR: Committing semi space failed. Allocation failed - JavaScript heap out of memory
+```
+
+**根因**：lancedb native binding + arrow schema 在 Windows + Node 22 下首次打开 `.lancedb/rag/` 时分配 ~1.5GB native 段，超过 Node 默认堆上限，触发 GC semi-space commit 失败（**注意：JS stacktrace 为空 —— 错在 native 不在 JS**，误以为内存泄漏）。
+
+**修法**：[apps/api/src/spawn-main.ts:19-27](apps/api/src/spawn-main.ts#L19-L27) + [line 55](apps/api/src/spawn-main.ts#L55) 注入 `NODE_OPTIONS=--max-old-space-size=4096` 给子进程：
+
+```ts
+const CHILD_NODE_OPTIONS = '--max-old-space-size=4096';
+// ...
+env: { ...process.env, NODE_OPTIONS: CHILD_NODE_OPTIONS },
+```
+
+**Why**：父进程 3100 rag server 不受影响（堆独立）。子进程堆提到 4GB 容下 lancedb native 段。CLI 直跑没注入 NODE_OPTIONS 仍 OOM —— 真用必须走 spawn 路径或自己设 env。
+
+### R15 — search tableName 不对称（spec 写错）
+
+**症状**：真入库 1990 chunks 进 `chunks_md_heading` + `chunks_md_paragraph`，search API 返回 `hits: []`。
+
+**根因**：spec §Day 14 写 `${prefix}` 单表（`chunks_md` / `chunks_notion`），但 `libs/rag/indexer.ts` 实际写 `${prefix}_${strategy}` 双表（沿用 Day 13 RAG 设计）。**spec 与实现不对称** —— 入库双表、检索单表、单表根本不存在。
+
+**修法**：[apps/api/src/rag-search.ts:39-44](apps/api/src/rag-search.ts#L39-L44) `TABLE_BY_NAMESPACE` 拼 heading 后缀：
+
+```ts
+const TABLE_BY_NAMESPACE = {
+  notion: 'chunks_notion_heading',
+  md: 'chunks_md_heading',
+} as const;
+```
+
+**Why**：1 行改，对齐实现。spec §Day 13.5 runbook 早写明「`chunks_notion_heading` / `chunks_notion_paragraph` / `chunks_notion_meta`」双表 —— Day 14 spec 错把双表简写成单表。Post-mortem 落 ADR 0004。
+
+### R16 — rag-search 没透传 embed baseUrl/model
+
+**症状**：修了 R15 后，search API 改返 `500 Internal Server Error`（无 body），`retrieveMs: 42s`（卡在 fallback loop）。
+
+**根因**：[apps/api/src/rag-search.ts](apps/api/src/rag-search.ts) 调 `retrieve(query, opts)` 没传 `baseUrl` + `model`，libs 层默认走 OpenAI 官方 + `text-embedding-3-small`。.env 里的 `OPENAI_API_KEY` 是 dev 网关的，访问 OpenAI 官方被 401 → fallback 单条再失败 → 二分定位坏 chunk → 42s 后错误聚合抛 500。
+
+**修法**：[apps/api/src/rag-search.ts:70-72](apps/api/src/rag-search.ts#L70-L72) 读 `OPENAI_BASE_URL` + `EMBEDDING_MODEL_NAME` env，注入 retrieve opts：
+
+```ts
+const embedBaseUrl = process.env['OPENAI_BASE_URL'];
+const embedModel = process.env['EMBEDDING_MODEL_NAME'];
+// ...
+await retrieve(query, {
+  ...,
+  ...(embedBaseUrl !== undefined ? { baseUrl: embedBaseUrl } : {}),
+  ...(embedModel !== undefined ? { model: embedModel } : {}),
+});
+```
+
+**Why**：libs/rag/retrieve.ts 注释明写「env 读取在 examples 层」 —— apps/api 也是 examples/ 的等价物（env-aware wrapper），必须显式注入。同类调用点（examples/day13/ex_002/ex_003/ex_004）已正确传，rag-search 是漏网之鱼。
+
+### R17 — md_import 默认 sourceDir 是死代码
+
+**症状**：UI 点入库按钮跑通 SSE 4 phase，但 `seedPages=0` —— 后端 spawn `md_import` 没指定 sourceDir，默认读 `./notes`（仓库根没这目录）。
+
+**根因**：[examples/md_import/main.ts](examples/md_import/main.ts) 默认 `MD_SOURCE_DIR ?? './notes'` 是死代码默认（仓库根无 notes/）。
+
+**修法**：默认改为 `'./docs/daily'`（14 篇 day notes 已就位）。
+
+**Why**：仓库根实际数据在 `docs/daily/`，spec 当时没暴露这层约束（Day 14 路线只到「点入库」，没要求 source dir UI 选）。最小改 default，CLI 直跑也能用。
+
 ---
 
 ## ✅ Acceptance Criteria 核对
@@ -308,6 +386,10 @@ case 'rag':
 - ✅ `pnpm dev:rag` 起后端（控制台：`RAG server listening on http://127.0.0.1:3100`）
 - ✅ `pnpm dev:web` 起前端 + Vite `/api` proxy 到 3100
 - ✅ 浏览器 `http://127.0.0.1:5173` 看到 TabBar + 搜索 view；切到「入库」看到入库按钮 + health 警告（如缺 env）
+- ✅ **真入库 + 真搜索全链路打通**（post-R13/R14/R15/R16/R17 修复后）：
+  - `pnpm exec tsx examples/md_import/main.ts` 真跑 14 篇 day notes → `+14 added` → embed 1990 chunks → 写 `chunks_md_heading` (1048 rows) + `chunks_md_paragraph` + `chunks_md_meta`
+  - `curl POST /api/search {query: 'day1 学习了 什么', namespace: 'md', topK: 3}` 返回 3 个 hits，最高 score 0.987（day11.md JD-2 命中 + day01.md heading）
+  - retrieveMs 从修前 42s 降到 2252ms（透传 embed env 后真调通 dev 网关 qwen3-embedding-8b）
 - ✅ **spec §5.3 反 YAGNI 红线全部守住**：
   - ❌ 不做 chunk 删除 / 编辑 UI → 没做
   - ❌ 不做多 embedding 模型切换 UI → 没做
@@ -348,7 +430,7 @@ case 'rag':
    OPENAI_API_KEY=sk-...                # 任意 namespace 搜索 + md 入库
    NOTION_TOKEN=secret_...              # 仅 notion 入库需要
    ```
-2. **首次入库**：跑一次 `npx tsx examples/notion_import/main.ts` 或 `npx tsx examples/md_import/main.ts` 让 `.lancedb/rag/chunks_*` 有数据（gitignored）。
+2. **首次入库**：跑一次 `npx tsx examples/notion_import/main.ts` 或 `npx tsx examples/md_import/main.ts` 让 `.lancedb/rag/chunks_*` 有数据（gitignored）。`md` 默认源目录是 `./docs/daily`（仓库根 `docs/daily/` 含 14 篇 day notes），可通过 `MD_SOURCE_DIR=<dir>` env 覆盖。
 
 ### 双终端起服务
 
