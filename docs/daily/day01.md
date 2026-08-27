@@ -108,7 +108,7 @@ pnpm build              # tsc -p tsconfig.build.json
 ```ts
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  baseURL: 'http://10.230.10.242:8000/v1', // ← 任意 OpenAI 兼容服务
+  baseURL: '<your-base-url>/v1', // ← 任意 OpenAI 兼容服务
 });
 ```
 

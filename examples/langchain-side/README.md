@@ -53,7 +53,7 @@
 ## Step 4 速记
 
 - **入口**：[step4_probe_embeddings.ts](step4_probe_embeddings.ts)（探针 → 发现 dev 网关白名单锁死）→ [step4_compare_chunks.ts](step4_compare_chunks.ts)
-- **真实结果**：同 `qwen3-embedding-8b` embedding × 3 chunk 策略
+- **真实结果**：同 `EMBEDDING_MODEL_NAME` embedding × 3 chunk 策略
 
 | 策略 | Q1 | Q2 | Q3 | Q4 | Q5 | 总命中率 | 平均耗时 |
 |---|---|---|---|---|---|---|---|
@@ -64,7 +64,7 @@
 ### Step 4 关键发现
 
 1. **dev 网关 admin 白名单锁死**：`GET /v1/models` 只列 3 个；`text-embedding-3-small/large/ada-002/bge-large-*` 全部 HTTP 403 `team not allowed` —— "真对比 embedding 模型"被外部约束阻断
-2. **转向同 embedding 不同 chunk**：3 个 collection 共用 `qwen3-embedding-8b`，对比转向 chunk 策略
+2. **转向同 embedding 不同 chunk**：3 个 collection 共用 `EMBEDDING_MODEL_NAME`，对比转向 chunk 策略
 3. **Q1 全策略失败**："4闸必跑是哪4 个" 在 heading 库内 6 个 ground-truth chunks（day01/02/09），但 top-3 都被 day13.md 元信息（"Q1 失败案例分析"段落）抢走 —— **"ground truth 存在 ≠ top-3 命中"** 是真 RAG 召回问题
 4. **副线 RecursiveCharacterTextSplitter (500/50) = heading 命中率持平**，且 **平均耗时最低（16ms）** —— chunkSize 适中 + 不保护代码块也没显著退化
 

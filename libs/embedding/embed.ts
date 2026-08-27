@@ -6,7 +6,7 @@
  * 实际读 env 在前端 api.ts。
  *
  * 默认值：baseUrl = https://api.openai.com/v1 ，model = text-embedding-3-small。
- * dev 环境下 caller 传 { baseUrl: OPENAI_BASE_URL, model: 'qwen3-embedding-8b' }。
+ * dev 环境下 caller 传 { baseUrl: OPENAI_BASE_URL, model: EMBEDDING_MODEL_NAME 的值 }。
  */
 
 export type EmbedDimensions = 4096 | 256;
@@ -29,7 +29,7 @@ export interface EmbedResult {
 const DEFAULT_MODEL = 'text-embedding-3-small';
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1';
 
-/** 占位文本：dev 网关 qwen3-embedding-8b 对某些输入（极短 / 特殊字符 / 全空白）输出 NaN vector。
+/** 占位文本：dev 网关 embedding 模型对某些输入（极短 / 特殊字符 / 全空白）输出 NaN vector。
  *  用统一 placeholder 替代，retrieval 时这条记录不会被命中（cosine 无意义），但不影响整体。 */
 export const EMBED_FALLBACK_TEXT = '[empty]';
 

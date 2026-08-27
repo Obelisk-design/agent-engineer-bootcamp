@@ -24,10 +24,16 @@ import { StringOutputParser } from '@langchain/core/output_parsers';
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) throw new Error('OPENAI_API_KEY required');
 
+const baseURL = process.env.OPENAI_BASE_URL;
+const modelName = process.env.MODEL_NAME;
+if (!apiKey) throw new Error('OPENAI_API_KEY required');
+if (!baseURL) throw new Error('OPENAI_BASE_URL is required');
+if (!modelName) throw new Error('MODEL_NAME is required');
+
 const model = new ChatOpenAI({
   apiKey,
-  configuration: { baseURL: process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1' },
-  model: process.env.MODEL_NAME ?? 'ai-coding',
+  configuration: { baseURL },
+  model: modelName,
   temperature: 0,
 });
 const parser = new StringOutputParser();

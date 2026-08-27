@@ -556,7 +556,7 @@ agent-engineer-bootcamp/
 - EmbedDemo.vue — 4 panel 容器 + 缺 key 红 banner
 - /embed-demo 路由 — App.vue hash switch（path B，无 vue-router）
 - LeftMenu 加 Embed 入口 + HeaderBar 加 dev:day12 标识
-- dev OpenAI 兼容网关 + qwen3-embedding-8b（4096 维）作为默认
+- dev OpenAI 兼容网关 + 4096 维 embedding 作为默认
 - examples/day12/ex_001_embed_only.ts + ex_002_probe_dims.ts
 
 **核心代码**：

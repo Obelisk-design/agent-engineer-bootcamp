@@ -3,6 +3,9 @@
 > 65 天 AI Agent 工程师训练营 · Day 12 / 65
 > 主题：学 embedding，看向量空间长什么样。Cosine / Euclidean / PCA 一次看到。
 
+> ⚠️ **教学上下文免责**：本文中的内网 base URL / 模型名（如 `http://10.230.10.242:8000/v1`、`qwen3-embedding-8b`）仅记录 Day 12 当时跑通的本地 dev 环境。
+> **不要**把它们当作默认配置抄进 .env。代码侧已移除所有默认值（见 app 配置时必须显式声明）。
+
 ---
 
 ## ⚠️ 路线修正（First things first）
@@ -16,7 +19,7 @@
 3. 学习顺序决定先学 embedding —— 要先看到向量空间长什么样，才能判断未来要不要 / 怎么接 RAG。
 4. FileEditTool 不会丢 —— 依赖 file_read 的 cat -n 行号（Day 11 已就绪），顺延即可。
 
-**⚠️ 第二轮修正（spec 假设错误，已修正）**：原 spec 假设 `qwen3-embedding-8b` 支持 Matryoshka 嵌套维度（4096→256）。**实测 dev 网关 vLLM/litellm 拒绝 `dimensions` 参数**（连原生 4096 也拒，见 `ex_002_probe_dims`）。Panel C 改为同维度 cosine vs euclidean 对比 —— 这反而是更基础的"方向 vs 距离"教学。
+**⚠️ 第二轮修正（spec 假设错误，已修正）**：原 spec 假设 dev 网关 embedding 模型支持 Matryoshka 嵌套维度（4096→256）。**实测 dev 网关 vLLM/litellm 拒绝 `dimensions` 参数**（连原生 4096 也拒，见 `ex_002_probe_dims`）。Panel C 改为同维度 cosine vs euclidean 对比 —— 这反而是更基础的"方向 vs 距离"教学。
 
 ---
 
@@ -36,7 +39,7 @@
 12. ✅ `EmbedDemo.vue` — 4 panel 容器 + 缺 key 红 banner
 13. ✅ `/embed-demo` 路由 — App.vue hash switch（path B，无 vue-router）
 14. ✅ `LeftMenu` 加 Embed 入口 + `HeaderBar` 加 `dev:day12` 标识
-15. ✅ dev OpenAI 兼容网关 + `qwen3-embedding-8b`（4096 维）作为默认
+15. ✅ dev OpenAI 兼容网关 + 4096 维 embedding 作为默认
 16. ✅ `examples/day12/ex_001_embed_only.ts` + `ex_002_probe_dims.ts`（真跑通）
 
 ---
@@ -98,7 +101,7 @@ apps/web/src/components/HeaderBar.vue   MODIFIED — 加 dev:day12 标识
 `euclidean` 看"距离"，对长度敏感 → 更适合图像 / 坐标。
 **Panel C 现在让用户亲眼对比**两个距离公式在同一组向量上的差异 —— 同类词 cosine 小但 euclidean 不一定小。
 
-> ~~Matryoshka 降维~~（取消）：原计划对比 4096 vs 256，**实测 dev 网关不支持**。`qwen3-embedding-8b` 通过 vLLM/litellm 跑时 litellm 主动拒绝 `dimensions` 参数（即使原生的 4096），担心"未训练 Matryoshka 的模型乱输出质量差"。详见 `examples/day12/ex_002_probe_dims.ts` 4 个探针。
+> ~~Matryoshka 降维~~（取消）：原计划对比 4096 vs 256，**实测 dev 网关不支持**。该 embedding 模型通过 vLLM/litellm 跑时 litellm 主动拒绝 `dimensions` 参数（即使原生的 4096），担心"未训练 Matryoshka 的模型乱输出质量差"。详见 `examples/day12/ex_002_probe_dims.ts` 4 个探针。
 >
 > 这给我们的教训：**spec 时只跑一次真 API 就能避免 4096 vs 256 这种"看似合理的架构假设"** —— spec 阶段要至少跑一次"零碎的真网关调用"，再下笔写 Panel C。
 
@@ -108,7 +111,7 @@ apps/web/src/components/HeaderBar.vue   MODIFIED — 加 dev:day12 标识
 
 ### 6. OpenAI 兼容 ≠ OpenAI
 
-环境用的是 dev 网关 `http://10.230.10.242:8000/v1`（Qwen3-Embedding-8B），但 API 协议与 OpenAI 兼容。
+环境用的是 dev 网关（详见文件头免责段），但 API 协议与 OpenAI 兼容。
 libs 层只看 `baseUrl + model + apiKey`，不绑任何 provider 名字 → 一处实现到处跑。
 
 ---
@@ -125,9 +128,9 @@ Hash switch 17 行实现：监听 `hashchange`，根 `<div>` v-if 切换 EmbedDe
 ### 前端 defaults 适配（用户中段变更）
 
 原 api.ts `DEFAULT_BASE_URL = 'https://api.openai.com/v1'`，`DEFAULT_MODEL = 'text-embedding-3-small'`。
-**用户中段要求**：base URL = `http://10.230.10.242:8000`（内网）+ model = `qwen3-embedding-8b`。
-**调整**：api.ts 两个常量改为 dev 网关；`.env.example` 默认值同步；`.env` 增加 `VITE_OPENAI_*` 三行（gitignored）。
-**为什么不放 OpenAI 默认？** dev demo 跑得起来 = 项目可跑；OpenAI 默认 = 用户必须改 env 才能跑通 demo。
+**用户中段要求**：base URL = 内网网关 + model = dev 网关支持的 embedding 模型（历史值见 git blame）。
+**调整**：api.ts 两个常量删除；`.env.example` 默认值同步留空；`.env` 增加 `VITE_OPENAI_*` 三行（gitignored）。
+**为什么不放任何默认值？** 不留默认 = 强制每次部署都显式声明 provider，避免配置漂移。
 
 ### signal 的 exactOptionalPropertyTypes 处理
 
@@ -184,7 +187,7 @@ npx tsx examples/day12/ex_002_probe_dims.ts                                     
 
 ### 已知盲点
 
-4 个 Panel 的视觉输出零自动化断言 —— 热图颜色 / PCA 聚类 / 梯度条形全靠肉眼。需 .env 三项（`VITE_OPENAI_API_KEY` / `VITE_OPENAI_BASE_URL` / `VITE_OPENAI_EMBEDDING_MODEL`）+ dev 网关可达（网关 admin 只放行 `qwen3-embedding-8b`）。Panel C 无法对比 4096 vs 256 维（网关不支持 `dimensions` 参数）。ledger 记录 Task 2 曾出现 vitest 全绿但 `pnpm typecheck` 红（esbuild 不做类型检查），此后每 brief 强制报 typecheck exit code。
+4 个 Panel 的视觉输出零自动化断言 —— 热图颜色 / PCA 聚类 / 梯度条形全靠肉眼。需 .env 三项（`VITE_OPENAI_API_KEY` / `VITE_OPENAI_BASE_URL` / `VITE_OPENAI_EMBEDDING_MODEL`）+ dev 网关可达（网关 admin 只放行一个 embedding 模型，见 .env）。Panel C 无法对比 4096 vs 256 维（网关不支持 `dimensions` 参数）。ledger 记录 Task 2 曾出现 vitest 全绿但 `pnpm typecheck` 红（esbuild 不做类型检查），此后每 brief 强制报 typecheck exit code。
 
 ---
 
@@ -213,8 +216,8 @@ Day 12 的核心交付是 4 个可视化 panel（浏览器里看）。下面是�
 1. **确认 `.env` 三件事都在**（gitignored，本地）：
    ```
    VITE_OPENAI_API_KEY=sk-...
-   VITE_OPENAI_BASE_URL=http://10.230.10.242:8000/v1
-   VITE_OPENAI_EMBEDDING_MODEL=qwen3-embedding-8b
+   VITE_OPENAI_BASE_URL=<your-base-url>/v1
+   VITE_OPENAI_EMBEDDING_MODEL=<your-embedding-model>
    ```
 
 2. **起 dev server**：

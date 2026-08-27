@@ -268,7 +268,7 @@ async function summarize(chat: ChatClient, text: string): Promise<string> {
   return chat.chat([{ role: 'user', content: `总结：${text}` }]);
 }
 
-const openai = new OpenAIChatClient({ apiKey, baseURL: '.../v1', model: 'ai-coding' });
+const openai = new OpenAIChatClient({ apiKey, baseURL: '<your-base-url>/v1', model: '<your-model>' });
 const anthropic = new AnthropicChatClient({ apiKey, baseURL: '...', model: 'claude-...' });
 
 await summarize(openai, '...');     // 走 OpenAI 协议

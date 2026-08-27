@@ -13,10 +13,14 @@
 import 'dotenv/config';
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseURL = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
+const baseURL = process.env.OPENAI_BASE_URL;
 
 if (!apiKey) {
   console.error('OPENAI_API_KEY required');
+  process.exit(1);
+}
+if (!baseURL) {
+  console.error('OPENAI_BASE_URL is required');
   process.exit(1);
 }
 
@@ -51,14 +55,18 @@ async function listModels(): Promise<void> {
 }
 
 // ─── probe 2: 候选模型逐个试调 1 条 embed ───
-const CANDIDATES = [
-  'qwen3-embedding-8b',
-  'text-embedding-3-small',
-  'text-embedding-3-large',
-  'text-embedding-ada-002',
-  'bge-large-zh-v1.5',
-  'bge-large-en-v1.5',
-];
+// 候选列表从 env 读（逗号分隔），不硬编码任何模型名 —— 探针的本意是
+// "穷举 caller 关心的模型看网关支持度"，不该偷偷挑模型。
+const CANDIDATES_RAW = process.env.PROBE_EMBEDDING_CANDIDATES;
+if (!CANDIDATES_RAW) {
+  console.error(
+    'PROBE_EMBEDDING_CANDIDATES is required (comma-separated embedding model ids, e.g. "model-a,model-b")',
+  );
+  process.exit(1);
+}
+const CANDIDATES = CANDIDATES_RAW.split(',')
+  .map((m) => m.trim())
+  .filter((m) => m.length > 0);
 
 async function probeEmbed(model: string, text: string): Promise<void> {
   try {

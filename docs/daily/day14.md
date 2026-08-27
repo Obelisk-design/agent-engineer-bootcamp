@@ -389,7 +389,7 @@ await retrieve(query, {
 - ✅ **真入库 + 真搜索全链路打通**（post-R13/R14/R15/R16/R17 修复后）：
   - `pnpm exec tsx examples/md_import/main.ts` 真跑 14 篇 day notes → `+14 added` → embed 1990 chunks → 写 `chunks_md_heading` (1048 rows) + `chunks_md_paragraph` + `chunks_md_meta`
   - `curl POST /api/search {query: 'day1 学习了 什么', namespace: 'md', topK: 3}` 返回 3 个 hits，最高 score 0.987（day11.md JD-2 命中 + day01.md heading）
-  - retrieveMs 从修前 42s 降到 2252ms（透传 embed env 后真调通 dev 网关 qwen3-embedding-8b）
+  - retrieveMs 从修前 42s 降到 2252ms（透传 embed env 后真调通 dev 网关 embedding 模型）
 - ✅ **spec §5.3 反 YAGNI 红线全部守住**：
   - ❌ 不做 chunk 删除 / 编辑 UI → 没做
   - ❌ 不做多 embedding 模型切换 UI → 没做

@@ -22,10 +22,12 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { StringOutputParser } from '@langchain/core/output_parsers';
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseURL = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-const model = process.env.MODEL_NAME ?? 'ai-coding';
+const baseURL = process.env.OPENAI_BASE_URL;
+const model = process.env.MODEL_NAME;
 
 if (!apiKey) throw new Error('OPENAI_API_KEY required');
+if (!baseURL) throw new Error('OPENAI_BASE_URL is required');
+if (!model) throw new Error('MODEL_NAME is required');
 
 // ─── bootcamp 风格 ───
 // const client = new OpenAIChatClient({ apiKey, baseURL, model });

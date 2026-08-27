@@ -44,12 +44,18 @@ import { Agent } from '../../libs/agent/index.js';
 import { createAgentApp } from '../../apps/api/src/index.js';
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseURL = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-const model = process.env.MODEL_NAME ?? 'ai-coding';
+const baseURL = process.env.OPENAI_BASE_URL;
+const model = process.env.MODEL_NAME;
 const port = Number(process.env.PORT ?? 3000);
 
 if (!apiKey) {
   throw new Error('OPENAI_API_KEY is required');
+}
+if (!baseURL) {
+  throw new Error('OPENAI_BASE_URL is required');
+}
+if (!model) {
+  throw new Error('MODEL_NAME is required');
 }
 
 const chat = new OpenAIChatClient({ apiKey, baseURL, model });

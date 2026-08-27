@@ -2,7 +2,7 @@
  * examples/day12/ex_001_embed_only.ts
  *
  * 手跑 libs/embedding：在 node 环境直接调 embed() + cosineDistance，
- * 不依赖 vite env / 浏览器。验证 dev 网关 + qwen3-embedding-8b 真能跑通，
+ * 不依赖 vite env / 浏览器。验证 dev 网关 + 配置的 embedding 模型真能跑通，
  * 不必启动 dev:web 也能在终端看到向量。
  *
  * 跑法：npx tsx examples/day12/ex_001_embed_only.ts
@@ -23,10 +23,16 @@ const TEXTS = ['cat', 'dog', 'apple', 'orange', 'happy', 'sad'] as const;
 
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-  const model = process.env.EMBEDDING_MODEL_NAME ?? 'qwen3-embedding-8b';
+  const baseUrl = process.env.OPENAI_BASE_URL;
+  const model = process.env.EMBEDDING_MODEL_NAME;
   if (apiKey === undefined || apiKey.length === 0) {
     throw new Error('OPENAI_API_KEY not set (export from .env)');
+  }
+  if (!baseUrl) {
+    throw new Error('OPENAI_BASE_URL is required (set in .env or shell env)');
+  }
+  if (!model) {
+    throw new Error('EMBEDDING_MODEL_NAME is required (set in .env or shell env)');
   }
 
   console.log(`--- 1. embed 6 words (4096 dim) via ${model} @ ${baseUrl} ---`);

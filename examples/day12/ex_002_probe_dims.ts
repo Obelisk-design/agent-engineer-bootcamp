@@ -1,10 +1,12 @@
 import 'dotenv/config';
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseUrl = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-const model = process.env.EMBEDDING_MODEL_NAME ?? 'qwen3-embedding-8b';
+const baseUrl = process.env.OPENAI_BASE_URL;
+const model = process.env.EMBEDDING_MODEL_NAME;
 
 if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+if (!baseUrl) throw new Error('OPENAI_BASE_URL is required');
+if (!model) throw new Error('EMBEDDING_MODEL_NAME is required');
 
 async function tryEmbed(label: string, body: Record<string, unknown>): Promise<void> {
   const res = await fetch(`${baseUrl}/embeddings`, {

@@ -256,10 +256,12 @@ ${transcript}`;
 
 async function main(): Promise<void> {
   const apiKey: string = process.env.OPENAI_API_KEY ?? '';
-  const baseURL: string = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-  const model: string = process.env.MODEL_NAME ?? 'ai-coding';
+  const baseURL: string = process.env.OPENAI_BASE_URL ?? '';
+  const model: string = process.env.MODEL_NAME ?? '';
 
   if (!apiKey) throw new Error('OPENAI_API_KEY is required');
+  if (!baseURL) throw new Error('OPENAI_BASE_URL is required');
+  if (!model) throw new Error('MODEL_NAME is required');
 
   const counter = await buildTokenCounter();
   console.log(`[config] baseURL=${baseURL} model=${model}`);

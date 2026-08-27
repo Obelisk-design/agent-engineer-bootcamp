@@ -24,11 +24,17 @@ import { fileReadTool } from '../../libs/tools/repo/file-read-tool.js';
 import { OpenAIChatClient } from '../../libs/llm/openai-chat-client.js';
 
 const apiKey = process.env.OPENAI_API_KEY;
-const baseURL = process.env.OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1';
-const model = process.env.MODEL_NAME ?? 'ai-coding';
+const baseURL = process.env.OPENAI_BASE_URL;
+const model = process.env.MODEL_NAME;
 
 if (!apiKey) {
   throw new Error('OPENAI_API_KEY is required (set in .env or shell env)');
+}
+if (!baseURL) {
+  throw new Error('OPENAI_BASE_URL is required (set in .env or shell env)');
+}
+if (!model) {
+  throw new Error('MODEL_NAME is required (set in .env or shell env)');
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -40,7 +46,7 @@ async function main(): Promise<void> {
   tools.register(repoSearchTool);
   tools.register(fileReadTool);
 
-  const chat = new OpenAIChatClient({ apiKey: apiKey!, baseURL, model });
+  const chat = new OpenAIChatClient({ apiKey: apiKey!, baseURL: baseURL!, model: model! });
   const agent = new Agent({ chat, tools, model: 'gpt-4o-mini' });
 
   const messages = [

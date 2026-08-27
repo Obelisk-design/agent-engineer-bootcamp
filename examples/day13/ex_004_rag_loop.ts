@@ -19,10 +19,12 @@ async function main(): Promise<void> {
 
   const apiKey = process.env.OPENAI_API_KEY;
   const baseUrl = process.env.OPENAI_BASE_URL;
-  const model = process.env.OPENAI_API_KEY ? (process.env.MODEL_NAME ?? 'ai-coding') : undefined;
+  const model = process.env.MODEL_NAME;
   const embedModel = process.env.EMBEDDING_MODEL_NAME;
   if (!apiKey) throw new Error('OPENAI_API_KEY not set');
-  if (!model) throw new Error('MODEL_NAME not set');
+  if (!baseUrl) throw new Error('OPENAI_BASE_URL is required');
+  if (!model) throw new Error('MODEL_NAME is required');
+  if (!embedModel) throw new Error('EMBEDDING_MODEL_NAME is required');
 
   const t0 = Date.now();
   const store = await openVectorStore('.lancedb/rag', 'chunks_paragraph');

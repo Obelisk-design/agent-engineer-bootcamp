@@ -6,7 +6,7 @@
  * 目的：评估副线 RecursiveCharacterTextSplitter (500/50) vs 主线 heading / paragraph 切分。
  *
  * 为什么是 chunk 策略对比（不是 embedding 模型对比）：
- *   step4_probe_embeddings.ts 探针发现 dev 网关 admin 白名单只允许 qwen3-embedding-8b，
+ *   step4_probe_embeddings.ts 探针发现 dev 网关 admin 白名单只允许一个 embedding 模型（见 .env），
  *   其它 embedding 模型（text-embedding-3-* / bge-large-*）HTTP 403 team not allowed。
  *   所以"真对比 embedding"被外部约束锁死 → 转向"同 embedding 不同 chunk 策略"对比。
  *
@@ -15,7 +15,7 @@
  *   - chunks_paragraph      (1420 rows, paragraph 切分)
  *   - langchain_side_chunks (547 rows,  RecursiveCharacterTextSplitter 500/50)
  *
- * 同 embedding：qwen3-embedding-8b（dev 网关白名单唯一）
+ * 同 embedding：EMBEDDING_MODEL_NAME（dev 网关白名单内唯一允许的模型，由 .env 注入）
  *
  * 评估口径：复用 libs/rag/evaluate.ts 的 judgeHit 逻辑（不引，复刻避免 libs 污染）
  *   hit = top-3 内任一 chunk text 全中 expectedKeywords（默认 all；Q1/Q2/Q3 用 any）
@@ -90,8 +90,10 @@ const COLLECTIONS: ReadonlyArray<{ strategy: ChunkStrategy; tableName: string; l
 async function main(): Promise<void> {
   const apiKey = process.env.OPENAI_API_KEY;
   const baseURL = process.env.OPENAI_BASE_URL;
-  const model = process.env.EMBEDDING_MODEL_NAME ?? 'qwen3-embedding-8b';
+  const model = process.env.EMBEDDING_MODEL_NAME;
   if (!apiKey) throw new Error('OPENAI_API_KEY required');
+  if (!baseURL) throw new Error('OPENAI_BASE_URL is required');
+  if (!model) throw new Error('EMBEDDING_MODEL_NAME is required');
 
   console.log('[step4] baseURL=' + baseURL);
   console.log('[step4] embedding model=' + model);
@@ -176,7 +178,9 @@ async function main(): Promise<void> {
 
   console.log('\n公平性提醒：');
   console.log('  - 3 个 collection chunk 数差异巨大（381 / 1420 / 547），hit 数本身不能直接对比');
-  console.log('  - 所有 chunk 共用同一个 embedding 模型 (qwen3-embedding-8b)，对比的是 chunk 策略');
+  console.log(
+    '  - 所有 chunk 共用同一个 embedding 模型 (EMBEDDING_MODEL_NAME)，对比的是 chunk 策略',
+  );
   console.log('  - 真对比 embedding 模型需等网关 admin 解锁更多白名单');
 
   /**

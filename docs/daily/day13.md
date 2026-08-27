@@ -96,7 +96,7 @@ package.json                            MODIFIED — +@lancedb/lancedb (dependen
 
 跑 ex_001 时 paragraph 1351 个 chunk **整批 400**：`Out of range float values are not JSON compliant: nan`。
 - 现象：litellm 主动拒绝整批（NaN 不可 JSON 序列化）
-- 根因：dev 网关 qwen3-embedding-8b 对**某些输入**（极短 / 特殊字符 / 全反引号代码片段）输出 NaN vector
+- 根因：dev 网关 embedding 模型对**某些输入**（极短 / 特殊字符 / 全反引号代码片段）输出 NaN vector
 - 二分定位：bad index=460 in day04.md，内容是" import \`libs/tools/tool.ts\`（\`ToolParameters\`）..."
 - 修复：`embed()` 重写 —— 整批失败时二分定位坏 chunk → 单条 placeholder 重 embed → 返回 `fallbackFlags` 让调用方 skip
 - **教训**：spec 阶段没探这个坑，落地才补 —— 第 3 次踩"spec 假设 vs 网关实际"（Day 11 zod / Day 12 Matryoshka / Day 13 NaN）。**所有依赖外部 API 的设计都需要"零碎真 API 探针"前置**。

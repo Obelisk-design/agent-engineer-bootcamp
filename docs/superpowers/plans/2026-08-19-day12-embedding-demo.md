@@ -6,7 +6,7 @@
 
 **Architecture:** Three layers — (1) pure-function `libs/embedding/` (distance, pca, visualize, fixture, OpenAI wrapper); (2) `apps/web/src/views/embed/` Vue panels consuming libs; (3) router + LeftMenu + HeaderBar wiring under dev route `/embed-demo`. Frontend talks directly to the dev OpenAI-compatible gateway at `OPENAI_BASE_URL` (default `https://api.openai.com/v1`) using `OPENAI_API_KEY` (demo-only key exposure). `apps/api/` is **not** touched.
 
-**Tech Stack:** TypeScript, Vitest, Vue 3, Tailwind, OpenAI-compatible gateway + `qwen3-embedding-8b` (4096 dim, supports Matryoshka → 256), zod (already in repo).
+**Tech Stack:** TypeScript, Vitest, Vue 3, Tailwind, OpenAI-compatible gateway + 4096-dim embedding (supports Matryoshka → 256), zod (already in repo).
 
 **Spec:** [../specs/2026-08-19-day12-embedding-demo-design.md](../specs/2026-08-19-day12-embedding-demo-design.md)
 
@@ -19,7 +19,7 @@
 - **Daily note must include the route correction** (FileEditTool → Day 13+).
 - **Single source of truth for fixture texts**: `libs/embedding/fixtures/sample-corpus.ts`; both libs and Vue panels import from it.
 - **API key exposure**: `OPENAI_API_KEY` is dev-only (read via `import.meta.env.VITE_OPENAI_API_KEY` mirror — copy from `.env` at dev start, see Task 7 note). Console.warn once on first use.
-- **Endpoint / model**: gateway URL via `OPENAI_BASE_URL` env (libs default `https://api.openai.com/v1/embeddings`); model via `OPENAI_EMBEDDING_MODEL` env (libs default `text-embedding-3-small`). Dev uses `qwen3-embedding-8b` (4096 dim, supports Matryoshka → 256).
+- **Endpoint / model**: gateway URL via `OPENAI_BASE_URL` env (libs default `https://api.openai.com/v1/embeddings`); model via `OPENAI_EMBEDDING_MODEL` env (libs default `text-embedding-3-small`). Dev uses a 4096-dim embedding model that supports Matryoshka → 256.
 - **Fail-loud**: missing key → red banner in demo; PCA n<2 → `RangeError`; empty fixture → `RangeError`.
 - **TDD**: every libs task writes the failing test first, runs red, then impl.
 - **Commit cadence**: one commit per task; no batching across tasks.
@@ -665,7 +665,7 @@ Append after the last existing key:
 VITE_OPENAI_API_KEY=
 # Optional: override OpenAI-compatible endpoint
 VITE_OPENAI_BASE_URL=https://api.openai.com/v1
-# Optional: override embedding model (dev: qwen3-embedding-8b; OpenAI default: text-embedding-3-small)
+# Optional: override embedding model (dev: see your gateway admin whitelist; OpenAI default: text-embedding-3-small)
 VITE_OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 ```
 
