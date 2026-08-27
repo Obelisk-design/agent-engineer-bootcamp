@@ -15,6 +15,9 @@ import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
 
 const API_TARGET = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
+// 🆕 Day 14: RAG app 跑在 3100（day09 agent 占用 3000）
+// 前端 fetch /api/search 实际打到 http://localhost:3100/search（rewrite 去前缀）
+const RAG_API_TARGET = process.env.VITE_RAG_API_TARGET ?? 'http://localhost:3100';
 
 export default defineConfig({
   plugins: [vue(), tailwindcss()],
@@ -37,6 +40,13 @@ export default defineConfig({
       '/traces': {
         target: API_TARGET,
         changeOrigin: true,
+      },
+      // 🆕 Day 14: RAG app 代理 —— 前端 /api/search 打到 3100/search（rewrite 去 /api 前缀）
+      // 与 day09 Agent app 完全独立，端口隔离避免冲突
+      '/api': {
+        target: RAG_API_TARGET,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
