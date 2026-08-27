@@ -12,7 +12,7 @@
  *   OPENAI_API_KEY    Embedding API key
  *   OPENAI_BASE_URL   （可选）自定义 embedding 网关
  *   EMBEDDING_MODEL_NAME  （可选）覆盖模型名
- *   MD_SOURCE_DIR     （可选）默认 ./notes
+ *   MD_SOURCE_DIR     （可选）默认 ./docs/daily
  *
  * Spec: docs/superpowers/specs/2026-08-26-day14-notion-md-rag-ui-design.md
  *
@@ -38,7 +38,7 @@ const TABLE_PREFIX = 'chunks_md';
 const DRY_RUN = process.argv.includes('--dry-run');
 const sourceIdx = process.argv.indexOf('--source');
 const SOURCE_DIR =
-  sourceIdx > 0 ? process.argv[sourceIdx + 1]! : (process.env['MD_SOURCE_DIR'] ?? './notes');
+  sourceIdx > 0 ? process.argv[sourceIdx + 1]! : (process.env['MD_SOURCE_DIR'] ?? './docs/daily');
 
 function requireEnv(name: string): string {
   const v = process.env[name];

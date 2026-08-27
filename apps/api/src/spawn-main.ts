@@ -18,6 +18,14 @@ const HARD_TIMEOUT_MS = 5 * 60 * 1000;
 const STDERR_TAIL_BYTES = 500;
 const REPO_ROOT = process.cwd();
 
+/**
+ * lancedb native binding + arrow schema 在 Windows + Node 22 下需要 ~1.5GB 堆
+ * 才能跑完 14 篇 md 的 meta scan；Node 默认上限在 Windows 下受 native 段限制
+ * 会被 early-OOM kill（`Committing semi space failed` JS stacktrace 全空）。
+ * 子进程独立堆 —— 把 NODE_OPTIONS 显式拉到 4GB。父进程 3100 rag server 不受影响。
+ */
+const CHILD_NODE_OPTIONS = '--max-old-space-size=4096';
+
 export interface SpawnMainOptions {
   readonly namespace: 'notion' | 'md';
   readonly dryRun: boolean;
@@ -46,7 +54,7 @@ export function spawnMain(opts: SpawnMainOptions): Promise<SpawnMainResult> {
     const pnpmBin = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
     const child = spawn(pnpmBin, args, {
       cwd: REPO_ROOT,
-      env: process.env,
+      env: { ...process.env, NODE_OPTIONS: CHILD_NODE_OPTIONS },
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: process.platform === 'win32',
     });
