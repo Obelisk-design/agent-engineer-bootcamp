@@ -1,7 +1,8 @@
 /**
  * scripts/ports.ts
  *
- * 端口申领工具 —— 给 dev:api / dev:web / dev:day08 共享。
+ * 端口申领工具 —— 给 scripts/with-ports.ts / dev:web / dev:rag（通用 dev 入口）
+ * 以及 scripts/dev-day08.ts / dev-day09.ts（day 编排脚本）共享底层 claim。
  *
  * 策略：
  *   - 优先 preferred；被占就杀掉占用进程，再试 +1 / +2；
@@ -11,15 +12,15 @@
  *
  * 职责边界：
  *   - 只负责"找到一个能用的端口、清理孤儿"。
- *   - 杀完端口后，由调用方把端口号通过 env 喂给子进程（api 吃 PORT，vite 吃 --port）。
- *   - 不参与启动 api/web 本身 —— 那是 dev:api / dev:web 的事。
+ *   - 杀完端口后，由调用方把端口号通过 env 喂给子进程（api/rag 吃 PORT，vite 吃 --port）。
+ *   - 不参与启动 api/rag/web 本身 —— 那是 with-ports / dev:web / dev:rag 的事。
  *
  * 使用：
- *   tsx scripts/ports.ts <name> <preferred>            # 单端口（如 dev:api 单跑场景）
- *   tsx scripts/ports.ts <api-name> <api-port> <web-name> <web-port>  # 双端口（dev:day08）
+ *   tsx scripts/ports.ts <name> <preferred>            # 单端口（如 dev:rag 单跑场景）
+ *   tsx scripts/ports.ts <api-name> <api-port> <web-name> <web-port>  # 双端口（scripts/dev-day08.ts / dev-day09.ts）
  *
  *   退出后 stdout 是「<name>=<port>」一行，供 shell 捕获：
- *     PORT=$(tsx scripts/ports.ts api 3000 | tail -n1 | cut -d= -f2)
+ *     PORT=$(tsx scripts/ports.ts rag 3100 | tail -n1 | cut -d= -f2)
  */
 
 import { execSync } from 'node:child_process';
@@ -160,7 +161,7 @@ function main(): void {
     const web = claimPort(webName, Number(webPortRaw));
     console.log(`${api.name}=${String(api.port)}`);
     console.log(`${web.name}=${String(web.port)}`);
-    // 额外：让 Vite proxy 能拿到最终的 api 地址（dev:day08 跑时）
+    // 额外：让 Vite proxy 能拿到最终的 api 地址（scripts/dev-day08.ts / dev-day09.ts 跑时）
     console.log(`api_url=http://127.0.0.1:${String(api.port)}`);
     return;
   }

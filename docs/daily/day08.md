@@ -104,7 +104,7 @@ tests/
 # === Day 08 demos（真实 LLM + Context Window 观测）===
 
 # 推荐：一行起 API + 前端（concurrently 托管，Ctrl+C 同时退出）
-pnpm run dev:day08
+pnpm exec tsx scripts/dev-day08.ts
 
 # 旧方式：两个 terminal（保留；适合单进程调试 + 另端 curl 验证）
 # terminal 1
@@ -404,7 +404,7 @@ function scrollToIteration(n: number): void {
 ### 跑通命令
 
 ```bash
-pnpm run dev:day08                                                                # concurrently 起 API(3000) + Vite(5173)
+pnpm exec tsx scripts/dev-day08.ts                                                        # concurrently 起 API(3000) + Vite(5173)
 # 或：pnpm exec tsx examples/day08/agent_server.ts + cd apps/web && pnpm exec vite --host 127.0.0.1
 # curl / 浏览器访问 GET /traces/:runId → 断 meta.context 有 peakPromptTokens + iterations
 pnpm exec vite build                                                             # PASS（Tailwind 生成 8.89 kB CSS）

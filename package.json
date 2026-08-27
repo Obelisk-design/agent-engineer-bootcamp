@@ -21,14 +21,8 @@
     "test:coverage": "vitest run --coverage",
     "build": "tsc -p tsconfig.build.json && pnpm exec vue-tsc --noEmit -p apps/web/tsconfig.json",
     "dev": "nodemon",
-    "dev:example": "nodemon examples/day01/ex_001_chat_completion.ts",
-    "dev:smoke": "nodemon examples/day01/ex_002_nodemon_smoke.ts",
-    "dev:api": "pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day08/agent_server.ts",
-    "dev:api:day09": "pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day09/agent_server.ts",
     "dev:rag": "pnpm exec tsx scripts/with-ports.ts rag 3100 -- tsx apps/api/src/rag-server-entry.ts",
     "dev:web": "pnpm exec tsx scripts/with-ports.ts web 5173 -- vite --host 127.0.0.1",
-    "dev:day08": "pnpm exec tsx scripts/dev-day08.ts",
-    "dev:day09": "pnpm exec tsx scripts/dev-day09.ts",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"
   },
@@ -65,11 +59,6 @@
     "vitest": "^2.1.8",
     "vue": "^3.5.13",
     "vue-tsc": "^2.2.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

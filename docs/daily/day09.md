@@ -313,7 +313,7 @@ pnpm test --run tests/apps/web/multi-turn.test.ts                               
 # Layer 4（需 OPENAI_API_KEY，10~30s）
 pnpm exec tsx examples/day09/multi_turn_client.ts                               # turn 2 answer 应含"肥老大"
 # Layer 5（需 key + Chrome，10~30s）
-pnpm run dev:day09                                                              # 浏览器 http://127.0.0.1:5173/，两轮对话 + Σin/Σout 验证
+pnpm exec tsx scripts/dev-day09.ts                                                       # 浏览器 http://127.0.0.1:5173/，两轮对话 + Σin/Σout 验证
 ```
 
 ### 已知盲点
@@ -375,7 +375,7 @@ pnpm exec tsx examples/day09/multi_turn_client.ts
 
 ```bash
 # terminal 1: 一行起 API + 前端
-pnpm run dev:day09
+pnpm exec tsx scripts/dev-day09.ts
 
 # terminal 2: 浏览器开 http://127.0.0.1:5173/
 #   1. 输入 "我是肥老大" → 点 Send
@@ -385,9 +385,9 @@ pnpm run dev:day09
 #   5. 验证 turn 2 assistant 回答 "肥老大"
 ```
 
-`dev:day09` = `dev:api:day09`（API 入口是 `examples/day09/agent_server.ts`）+ `dev:web`（Vite 5173 + proxy /agent 到 3000）。
+`scripts/dev-day09.ts` 内部同时拉起 `examples/day09/agent_server.ts`（API 入口，监听 3000）+ dev:web（Vite 5173 + proxy /agent 到 3000），一次性透传端口。
 
-`dev:api:day09` vs `dev:api` 的区别：API example 文件不同（day09 vs day08）。**后端代码完全相同**（Day 09 的 server.ts 改动向后兼容 day08 example），但用 `dev:day09` 保证验证名实一致。
+跟 `scripts/dev-day08.ts` 的区别：API example 文件不同（`examples/day09/agent_server.ts` vs `examples/day08/agent_server.ts`）。**后端代码完全相同**（Day 09 的 server.ts 改动向后兼容 day08 example），但用 `scripts/dev-day09.ts` 保证验证名实一致。
 
 **Layer 5 是 Layer 4 验不到的场景**：Layer 4 验"后端 + LLM 真的记住"，Layer 5 验"前端 UI 真的 scrollback + 渲染多轮"。
 
@@ -603,7 +603,7 @@ apps/web/src/components/HeaderBar.vue  (MODIFIED)
 
 ### 4 步验证(浏览器)
 
-1. `pnpm run dev:day09` → 浏览器开 http://127.0.0.1:5173/
+1. `pnpm exec tsx scripts/dev-day09.ts` → 浏览器开 http://127.0.0.1:5173/
 2. 第一次 send "我是肥老大" → HeaderBar 显示: in/out (本轮) + Σin/Σout (跟本轮相等)
 3. 第二次 send "请告诉我你刚才听到的名字是什么?" → HeaderBar 显示: in/out (新本轮) + **Σin/Σout (两次累加,比本轮大)**
 4. 视觉对比:Σin/Σout 用暗色 (`bg-sky-700` / `bg-violet-700`),跟本轮亮色 (`bg-sky-400` / `bg-violet-400`) 一眼区分

@@ -47,9 +47,9 @@ corepack prepare pnpm@latest --activate
 pnpm install
 pnpm prepare            # 装 husky hooks
 
-# === 日常开发 ===
-pnpm dev:smoke          # 跑 smoke（不调 API，看 nodemon）
-pnpm dev:example        # 跑 chat demo（调 API，~500 tokens/次）
+# === 日常开发（查看 Day01 成果）===
+pnpm exec tsx examples/day01/ex_001_chat_completion.ts   # 跑 chat demo（调 API，~500 tokens/次）
+pnpm exec tsx examples/day01/ex_002_nodemon_smoke.ts     # 跑 smoke（不调 API，看 nodemon）
 
 # === 质量门 ===
 pnpm typecheck          # tsc --noEmit
@@ -180,8 +180,8 @@ const client = new OpenAI({
 
 ```bash
 pnpm build              # tsc -p tsconfig.build.json，输出 dist/
-pnpm dev:example        # 真调通义千问 Qwen，肉眼看回复（约 500 tokens/次）
-pnpm dev:smoke          # nodemon 热重启肉眼验证（改文件 → restart）
+pnpm exec tsx examples/day01/ex_001_chat_completion.ts   # 真调通义千问 Qwen，肉眼看回复（约 500 tokens/次）
+pnpm exec tsx examples/day01/ex_002_nodemon_smoke.ts     # nodemon 热重启肉眼验证（改文件 → restart）
 pnpm test tests/smoke.test.ts                                               # 占位 smoke
 # CI：Node 22 + 24 全绿（.github/workflows/ci.yml）
 ```
@@ -202,8 +202,8 @@ pnpm test tests/smoke.test.ts                                               # �
 - [x] `pnpm format:check` 通过
 - [x] `pnpm test` 通过（smoke test）
 - [x] `pnpm build` 通过（输出 dist/）
-- [x] `pnpm dev:example` 跑通（通义千问 Qwen）
-- [x] `pnpm dev:smoke` 跑通（nodemon 热重启验证）
+- [x] `pnpm exec tsx examples/day01/ex_001_chat_completion.ts` 跑通（通义千问 Qwen）
+- [x] `pnpm exec tsx examples/day01/ex_002_nodemon_smoke.ts` 跑通（nodemon 热重启验证）
 - [x] CI Node 22 + 24 全绿
 - [x] `.env` 在 .gitignore 里（key 安全）
 - [x] Conventional Commits 通过 commitlint
@@ -222,4 +222,4 @@ pnpm test tests/smoke.test.ts                                               # �
 3. 在 `examples/day02/` 加更复杂的 demo（streaming / function calling）
 4. CI 加 typecheck 严格度升级（开 `noUncheckedIndexedAccess` 的子集检查）
 
-**今日产出**：`pnpm dev:example` 一跑就通，libs/llm 是后续所有 Agent / RAG 项目的底座。
+**今日产出**：`pnpm exec tsx examples/day01/ex_001_chat_completion.ts` 一跑就通，libs/llm 是后续所有 Agent / RAG 项目的底座。

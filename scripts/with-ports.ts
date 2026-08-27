@@ -1,16 +1,18 @@
 /**
  * scripts/with-ports.ts
  *
- * 给 dev:web / dev:api 用的端口初始化封装。
+ * 端口初始化封装 —— dev:web / dev:rag（package.json 通用入口）以及
+ * scripts/dev-day08.ts / dev-day09.ts（day 编排脚本）都直接调用它。
  *
  * 跟 pnpm script 配合：
  *   pnpm exec tsx scripts/with-ports.ts web 5173 -- vite --config apps/web/vite.config.ts --host 127.0.0.1
  *   pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day08/agent_server.ts
+ *   pnpm exec tsx scripts/with-ports.ts rag 3100 -- tsx apps/api/src/rag-server-entry.ts
  *
  * 行为：
  *   1. 用 scripts/ports.ts claim 端口；
- *   2. 把端口放到对应 env（web → VITE_PORT, api → PORT）；
- *   3. 如果环境已有 api=<url>（由 dev:day08 注入），转写到 VITE_API_TARGET；
+ *   2. 把端口放到对应 env（web → VITE_PORT, api/rag → PORT）；
+ *   3. 如果环境已有 api=<url>（由 scripts/dev-day08.ts 注入），转写到 VITE_API_TARGET；
  *   4. spawn argv 中 `--` 之后的命令，把 stdout/stderr 透传，子进程用我们 fork 出去而非 exec，
  *      这样 Ctrl-C 还能传到子进程。
  *
@@ -57,7 +59,7 @@ function main(): void {
     throw new Error('usage: tsx scripts/with-ports.ts <name> <port> -- <command> [args...]');
   }
 
-  // dev:day08 上层已 claim 过端口，把结果通过 PORT / VITE_PORT 注入；
+  // scripts/dev-day08.ts / dev-day09.ts 上层已 claim 过端口，把结果通过 PORT / VITE_PORT 注入；
   // 若环境已有对应 env，就直接复用，避免二次 claim 抢到不同端口
   const envKey = name === 'api' || name === 'rag' ? 'PORT' : name === 'web' ? 'VITE_PORT' : null;
   const inherited = envKey !== null ? process.env[envKey] : undefined;
@@ -74,7 +76,7 @@ function main(): void {
   const childEnv: NodeJS.ProcessEnv = { ...process.env };
   if (name === 'web') {
     childEnv['VITE_PORT'] = String(port);
-    // dev:day08 会注入 api_url=http://127.0.0.1:<api-port>
+    // scripts/dev-day08.ts / dev-day09.ts 会注入 api_url=http://127.0.0.1:<api-port>
     if (process.env['api_url'] !== undefined && process.env['api_url'] !== '') {
       childEnv['VITE_API_TARGET'] = process.env['api_url'];
     }
@@ -86,7 +88,7 @@ function main(): void {
 
   console.log(`[with-ports] spawning ${childCmd.join(' ')} with ${name}=${String(port)}`);
   // vite 需要 cwd 在 apps/web（index.html / src 在那里）。
-  // dev:web / dev:day08 都从仓库根启动 → with-ports 强制子进程 cwd 到 apps/web。
+  // dev:web / scripts/dev-day08.ts / dev-day09.ts 都从仓库根启动 → with-ports 强制子进程 cwd 到 apps/web。
   // api 路径 cwd 不敏感（tsx 走 __dirname / import.meta），保持 process.cwd()。
   const childCwd = name === 'web' ? path.resolve(process.cwd(), 'apps', 'web') : process.cwd();
   // vite 必须显式 --port 才会用 claim 到的端口；否则会被 strictPort:false 静默迁走

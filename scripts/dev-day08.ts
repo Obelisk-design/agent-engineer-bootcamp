@@ -1,8 +1,8 @@
 /**
  * scripts/dev-day08.ts
  *
- * dev:day08 的真正入口 —— 一次性 claim api + web 两个端口，
- * 透传 PORT / VITE_PORT / VITE_API_TARGET 后，并发跑 dev:api + dev:web。
+ * 一次性 claim api + web 两个端口，透传 PORT / VITE_PORT / VITE_API_TARGET 后，
+ * 并发跑 examples/day08/agent_server.ts + dev:web。
  *
  * 不走 pnpm script 内嵌 shell 拼接 env（跨平台隐患），
  * 也不引 cross-env-shell（核心链路不变更依赖）。
@@ -11,6 +11,8 @@
  *   - 同步等待 Ctrl-C / concurrently 自然退出，前端和用户感知一致；
  *   - Windows shell:true 下 spawn pnpm 会被 cmd.exe 吃 PATH，
  *     execSync 让 npm 自己直接执行（一致行为）。
+ *
+ * 用法：pnpm exec tsx scripts/dev-day08.ts
  */
 
 import { execSync } from 'node:child_process';
@@ -48,7 +50,7 @@ function main(): void {
   try {
     execSync(
       'pnpm exec concurrently -n api,web -c blue,green --kill-others --success first ' +
-        '"pnpm run dev:api" ' +
+        '"pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day08/agent_server.ts" ' +
         '"pnpm run dev:web"',
       { env: childEnv, stdio: 'inherit' },
     );
