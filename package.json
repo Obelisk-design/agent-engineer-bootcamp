@@ -25,6 +25,7 @@
     "dev:smoke": "nodemon examples/day01/ex_002_nodemon_smoke.ts",
     "dev:api": "pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day08/agent_server.ts",
     "dev:api:day09": "pnpm exec tsx scripts/with-ports.ts api 3000 -- tsx examples/day09/agent_server.ts",
+    "dev:rag": "pnpm exec tsx scripts/with-ports.ts rag 3100 -- tsx apps/api/src/rag-server-entry.ts",
     "dev:web": "pnpm exec tsx scripts/with-ports.ts web 5173 -- vite --host 127.0.0.1",
     "dev:day08": "pnpm exec tsx scripts/dev-day08.ts",
     "dev:day09": "pnpm exec tsx scripts/dev-day09.ts",
