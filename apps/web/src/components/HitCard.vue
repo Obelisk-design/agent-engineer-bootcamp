@@ -5,7 +5,8 @@ import type { Hit } from '../../../../libs/api-schema/src/index.js';
 const props = defineProps<{ hit: Hit; rank: number }>();
 
 const scorePct = computed(() =>
-  Math.max(0, Math.min(100, Math.round((1 - props.hit.score) * 100)))
+  // hit.score = cosine similarity ∈ [0,1]，越大越相似 → 直接当百分比用
+  Math.max(0, Math.min(100, Math.round(props.hit.score * 100)))
 );
 
 const segments = computed(() => {

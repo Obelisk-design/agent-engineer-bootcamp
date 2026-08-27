@@ -18,9 +18,9 @@
  *   content     = record.text
  *   sourceKind  = record.sourceKind
  *   sourceLabel = record.source
- *   chunkKind   = 'heading'（hard-code，YAGNI）
+ *   chunkKind   = 'heading' / 'paragraph'（Day 14 后段：search 并行 heading + paragraph 双 strategy）
  *   meta        = { source, sourceKind }
- *   score       = hit.score（lance cosine distance，UI 端 1-score 展示）
+ *   score       = 1 - hit.score（lance 返回 cosine distance，后端转 cosine similarity ∈ [0,1]）
  *
  * 阶段耗时（per ledger R6.1）：
  *   embedMs     = 0（retrieve 黑盒不暴露内部 embed 耗时；UI 端不展示 embed 柱）
@@ -103,11 +103,12 @@ export async function ragSearchHandler(c: Context): Promise<Response> {
 
   const merged = perNamespaceHits
     .flat()
-    .sort((a, b) => a.hit.score - b.hit.score) // score = cosine distance，越小越相似
+    .sort((a, b) => a.hit.score - b.hit.score) // hit.score = lance cosine distance，越小越相似 → 升序合并
     .slice(0, topK);
   const retrieveMs = Date.now() - retrieveStart;
 
   // Phase: highlight + 字段映射
+  // 后端把 lance cosine distance 转 cosine similarity，UI / caller 拿到 [0,1] 越大越相似
   const hits: Hit[] = merged.map(({ hit, strategy, ns }) => {
     const rec = hit.record;
     return {
@@ -115,7 +116,7 @@ export async function ragSearchHandler(c: Context): Promise<Response> {
       sourceKind: ns,
       sourceLabel: rec.source,
       content: rec.text,
-      score: hit.score,
+      score: 1 - hit.score, // cosine similarity = 1 - cosine distance
       chunkKind: strategy,
       highlight: computeHighlight(query, rec.text),
       meta: { source: rec.source, sourceKind: rec.sourceKind },

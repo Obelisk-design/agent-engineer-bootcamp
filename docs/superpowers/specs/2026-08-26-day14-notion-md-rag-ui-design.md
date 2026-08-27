@@ -116,7 +116,7 @@ Hit = z.object({
   sourceKind: z.enum(['notion', 'md']),
   sourceLabel: z.string(),
   content: z.string(),
-  score: z.number(),                          // 0..1
+  score: z.number(),                          // 0..1 cosine similarity，越大越相似（后端把 lance cosine distance 转成 1-distance）
   chunkKind: z.enum(['heading', 'paragraph']),
   highlight: z.array(z.object({               // 后端算
     start: z.number().int(),

@@ -20,13 +20,19 @@ export const Highlight = z.object({
 });
 export type Highlight = z.infer<typeof Highlight>;
 
-/** 单条命中。 */
+/**
+ * 单条命中。
+ *
+ * score: cosine similarity ∈ [0, 1]，越大越相似。
+ *   后端把 lance 返回的 cosine distance 转成 similarity（1 - distance），
+ *   让 UI / caller 无需关心 lancedb 内部 metric。Day 14 后段约定。
+ */
 export const Hit = z.object({
   chunkId: z.string(),
   sourceKind: z.enum(['notion', 'md']),
   sourceLabel: z.string(),
   content: z.string(),
-  score: z.number(),
+  score: z.number().min(0).max(1),
   chunkKind: z.enum(['heading', 'paragraph']),
   highlight: z.array(Highlight),
   meta: z.record(z.string(), z.unknown()).optional(),
