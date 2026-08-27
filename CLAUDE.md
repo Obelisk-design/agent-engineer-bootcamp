@@ -149,6 +149,7 @@ Small > Huge
 - [0001](docs/adr/0001-tool-capability-must-not-embed-in-system-prompt.md) — Tool capability declaration MUST NOT be embedded into system prompt
 - [0002](docs/adr/0002-run-events-accepts-messages-caller-injects-system-prompt.md) — Agent.runEvents 接受完整 messages；systemPrompt 由 caller 注入
 - [0003](docs/adr/0003-tool-params-single-source-of-truth-zod.md) — Tool 参数契约以 zod schema 为单一事实源（推翻 Day 04「execute 自检」）
+- [0004](docs/adr/0004-rag-table-naming-follows-implementation.md) — RAG table 命名必须以实现为准（spec 与 indexer 对称，`${prefix}_heading` / `${prefix}_paragraph` 双表）
 
 ## Teaching Preference
 
