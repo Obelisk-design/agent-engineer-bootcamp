@@ -13,6 +13,7 @@
     "examples/**/*",
     "scripts/**/*",
     "node_modules",
-    "dist"
+    "dist",
+    "apps/web/**/*"
   ]
 }

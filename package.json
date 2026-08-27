@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && pnpm exec vue-tsc --noEmit -p apps/web/tsconfig.json",
     "dev": "nodemon",
     "dev:example": "nodemon examples/day01/ex_001_chat_completion.ts",
     "dev:smoke": "nodemon examples/day01/ex_002_nodemon_smoke.ts",
