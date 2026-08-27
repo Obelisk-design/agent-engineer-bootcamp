@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 import PhaseStream from '../components/PhaseStream.vue';
 import type {
   DoneEvent,
@@ -68,18 +68,6 @@ onBeforeUnmount(() => {
 });
 
 const currentHealth = (): NamespaceHealth | undefined => health.value?.[namespace.value];
-// PhaseStream 的 done/error prop 是手写 inline 类型（exactOptionalPropertyTypes 下
-// 不接受 zod 推断的 optional 字段）。这里派生窄化形态以满足 strict 校验，
-// 同时保留 ErrorEvent 的语义字段（exitCode/stderrTail）。
-const streamError = computed(() =>
-  error.value === null
-    ? null
-    : {
-        message: error.value.message,
-        ...(error.value.exitCode !== undefined ? { exitCode: error.value.exitCode } : {}),
-        ...(error.value.stderrTail !== undefined ? { stderrTail: error.value.stderrTail } : {}),
-      },
-);
 </script>
 
 <template>
@@ -117,6 +105,6 @@ const streamError = computed(() =>
         中断
       </button>
     </div>
-    <PhaseStream :phases="phases" :done="done" :error="streamError" />
+    <PhaseStream :phases="phases" :done="done" :error="error" />
   </div>
 </template>

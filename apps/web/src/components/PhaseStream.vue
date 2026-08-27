@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { PhaseEvent } from '../../../../libs/api-schema/src/index.js';
+import type {
+  DoneEvent,
+  ErrorEvent,
+  PhaseEvent,
+} from '../../../../libs/api-schema/src/index.js';
 
 const props = defineProps<{
   phases: readonly PhaseEvent[];
-  done: { added: number; modified: number; removed: number; totalMs: number } | null;
-  error: { message: string; exitCode?: number; stderrTail?: string } | null;
+  done: DoneEvent | null;
+  error: ErrorEvent | null;
 }>();
 
 const PHASE_LABELS: Record<string, string> = {
