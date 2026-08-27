@@ -407,14 +407,13 @@ function scrollToIteration(n: number): void {
 pnpm run dev:day08                                                                # concurrently 起 API(3000) + Vite(5173)
 # 或：pnpm exec tsx examples/day08/agent_server.ts + cd apps/web && pnpm exec vite --host 127.0.0.1
 # curl / 浏览器访问 GET /traces/:runId → 断 meta.context 有 peakPromptTokens + iterations
-pnpm test tests/apps/web/observability.test.ts                                   # HeaderPill / MetricsSidebar 组件断言
 pnpm exec vite build                                                             # PASS（Tailwind 生成 8.89 kB CSS）
 # pnpm lint 当日已知：dist/ 报错 pre-existing，无 .eslintignore（daily note 标记）
 ```
 
 ### 已知盲点
 
-`pnpm lint` 当日**没干净**（`apps/web/dist/` 被 eslint 扫到，daily note 里明写 pre-existing）。真跑 context 需 `ANTHROPIC_API_KEY` + 手改 example 里 model 为 `claude-opus-5`。前端三栏布局 / 进度条变色 / scroll-to-iteration 全是肉眼验（scroll-to-iteration 一度 wired but non-functional，当日修复仍无自动化断言）。
+`pnpm lint` 当日**没干净**（`apps/web/dist/` 被 eslint 扫到，daily note 里明写 pre-existing）。真跑 context 需 `ANTHROPIC_API_KEY` + 手改 example 里 model 为 `claude-opus-5`。前端三栏布局 / 进度条变色 / scroll-to-iteration 全是肉眼验（scroll-to-iteration 一度 wired but non-functional，当日修复仍无自动化断言）。`tests/apps/web/observability.test.ts` 文件已被改名 / 删除（组件断言 Day 10+ 拆到 libs/llm/observability 单测）。
 
 ---
 

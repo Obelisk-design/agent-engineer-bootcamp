@@ -438,6 +438,8 @@ pnpm exec tsx examples/day02/ex_002_anthropic_chat_client.ts                    
 
 libs/llm 本身**零单测** —— `ChatClient` / `OpenAIChatClient` / `AnthropicChatClient` 的正确性全靠 typecheck + 手跑 demo。测试计数仍是 Day 01 的 3。需 `OPENAI_API_KEY` + `ANTHROPIC_AUTH_TOKEN`/`ANTHROPIC_BASE_URL`。
 
+vitest tinypool worker crash on Windows 偶发（已知平台 flakiness，非测试逻辑失败，重跑通过；Day 15+ 改 `--pool=forks`）。
+
 ---
 
 ## 📋 验收清单
