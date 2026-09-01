@@ -32,6 +32,8 @@ export interface SpawnMainOptions {
   readonly onPhase: (event: PhaseEvent) => void;
   readonly onStderr: (chunk: string) => void;
   readonly signal: AbortSignal;
+  /** 测试接缝：覆盖脚本路径（默认按 namespace 映射到 examples/<ns>_import/main.ts）。 */
+  readonly scriptPath?: string;
 }
 
 export interface SpawnMainResult {
@@ -44,7 +46,10 @@ export interface SpawnMainResult {
 export function spawnMain(opts: SpawnMainOptions): Promise<SpawnMainResult> {
   return new Promise((resolve) => {
     const scriptPath =
-      opts.namespace === 'notion' ? 'examples/notion_import/main.ts' : 'examples/md_import/main.ts';
+      opts.scriptPath ??
+      (opts.namespace === 'notion'
+        ? 'examples/notion_import/main.ts'
+        : 'examples/md_import/main.ts');
 
     const args = ['tsx', scriptPath];
     if (opts.dryRun) args.push('--dry-run');

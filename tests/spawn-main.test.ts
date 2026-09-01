@@ -1,29 +1,39 @@
 import { describe, it, expect } from 'vitest';
 import { spawnMain } from '../apps/api/src/spawn-main.js';
 
-// spawn-main 真起 tsx 子进程，Windows 上 pnpm.cmd 启动 + tsx cold start 远 > 5s 默认 vitest timeout。
-// describe 级默认 60s 覆盖 abort case；spawn-and-collect 单独给 180s 给 tsx/Notion SDK cold start。
+// spawnMain 的测试对象是 spawn→parse→exit 契约，不是真实 Notion/MD 导入：
+// 真实 CLI 的 dry-run 仍打 api.notion.com（网络天气驱动：断网快失败"假通过"，
+// 通网真实递归导入 >180s 超时），所以指向本地 fixture（打印 4 个 phase marker
+// 后 exit 0，无网络、无 lancedb）。真实 CLI 集成验证见 docs/daily/day14.md。
+const FIXTURE = 'tests/fixtures/fake-import.ts';
+
+// spawn 真起 tsx 子进程，Windows 上 pnpm.cmd 启动 + tsx cold start 远 > 5s 默认 vitest timeout。
 describe('spawnMain', { timeout: 60_000 }, () => {
-  it('spawns notion_import and parses 4 phase events', { timeout: 180_000 }, async () => {
+  it('spawns fixture and parses 4 phase events', { timeout: 120_000 }, async () => {
     const phases: string[] = [];
     const result = await spawnMain({
       namespace: 'notion',
       dryRun: true,
+      scriptPath: FIXTURE,
       onPhase: (e) => phases.push(e.name),
       onStderr: () => {},
       signal: new AbortController().signal,
     });
-    // not exit 0 in test env without real NOTION_TOKEN; just verify it ran
-    expect(phases.length).toBeGreaterThanOrEqual(0);
-    expect(typeof result.exitCode).toBe('number');
+    // 断言收紧：fixture 确定性输出 4 个 marker，name 序列必须精确匹配。
+    expect(result.exitCode).toBe(0);
+    expect(result.aborted).toBe(false);
+    expect(result.timedOut).toBe(false);
+    expect(phases).toEqual(['fetch', 'diff', 'embed', 'write']);
   });
 
   it('aborts child on signal', async () => {
     const ac = new AbortController();
+    // 50ms abort 落在 tsx cold start 期间（child 尚未 exit），保证 kill 路径被执行。
     setTimeout(() => ac.abort(), 50);
     const result = await spawnMain({
       namespace: 'notion',
       dryRun: true,
+      scriptPath: FIXTURE,
       onPhase: () => {},
       onStderr: () => {},
       signal: ac.signal,
