@@ -25,9 +25,7 @@ import type { SearchHit } from './store.js';
 const MAX_PROMPT_CHARS = 8_000;
 
 export function buildRagPrompt(query: string, hits: readonly SearchHit[]): string {
-  const ctx = hits
-    .map((h) => `[source: ${h.record.source}]\n${h.record.text}`)
-    .join('\n\n');
+  const ctx = hits.map((h) => `[source: ${h.record.source}]\n${h.record.text}`).join('\n\n');
 
   let prompt = `Context:\n${ctx}\n\nQuestion: ${query}\n\nAnswer in 2-3 sentences using only the context above. Cite source filenames.`;
 

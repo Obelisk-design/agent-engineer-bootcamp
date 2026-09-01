@@ -78,10 +78,9 @@ function iconColor(): string {
 
 function metaEntries(): Array<readonly [string, string]> {
   if (props.meta === undefined || props.meta === null) return [];
-  return Object.entries(props.meta).map(([k, v]) => [
-    k,
-    typeof v === 'string' ? v : JSON.stringify(v),
-  ] as const);
+  return Object.entries(props.meta).map(
+    ([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)] as const,
+  );
 }
 
 function padSeq(): string {
@@ -105,7 +104,15 @@ import { defineComponent } from 'vue';
       <div class="flex-1 w-px bg-zinc-800" />
       <!-- icon 圆 -->
       <div
-        :class="['w-6 h-6 rounded-full bg-zinc-900 border flex items-center justify-center my-1', iconColor(), props.status === 'active' ? 'border-sky-500 ring-4 ring-sky-500/15' : props.status === 'error' ? 'border-red-500' : 'border-zinc-700']"
+        :class="[
+          'w-6 h-6 rounded-full bg-zinc-900 border flex items-center justify-center my-1',
+          iconColor(),
+          props.status === 'active'
+            ? 'border-sky-500 ring-4 ring-sky-500/15'
+            : props.status === 'error'
+              ? 'border-red-500'
+              : 'border-zinc-700',
+        ]"
       >
         <component :is="iconComp()" :size="12" />
       </div>
@@ -114,14 +121,25 @@ import { defineComponent } from 'vue';
     </div>
 
     <!-- 右 main -->
-    <div class="flex-1 min-w-0 rounded-lg bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors border border-zinc-800/60">
+    <div
+      class="flex-1 min-w-0 rounded-lg bg-zinc-900/40 hover:bg-zinc-900/70 transition-colors border border-zinc-800/60"
+    >
       <button
         type="button"
         class="w-full flex items-center gap-2 px-3 py-2.5 text-left"
         @click="expanded = !expanded"
       >
         <span class="font-mono text-zinc-600 text-[10.5px] shrink-0">{{ padSeq() }}</span>
-        <span :class="['font-semibold text-[12.5px]', props.status === 'error' ? 'text-red-300' : props.status === 'active' ? 'text-sky-300' : 'text-zinc-100']">
+        <span
+          :class="[
+            'font-semibold text-[12.5px]',
+            props.status === 'error'
+              ? 'text-red-300'
+              : props.status === 'active'
+                ? 'text-sky-300'
+                : 'text-zinc-100',
+          ]"
+        >
           {{ title }}
         </span>
         <span class="flex-1" />
@@ -137,11 +155,7 @@ import { defineComponent } from 'vue';
         v-if="metaEntries().length > 0"
         class="px-3 pb-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]"
       >
-        <div
-          v-for="[k, v] in metaEntries()"
-          :key="k"
-          class="flex gap-2 truncate"
-        >
+        <div v-for="[k, v] in metaEntries()" :key="k" class="flex gap-2 truncate">
           <span class="text-zinc-500 uppercase tracking-wider shrink-0">{{ k }}</span>
           <span class="text-zinc-300 font-mono truncate">{{ v }}</span>
         </div>

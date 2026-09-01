@@ -40,7 +40,7 @@ import {
 // Day 12 hash route — `#/embed-demo` swaps Agent Console for EmbedDemo fullscreen.
 // No vue-router: kept minimal (one route, dev-only). See CLAUDE.md Day 12 daily note.
 const route = ref<string>(
-  typeof window === 'undefined' ? '/' : (window.location.hash.slice(1) || '/'),
+  typeof window === 'undefined' ? '/' : window.location.hash.slice(1) || '/',
 );
 function syncRoute(): void {
   route.value = window.location.hash.slice(1) || '/';
@@ -278,7 +278,10 @@ function dispatch(ev: AgentEvent): void {
           conversation.value = updated;
         }
       }
-      conversation.value = [...conversation.value, { role: 'error', text: friendly, streaming: false }];
+      conversation.value = [
+        ...conversation.value,
+        { role: 'error', text: friendly, streaming: false },
+      ];
       appendTimeline({
         title: 'Error',
         detail: friendly,
@@ -297,17 +300,15 @@ function dispatch(ev: AgentEvent): void {
 async function send(input: string): Promise<void> {
   if (input.trim() === '' || isStreaming.value) return;
   resetRunState();
-  conversation.value = [
-    ...conversation.value,
-    { role: 'user', text: input, streaming: false },
-  ];
+  conversation.value = [...conversation.value, { role: 'user', text: input, streaming: false }];
   scrollConversationToBottom();
 
   // 🆕 Day 09: 多轮对话 —— 把 conversation 累积的 user/assistant 翻译成 server 的 Message[]
   // system/tool 消息前端不持有（前端 ConversationItem 只 4 种 role）
   const historyMessages: Message[] = conversation.value
-    .filter((c): c is { role: 'user' | 'assistant'; text: string; streaming: boolean } =>
-      c.role === 'user' || c.role === 'assistant',
+    .filter(
+      (c): c is { role: 'user' | 'assistant'; text: string; streaming: boolean } =>
+        c.role === 'user' || c.role === 'assistant',
     )
     .filter((c) => c.text.length > 0) // 跳过 streaming 中的空 assistant
     .map((c) => ({ role: c.role, content: c.text }));
@@ -325,10 +326,7 @@ async function send(input: string): Promise<void> {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    conversation.value = [
-      ...conversation.value,
-      { role: 'error', text: msg, streaming: false },
-    ];
+    conversation.value = [...conversation.value, { role: 'error', text: msg, streaming: false }];
     appendTimeline({
       title: 'Request Failed',
       detail: msg,
@@ -350,9 +348,7 @@ function stop(): void {
 function scrollToIteration(n: number): void {
   // timeline 在 RightPanel 内 —— 通过 querySelector 滚动
   queueMicrotask(() => {
-    const el = document.querySelector(
-      `[data-timeline-iter="${String(n)}"]`,
-    ) as HTMLElement | null;
+    const el = document.querySelector(`[data-timeline-iter="${String(n)}"]`) as HTMLElement | null;
     if (el !== null) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 }
@@ -381,11 +377,7 @@ function toggleRightPanel(): void {
 
     <div class="flex flex-1 min-h-0">
       <LeftMenu @toggle-right-panel="toggleRightPanel" />
-      <ConversationPanel
-        ref="conversationPanel"
-        :items="conversation"
-        class="flex-1 min-w-0"
-      />
+      <ConversationPanel ref="conversationPanel" :items="conversation" class="flex-1 min-w-0" />
       <RightPanel
         v-if="rightPanelOpen"
         :contexts="runContexts"

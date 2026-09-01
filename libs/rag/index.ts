@@ -20,7 +20,13 @@ export {
   type SearchHit,
 } from './store.js';
 
-export { retrieve, retrieveRepeated, type RetrieveOptions, type RetrieveResult, type ChunkStrategy } from './retrieve.js';
+export {
+  retrieve,
+  retrieveRepeated,
+  type RetrieveOptions,
+  type RetrieveResult,
+  type ChunkStrategy,
+} from './retrieve.js';
 
 export { buildRagPrompt } from './prompt.js';
 
@@ -34,7 +40,13 @@ export {
   type EvaluateReport,
 } from './evaluate.js';
 
-export { loadDocsCorpus, loadTestCorpus, loadAllCorpus, REPO_ROOT, type DocEntry } from './fixtures/docs-corpus.js';
+export {
+  loadDocsCorpus,
+  loadTestCorpus,
+  loadAllCorpus,
+  REPO_ROOT,
+  type DocEntry,
+} from './fixtures/docs-corpus.js';
 
 export {
   incrementalIndex,

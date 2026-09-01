@@ -49,19 +49,20 @@ const AURA: Record<Props['role'], string> = {
 
 <template>
   <article
-    :class="[
-      'group flex gap-3 px-6 py-5',
-      props.role === 'user' ? 'flex-row-reverse' : '',
-    ]"
+    :class="['group flex gap-3 px-6 py-5', props.role === 'user' ? 'flex-row-reverse' : '']"
     data-testid="message-bubble"
   >
     <!-- Avatar -->
     <div
       :class="[
         'w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-zinc-950 font-bold',
-        props.role === 'user' ? 'bg-sky-500' :
-        props.role === 'thinking' ? 'bg-amber-500' :
-        props.role === 'error' ? 'bg-red-500' : 'bg-emerald-500'
+        props.role === 'user'
+          ? 'bg-sky-500'
+          : props.role === 'thinking'
+            ? 'bg-amber-500'
+            : props.role === 'error'
+              ? 'bg-red-500'
+              : 'bg-emerald-500',
       ]"
     >
       <IconUser v-if="props.role === 'user'" :size="15" />
@@ -74,7 +75,10 @@ const AURA: Record<Props['role'], string> = {
       <!-- Header: role pill + meta -->
       <header class="flex items-center gap-2 mb-1.5">
         <span
-          :class="['px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider text-zinc-950', ROLE_DOT_CLS[props.role]]"
+          :class="[
+            'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider text-zinc-950',
+            ROLE_DOT_CLS[props.role],
+          ]"
         >
           {{ ROLE_LABEL[props.role] }}
         </span>

@@ -50,12 +50,7 @@ async function onSubmit(query: string) {
       {{ result.hits.length }} hits · {{ elapsed }}ms total
     </div>
     <div v-if="result" class="space-y-3">
-      <HitCard
-        v-for="(hit, i) in result.hits"
-        :key="hit.chunkId"
-        :hit="hit"
-        :rank="i + 1"
-      />
+      <HitCard v-for="(hit, i) in result.hits" :key="hit.chunkId" :hit="hit" :rank="i + 1" />
     </div>
   </div>
 </template>

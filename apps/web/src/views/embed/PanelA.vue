@@ -78,7 +78,11 @@ async function run(): Promise<void> {
 <template>
   <section class="embed-panel">
     <h2>Panel A · 距离矩阵热图（10 个混合词，cosine，4096 维）</h2>
-    <button class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50" :disabled="busy" @click="run">
+    <button
+      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
+      :disabled="busy"
+      @click="run"
+    >
       {{ busy ? 'Running…' : 'Run' }}
     </button>
 

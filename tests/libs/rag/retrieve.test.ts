@@ -35,7 +35,12 @@ describe('retrieve (mock embed)', () => {
       chunkStrategy: 'heading',
       store: s,
       apiKey: 'fake',
-      embedFn: async () => ({ vectors: [[1, 0, 0]], model: 'm', dimensions: 3, fallbackFlags: [false] }),
+      embedFn: async () => ({
+        vectors: [[1, 0, 0]],
+        model: 'm',
+        dimensions: 3,
+        fallbackFlags: [false],
+      }),
     });
     expect(res.hits).toHaveLength(1);
     expect(res.hits[0]!.record.id).toBe('x');
@@ -52,7 +57,10 @@ describe('retrieve (mock embed)', () => {
         store: s,
         apiKey: 'fake',
         embedFn: async () => ({
-          vectors: [[1, 0], [0, 1]],
+          vectors: [
+            [1, 0],
+            [0, 1],
+          ],
           model: 'm',
           dimensions: 2,
           fallbackFlags: [false, false],

@@ -18,7 +18,8 @@ import { getOpenAIConfig } from './api.js';
     </header>
 
     <div v-if="getOpenAIConfig().apiKey === null" class="embed-error">
-      请设置 <code>VITE_OPENAI_API_KEY</code> in <code>.env</code> 后重启 <code>pnpm dev:web</code>。
+      请设置 <code>VITE_OPENAI_API_KEY</code> in <code>.env</code> 后重启
+      <code>pnpm dev:web</code>。
     </div>
 
     <PanelA />

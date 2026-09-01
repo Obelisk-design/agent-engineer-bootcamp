@@ -6,7 +6,7 @@ const props = defineProps<{ hit: Hit; rank: number }>();
 
 const scorePct = computed(() =>
   // hit.score = cosine similarity ∈ [0,1]，越大越相似 → 直接当百分比用
-  Math.max(0, Math.min(100, Math.round(props.hit.score * 100)))
+  Math.max(0, Math.min(100, Math.round(props.hit.score * 100))),
 );
 
 const segments = computed(() => {
@@ -42,10 +42,7 @@ const segments = computed(() => {
       </div>
       <div class="flex items-center gap-2">
         <div class="h-2 w-32 rounded bg-gray-100">
-          <div
-            class="h-2 rounded bg-blue-500"
-            :style="{ width: `${scorePct}%` }"
-          ></div>
+          <div class="h-2 rounded bg-blue-500" :style="{ width: `${scorePct}%` }"></div>
         </div>
         <span class="text-xs text-gray-600">{{ hit.score.toFixed(3) }}</span>
       </div>

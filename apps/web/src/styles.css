@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 /* apps/web/src/styles.css
  *
  * Agent Console 全局 reset + 设计 token。
@@ -62,14 +62,14 @@ body,
 code,
 pre,
 .mono {
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   font-variant-ligatures: none;
 }
 
 /* 流式光标：MessageBubble assistant streaming */
 @keyframes pulse-cursor {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -101,4 +101,4 @@ pre,
 }
 
 /* Day 12: Embedding demo 专用样式（矩阵 / 散点 / loading / error） */
-@import "./views/embed/styles.css";
+@import './views/embed/styles.css';

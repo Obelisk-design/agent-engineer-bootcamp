@@ -21,9 +21,7 @@
  *
  * Skips blocks that are not child_page, or that lack a string id.
  */
-export function extractChildPageIds(
-  blocks: readonly Record<string, unknown>[],
-): readonly string[] {
+export function extractChildPageIds(blocks: readonly Record<string, unknown>[]): readonly string[] {
   const out: string[] = [];
   for (const b of blocks) {
     if (b['type'] !== 'child_page') continue;

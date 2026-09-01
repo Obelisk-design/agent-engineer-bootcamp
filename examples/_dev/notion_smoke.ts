@@ -27,9 +27,16 @@ async function main(): Promise<void> {
   const report = await incrementalIndexFromSources([source], {
     apiKey: process.env.OPENAI_API_KEY ?? '',
     ...(process.env.OPENAI_BASE_URL !== undefined ? { baseUrl: process.env.OPENAI_BASE_URL } : {}),
-    ...(process.env.EMBEDDING_MODEL_NAME !== undefined ? { model: process.env.EMBEDDING_MODEL_NAME } : {}),
+    ...(process.env.EMBEDDING_MODEL_NAME !== undefined
+      ? { model: process.env.EMBEDDING_MODEL_NAME }
+      : {}),
     tablePrefix: 'chunks_smoke',
   });
-  console.log(`smoke: added=${report.added.length}, heading=${report.headingChunksAdded}, paragraph=${report.paragraphChunksAdded}`);
+  console.log(
+    `smoke: added=${report.added.length}, heading=${report.headingChunksAdded}, paragraph=${report.paragraphChunksAdded}`,
+  );
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

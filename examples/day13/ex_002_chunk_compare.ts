@@ -72,7 +72,12 @@ async function main(): Promise<void> {
       ...(baseUrl ? { baseUrl } : {}),
     });
     const hHit = judgeHit(q, hRes.hits, 3);
-    console.log(`  heading  hit=${hHit} elapsedMs=${hRes.elapsedMs} topSources=${hRes.hits.slice(0, 3).map((h) => h.record.source).join(', ')}`);
+    console.log(
+      `  heading  hit=${hHit} elapsedMs=${hRes.elapsedMs} topSources=${hRes.hits
+        .slice(0, 3)
+        .map((h) => h.record.source)
+        .join(', ')}`,
+    );
     rows.push({
       queryId: q.id,
       chunkStrategy: 'heading',
@@ -90,7 +95,12 @@ async function main(): Promise<void> {
       ...(baseUrl ? { baseUrl } : {}),
     });
     const pHit = judgeHit(q, pRes.hits, 3);
-    console.log(`  paragraph hit=${pHit} elapsedMs=${pRes.elapsedMs} topSources=${pRes.hits.slice(0, 3).map((h) => h.record.source).join(', ')}\n`);
+    console.log(
+      `  paragraph hit=${pHit} elapsedMs=${pRes.elapsedMs} topSources=${pRes.hits
+        .slice(0, 3)
+        .map((h) => h.record.source)
+        .join(', ')}\n`,
+    );
     rows.push({
       queryId: q.id,
       chunkStrategy: 'paragraph',

@@ -106,7 +106,10 @@ class LanceStore implements VectorStore {
       return [];
     }
     const t = await this.tbl();
-    const raw = await t.vectorSearch([...query]).limit(k).toArray();
+    const raw = await t
+      .vectorSearch([...query])
+      .limit(k)
+      .toArray();
     return raw.map((row) => ({
       record: {
         id: String(row.id),

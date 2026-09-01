@@ -24,7 +24,6 @@ function scrollInto(iter: number): void {
 
 // 仅 export scrollToIteration；TimelineItem 仍自己管滚动
 defineExpose({ scrollToIteration: scrollInto });
-
 </script>
 
 <template>

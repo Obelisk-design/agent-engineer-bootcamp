@@ -10,11 +10,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import {
-  IconBolt,
-  IconActivity,
-  IconCircleDot,
-} from './icons.js';
+import { IconBolt, IconActivity, IconCircleDot } from './icons.js';
 
 interface RunSummary {
   readonly totalPromptTokens: number;
@@ -45,10 +41,26 @@ const props = defineProps<Props>();
 
 const STATUS: Record<Props['status'], { label: string; cls: string; dotCls: string }> = {
   idle: { label: 'Idle', cls: 'bg-zinc-800 text-zinc-400', dotCls: 'bg-zinc-500' },
-  running: { label: 'Running', cls: 'bg-sky-950 text-sky-300 ring-1 ring-sky-700/40', dotCls: 'bg-sky-400 animate-pulse' },
-  completed: { label: 'Completed', cls: 'bg-emerald-950 text-emerald-300 ring-1 ring-emerald-700/40', dotCls: 'bg-emerald-400' },
-  error: { label: 'Error', cls: 'bg-red-950 text-red-300 ring-1 ring-red-700/40', dotCls: 'bg-red-400' },
-  cancelled: { label: 'Cancelled', cls: 'bg-amber-950 text-amber-300 ring-1 ring-amber-700/40', dotCls: 'bg-amber-400' },
+  running: {
+    label: 'Running',
+    cls: 'bg-sky-950 text-sky-300 ring-1 ring-sky-700/40',
+    dotCls: 'bg-sky-400 animate-pulse',
+  },
+  completed: {
+    label: 'Completed',
+    cls: 'bg-emerald-950 text-emerald-300 ring-1 ring-emerald-700/40',
+    dotCls: 'bg-emerald-400',
+  },
+  error: {
+    label: 'Error',
+    cls: 'bg-red-950 text-red-300 ring-1 ring-red-700/40',
+    dotCls: 'bg-red-400',
+  },
+  cancelled: {
+    label: 'Cancelled',
+    cls: 'bg-amber-950 text-amber-300 ring-1 ring-amber-700/40',
+    dotCls: 'bg-amber-400',
+  },
 };
 
 function formatTokens(n: number | null | undefined): string {
@@ -78,7 +90,9 @@ const barColor = computed(() => {
   >
     <!-- Brand / Logo -->
     <div class="flex items-center gap-2 font-semibold shrink-0">
-      <span class="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center text-zinc-950 font-bold text-[12px]">
+      <span
+        class="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center text-zinc-950 font-bold text-[12px]"
+      >
         AI
       </span>
       <span>Agent Console</span>
@@ -88,7 +102,8 @@ const barColor = computed(() => {
         class="text-zinc-500 hover:text-emerald-300 text-[11px] font-mono"
         title="Embedding Demo (Day 12 dev)"
         data-testid="header-bar-dev-embed"
-      >dev:day12</a>
+        >dev:day12</a
+      >
     </div>
 
     <span class="w-px h-5 bg-zinc-800" />
@@ -173,7 +188,10 @@ const barColor = computed(() => {
 
     <!-- Status pill -->
     <span
-      :class="['px-2 h-7 rounded inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase', STATUS[status].cls]"
+      :class="[
+        'px-2 h-7 rounded inline-flex items-center gap-1.5 text-[11px] font-medium tracking-wide uppercase',
+        STATUS[status].cls,
+      ]"
       data-testid="header-bar-status"
     >
       <IconCircleDot :size="10" :class="STATUS[status].dotCls" />

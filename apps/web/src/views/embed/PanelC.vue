@@ -19,10 +19,7 @@ const eucMat = ref<number[][] | null>(null);
 const busy = ref(false);
 const err = ref<string | null>(null);
 
-function buildMatrix(
-  vectors: number[][],
-  fn: (a: number[], b: number[]) => number,
-): number[][] {
+function buildMatrix(vectors: number[][], fn: (a: number[], b: number[]) => number): number[][] {
   const m: number[][] = [];
   for (let i = 0; i < N; i++) {
     const row: number[] = [];
@@ -82,10 +79,15 @@ async function run(): Promise<void> {
   <section class="embed-panel">
     <h2>Panel C · 同维度 cosine vs euclidean（4096 维）</h2>
     <p class="text-xs text-zinc-400 mb-2">
-      原计划 4096 vs 256 Matryoshka，实测 dev 网关不支持 <code>dimensions</code> 参数（见 <code>ex_002_probe_dims</code>）。
-      改为同向量两种距离公式对比：cosine 看"方向"，euclidean 看"距离"。
+      原计划 4096 vs 256 Matryoshka，实测 dev 网关不支持 <code>dimensions</code> 参数（见
+      <code>ex_002_probe_dims</code>）。 改为同向量两种距离公式对比：cosine 看"方向"，euclidean
+      看"距离"。
     </p>
-    <button class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50" :disabled="busy" @click="run">
+    <button
+      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
+      :disabled="busy"
+      @click="run"
+    >
       {{ busy ? 'Running…' : 'Run' }}
     </button>
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>

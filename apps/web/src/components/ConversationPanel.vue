@@ -29,15 +29,8 @@ defineExpose({ scrollToBottom });
     class="flex-1 min-w-0 flex flex-col bg-zinc-950 overflow-hidden"
     data-testid="conversation-panel"
   >
-    <div
-      ref="body"
-      id="conversation-body"
-      class="flex-1 overflow-y-auto divide-y divide-zinc-900"
-    >
-      <div
-        v-if="items.length === 0"
-        class="text-center text-zinc-500 py-24 text-[13px]"
-      >
+    <div ref="body" id="conversation-body" class="flex-1 overflow-y-auto divide-y divide-zinc-900">
+      <div v-if="items.length === 0" class="text-center text-zinc-500 py-24 text-[13px]">
         <p class="font-medium text-zinc-400 text-[14px] mb-1">No messages yet</p>
         <p>Send a prompt to inspect the agent run in real time.</p>
       </div>

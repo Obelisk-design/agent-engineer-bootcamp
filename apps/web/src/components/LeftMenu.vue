@@ -45,7 +45,9 @@ function go(href: string | undefined): void {
     data-testid="left-menu"
   >
     <!-- Brand mark -->
-    <div class="w-9 h-9 rounded-md bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center text-zinc-950 font-bold text-[13px] mb-3">
+    <div
+      class="w-9 h-9 rounded-md bg-gradient-to-br from-emerald-500 to-sky-500 flex items-center justify-center text-zinc-950 font-bold text-[13px] mb-3"
+    >
       AI
     </div>
 

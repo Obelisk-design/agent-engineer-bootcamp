@@ -4,10 +4,7 @@
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import {
-  QUERY_WITH_PREFIXES,
-  cosineDistance,
-} from '../../../../../libs/embedding/index.js';
+import { QUERY_WITH_PREFIXES, cosineDistance } from '../../../../../libs/embedding/index.js';
 import { embedTexts, warnDevKeyOnce } from './api.js';
 
 const QUERY = 'The cat is a friendly animal';
@@ -51,7 +48,11 @@ async function run(): Promise<void> {
     <p class="text-xs text-zinc-400 mb-2">
       query: <code class="text-zinc-200">"{{ QUERY }}"</code>
     </p>
-    <button class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50" :disabled="busy" @click="run">
+    <button
+      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
+      :disabled="busy"
+      @click="run"
+    >
       {{ busy ? 'Running…' : 'Run' }}
     </button>
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>
@@ -60,7 +61,7 @@ async function run(): Promise<void> {
       <li v-for="r in rows" :key="r.name" class="flex items-center gap-3">
         <span class="w-28 text-zinc-400">{{ r.name }}</span>
         <div class="flex-1 bg-zinc-800 rounded h-3 overflow-hidden">
-          <div class="h-full bg-rose-500" :style="{ width: ((r.distance / maxD) * 100) + '%' }" />
+          <div class="h-full bg-rose-500" :style="{ width: (r.distance / maxD) * 100 + '%' }" />
         </div>
         <span class="w-16 text-right text-zinc-300">{{ r.distance.toFixed(3) }}</span>
       </li>

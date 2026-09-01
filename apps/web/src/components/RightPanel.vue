@@ -61,7 +61,9 @@ function total(): number | null {
     <section class="p-4 border-b border-zinc-800 shrink-0">
       <header class="flex items-center gap-2 mb-3">
         <IconCpu :size="13" class="text-emerald-400" />
-        <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">Context Window</h3>
+        <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">
+          Context Window
+        </h3>
       </header>
 
       <div class="space-y-2">
@@ -88,7 +90,9 @@ function total(): number | null {
     <section v-if="contexts.length > 0" class="p-4 border-b border-zinc-800 shrink-0">
       <header class="flex items-center gap-2 mb-2">
         <IconLayers :size="13" class="text-zinc-400" />
-        <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">Iterations</h3>
+        <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">
+          Iterations
+        </h3>
       </header>
       <ul class="space-y-1.5">
         <li
@@ -114,10 +118,14 @@ function total(): number | null {
 
     <!-- ========== Execution Timeline ========== -->
     <section class="flex-1 min-h-0 flex flex-col">
-      <header class="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60 shrink-0">
+      <header
+        class="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800/60 shrink-0"
+      >
         <div class="flex items-center gap-2">
           <IconActivity :size="13" class="text-emerald-400" />
-          <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">Execution Timeline</h3>
+          <h3 class="text-[10.5px] uppercase tracking-wider text-zinc-400 font-semibold">
+            Execution Timeline
+          </h3>
         </div>
         <span class="font-mono text-[10.5px] text-zinc-500">
           {{ timeline.length }} step{{ timeline.length === 1 ? '' : 's' }}

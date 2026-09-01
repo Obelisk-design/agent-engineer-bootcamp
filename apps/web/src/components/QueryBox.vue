@@ -21,7 +21,12 @@ function onSubmit() {
       <select
         :value="namespace"
         class="rounded border border-gray-300 px-2 py-1 text-sm"
-        @change="emit('namespaceChange', ($event.target as HTMLSelectElement).value as 'notion' | 'md' | 'all')"
+        @change="
+          emit(
+            'namespaceChange',
+            ($event.target as HTMLSelectElement).value as 'notion' | 'md' | 'all',
+          )
+        "
       >
         <option value="all">all</option>
         <option value="notion">notion</option>

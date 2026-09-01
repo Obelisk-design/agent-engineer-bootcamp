@@ -16,16 +16,19 @@
  */
 
 import 'dotenv/config';
-import {
-  incrementalIndex,
-  loadDocsCorpus,
-  loadTestCorpus,
-} from '../../libs/rag/index.js';
+import { incrementalIndex, loadDocsCorpus, loadTestCorpus } from '../../libs/rag/index.js';
 
-function printReport(label: string, r: ReturnType<typeof incrementalIndex> extends Promise<infer R> ? R : never): void {
+function printReport(
+  label: string,
+  r: ReturnType<typeof incrementalIndex> extends Promise<infer R> ? R : never,
+): void {
   console.log(`\n=== ${label} ===`);
-  console.log(`changedFiles=${r.changedFiles.length}  (added=${r.added.length} modified=${r.modified.length} removed=${r.removed.length})`);
-  console.log(`skipped=${r.skipped.length}  chunksAdded=${r.headingChunksAdded}h/${r.paragraphChunksAdded}p`);
+  console.log(
+    `changedFiles=${r.changedFiles.length}  (added=${r.added.length} modified=${r.modified.length} removed=${r.removed.length})`,
+  );
+  console.log(
+    `skipped=${r.skipped.length}  chunksAdded=${r.headingChunksAdded}h/${r.paragraphChunksAdded}p`,
+  );
   console.log('phases:');
   console.log(`  stat   ${String(r.phases.statMs).padStart(6)}ms`);
   console.log(`  delete ${String(r.phases.deleteMs).padStart(6)}ms`);

@@ -48,10 +48,7 @@ describe('diffDocs', () => {
   });
 
   it('新文档 → added', () => {
-    const d = diffDocs(
-      [{ source: 'a.md', mtimeMs: 1000, hash: 'h1' }],
-      new Map(),
-    );
+    const d = diffDocs([{ source: 'a.md', mtimeMs: 1000, hash: 'h1' }], new Map());
     expect(d.added).toEqual(['a.md']);
     expect(d.modified).toEqual([]);
     expect(d.unchanged).toEqual([]);
@@ -59,20 +56,26 @@ describe('diffDocs', () => {
   });
 
   it('mtime 变 → modified', () => {
-    const cached = new Map<string, DocMeta>([['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })]]);
+    const cached = new Map<string, DocMeta>([
+      ['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })],
+    ]);
     const d = diffDocs([{ source: 'a.md', mtimeMs: 2000, hash: 'h1' }], cached);
     expect(d.modified).toEqual(['a.md']);
     expect(d.unchanged).toEqual([]);
   });
 
   it('mtime 同 + hash 变 → modified（mtime 假阴性兜底）', () => {
-    const cached = new Map<string, DocMeta>([['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })]]);
+    const cached = new Map<string, DocMeta>([
+      ['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })],
+    ]);
     const d = diffDocs([{ source: 'a.md', mtimeMs: 1000, hash: 'h2' }], cached);
     expect(d.modified).toEqual(['a.md']);
   });
 
   it('mtime 同 + hash 同 → unchanged', () => {
-    const cached = new Map<string, DocMeta>([['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })]]);
+    const cached = new Map<string, DocMeta>([
+      ['a.md', meta({ source: 'a.md', mtimeMs: 1000, hash: 'h1' })],
+    ]);
     const d = diffDocs([{ source: 'a.md', mtimeMs: 1000, hash: 'h1' }], cached);
     expect(d.unchanged).toEqual(['a.md']);
     expect(d.modified).toEqual([]);
@@ -96,9 +99,9 @@ describe('diffDocs', () => {
     ]);
     const d = diffDocs(
       [
-        { source: 'keep.md', mtimeMs: 1, hash: 'a' },      // unchanged
-        { source: 'change.md', mtimeMs: 2, hash: 'new' },  // modified (both mtime + hash)
-        { source: 'new.md', mtimeMs: 1, hash: 'd' },       // added
+        { source: 'keep.md', mtimeMs: 1, hash: 'a' }, // unchanged
+        { source: 'change.md', mtimeMs: 2, hash: 'new' }, // modified (both mtime + hash)
+        { source: 'new.md', mtimeMs: 1, hash: 'd' }, // added
       ],
       cached,
     );
@@ -112,7 +115,8 @@ describe('diffDocs', () => {
 describe('openMetaStore namespace isolation', () => {
   // 用临时 lancedb 目录避免污染真实 .lancedb/rag
   // 每个 case 用独立子目录，避免并测串扰
-  const mkTmpUri = (suffix: string): string => `.lancedb/test-meta-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const mkTmpUri = (suffix: string): string =>
+    `.lancedb/test-meta-${suffix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   it('不同 tablePrefix 写入互不影响', async () => {
     const uri = mkTmpUri('ns-a');
@@ -147,10 +151,20 @@ describe('openMetaStore namespace isolation', () => {
     const sMain = await openMetaStore(uri, 'chunks');
     const sTest = await openMetaStore(uri, 'chunks_test');
     await sMain.upsert([
-      { source: 'shared-name.md', mtimeMs: 1, hash: 'h1', chunkCount: { heading: 1, paragraph: 1 } },
+      {
+        source: 'shared-name.md',
+        mtimeMs: 1,
+        hash: 'h1',
+        chunkCount: { heading: 1, paragraph: 1 },
+      },
     ]);
     await sTest.upsert([
-      { source: 'shared-name.md', mtimeMs: 1, hash: 'h1', chunkCount: { heading: 1, paragraph: 1 } },
+      {
+        source: 'shared-name.md',
+        mtimeMs: 1,
+        hash: 'h1',
+        chunkCount: { heading: 1, paragraph: 1 },
+      },
     ]);
     await sMain.deleteSources(['shared-name.md']);
     expect((await sMain.loadAll()).size).toBe(0);

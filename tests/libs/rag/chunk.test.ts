@@ -66,7 +66,14 @@ describe('chunkByParagraph', () => {
 describe('dropEmptyChunks', () => {
   it('极短 chunk（<10 chars）被过滤', () => {
     const chunks: Chunk[] = [
-      { text: 'hello world', source: 'a', sourceKind: 'daily', byteStart: 0, byteEnd: 11, ordinal: 0 },
+      {
+        text: 'hello world',
+        source: 'a',
+        sourceKind: 'daily',
+        byteStart: 0,
+        byteEnd: 11,
+        ordinal: 0,
+      },
       { text: 'ab', source: 'a', sourceKind: 'daily', byteStart: 11, byteEnd: 13, ordinal: 1 },
     ];
     expect(dropEmptyChunks(chunks)).toHaveLength(1);

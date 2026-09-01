@@ -3,7 +3,11 @@ import { pageToMarkdown } from './to-markdown.js';
 
 // Minimal Notion block factory kept inline; do NOT depend on @notionhq/client
 // test helpers because they pull the SDK into the test graph early.
-function block<T extends Record<string, unknown>>(type: string, data: T, extra: Record<string, unknown> = {}) {
+function block<T extends Record<string, unknown>>(
+  type: string,
+  data: T,
+  extra: Record<string, unknown> = {},
+) {
   return {
     id: `b-${Math.random()}`,
     type,
@@ -23,7 +27,10 @@ function block<T extends Record<string, unknown>>(type: string, data: T, extra: 
 
 describe('pageToMarkdown', () => {
   it('prepends the page title as a H1', () => {
-    const page = { id: 'p1', properties: { title: { type: 'title', title: [{ plain_text: 'Hello' }] } } } as never;
+    const page = {
+      id: 'p1',
+      properties: { title: { type: 'title', title: [{ plain_text: 'Hello' }] } },
+    } as never;
     const out = pageToMarkdown(page, []);
     expect(out.markdown.startsWith('# Hello\n')).toBe(true);
     expect(out.title).toBe('Hello');
@@ -94,7 +101,11 @@ describe('pageToMarkdown', () => {
   it('inserts placeholder text for image / file / video', () => {
     const page = { id: 'p', properties: { title: { type: 'title', title: [] } } } as never;
     const blocks = [
-      block('image', { caption: [{ plain_text: 'photo' }], type: 'external', external: { url: 'x' } }),
+      block('image', {
+        caption: [{ plain_text: 'photo' }],
+        type: 'external',
+        external: { url: 'x' },
+      }),
       block('file', { caption: [], type: 'external', external: { url: 'x' } }),
       block('video', { caption: [], type: 'external', external: { url: 'x' } }),
     ];
