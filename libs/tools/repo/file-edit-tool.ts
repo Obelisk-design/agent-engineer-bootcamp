@@ -145,9 +145,16 @@ export const fileEditTool: Tool<typeof fileEditSchema, FileEditResult> = {
 
     let stat;
     try {
-      stat = await fs.stat(filePath);
+      // 用 lstat 检测 symlink；stat 会跟随 symlink，掩盖 symlink 替换语义。
+      stat = await fs.lstat(filePath);
     } catch {
       throw new Error(`file_edit: path does not exist: ${filePath}`);
+    }
+    if (stat.isSymbolicLink()) {
+      throw new Error(
+        `file_edit: symlink not supported: ${filePath} ` +
+          '(resolve to the target path first; this avoids replacing the link with a regular file)',
+      );
     }
     if (!stat.isFile()) {
       throw new Error(`file_edit: path is not a file: ${filePath}`);

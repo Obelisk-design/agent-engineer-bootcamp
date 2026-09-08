@@ -448,3 +448,33 @@ describe('FileEditTool preserve file mode (Day 15 hardening)', () => {
     }
   });
 });
+
+// Symlink 在 Windows 上需要开发者模式 / 管理员；symlink 测试仅在 POSIX 跑。
+describe('FileEditTool symlink rejection (Day 15 hardening)', () => {
+  modeTest('rejects editing a symlink and leaves the link unchanged', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-symlink-'));
+    try {
+      const target = path.join(tmp, 'target.ts');
+      await fs.writeFile(target, 'const a = 1;\n');
+      const link = path.join(tmp, 'link.ts');
+      await fs.symlink(target, link);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      await expect(
+        registry.execute('file_edit', {
+          path: link,
+          oldString: 'const a = 1;',
+          newString: 'const a = 2;',
+        }),
+      ).rejects.toThrow(/file_edit: symlink not supported/);
+      // target 不应被改
+      const after = await fs.readFile(target, 'utf8');
+      expect(after).toBe('const a = 1;\n');
+      // link 仍应是 symlink
+      const lst = await fs.lstat(link);
+      expect(lst.isSymbolicLink()).toBe(true);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
