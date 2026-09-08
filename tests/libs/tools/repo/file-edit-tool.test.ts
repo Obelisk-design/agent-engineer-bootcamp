@@ -10,7 +10,7 @@
  *   3. IO 前置条件 + 原子写入 + diff 格式
  */
 
-import { describe, expect, it, beforeAll, afterAll } from 'vitest';
+import { describe, expect, it, beforeAll, afterAll, vi } from 'vitest';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -356,20 +356,24 @@ describe('FileEditTool error prefix unification (Day 15 hardening)', () => {
     try {
       const f = path.join(tmp, 'x.ts');
       await fs.writeFile(f, 'const answer = 1;\n');
-      // chmod 0444 让 writeFile 抛 EACCES
-      await fs.chmod(f, 0o444);
-      const registry = new ToolRegistry();
-      registry.register(fileEditTool);
-      await expect(
-        registry.execute('file_edit', {
-          path: f,
-          oldString: 'const answer = 1;',
-          newString: 'const answer = 2;',
-        }),
-      ).rejects.toThrow(/^file_edit: /);
-      const after = await fs.readFile(f, 'utf8');
-      expect(after).toBe('const answer = 1;\n');
-      await fs.chmod(f, 0o644);
+      // 用 spyOn 让 fs.writeFile 抛 EACCES；规避 CI root 跑 chmod 0444 不生效的问题。
+      const err = Object.assign(new Error('permission denied'), { code: 'EACCES' });
+      const spy = vi.spyOn(fs, 'writeFile').mockRejectedValueOnce(err);
+      try {
+        const registry = new ToolRegistry();
+        registry.register(fileEditTool);
+        await expect(
+          registry.execute('file_edit', {
+            path: f,
+            oldString: 'const answer = 1;',
+            newString: 'const answer = 2;',
+          }),
+        ).rejects.toThrow(/^file_edit: /);
+        const after = await fs.readFile(f, 'utf8');
+        expect(after).toBe('const answer = 1;\n');
+      } finally {
+        spy.mockRestore();
+      }
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
