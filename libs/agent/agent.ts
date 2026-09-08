@@ -302,9 +302,17 @@ export class Agent {
             resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
           }
 
-          // 🆕 Day 15: tool_call_end —— 工具执行后 yield，携带耗时与 turn 累计 usage 快照。
-          // tokenUsage 始终写入（不依赖 ok），让 error 路径也能把 tool 关联到 turn。
+          // 🆕 Day 15: tokenUsage 始终写入（不依赖 ok），让 error 路径也能把 tool 关联到 turn。
+          // ADR 0005 顺序契约：tool_call_end 必须在 tool_result 之后 yield，让消费方先拿到
+          // 结果再收到「该次调用已经收尾」的信号（含耗时与 turn usage 快照）。
           const latencyMs = Date.now() - startedAt;
+          yield {
+            kind: 'tool_result',
+            id: tc.id,
+            name: tc.toolName,
+            output: resultContent,
+          };
+
           yield {
             kind: 'tool_call_end',
             id: tc.id,
@@ -315,13 +323,6 @@ export class Agent {
               promptTokens: totalPromptTokens,
               completionTokens: totalCompletionTokens,
             },
-          };
-
-          yield {
-            kind: 'tool_result',
-            id: tc.id,
-            name: tc.toolName,
-            output: resultContent,
           };
 
           workingMessages.push({

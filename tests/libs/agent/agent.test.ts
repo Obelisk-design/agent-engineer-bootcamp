@@ -77,8 +77,8 @@ describe('Agent tool_call_start / tool_call_end (Day 15)', () => {
       if (ev.kind.startsWith('tool_')) kinds.push(ev.kind);
     }
 
-    // 顺序约束：start → call → end → result（Day 15 ADR 0005）
-    expect(kinds).toEqual(['tool_call_start', 'tool_call', 'tool_call_end', 'tool_result']);
+    // 顺序约束：start → call → result → end（Day 15 ADR 0005）
+    expect(kinds).toEqual(['tool_call_start', 'tool_call', 'tool_result', 'tool_call_end']);
   });
 
   it('marks ok=false when tool throws, still yields tool_result with Error string', async () => {

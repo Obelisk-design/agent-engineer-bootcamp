@@ -48,8 +48,8 @@ describe('Agent.runEvents — event sequence', () => {
       'response', // 1: toolCalls
       'tool_call_start', // 🆕 Day 15
       'tool_call',
-      'tool_call_end', // 🆕 Day 15
       'tool_result',
+      'tool_call_end', // 🆕 Day 15
       'iteration', // 2
       'request', // 2
       'message_delta', // Day 07: final-answer iter 流式

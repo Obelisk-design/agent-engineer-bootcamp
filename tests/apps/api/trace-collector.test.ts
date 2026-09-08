@@ -90,8 +90,8 @@ describe('Trace Collector (POST /agent)', () => {
       'response',
       'tool_call_start', // 🆕 Day 15
       'tool_call',
-      'tool_call_end', // 🆕 Day 15
       'tool_result',
+      'tool_call_end', // 🆕 Day 15
       'iteration',
       'request',
       'message_delta', // 🆕 Day 07
