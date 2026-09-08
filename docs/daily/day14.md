@@ -554,6 +554,17 @@ pnpm exec tsx examples/day15/ex_001_file_edit.ts     # exit 0，输出 BEFORE/AF
 
 ---
 
+## 🆕 Day 15 阶段增量（AgentEvent 可观测性 + edit loop example）
+
+仅记录已落地事项，不重开 Day 14 范围（FileEditTool review 5 项未触）：
+
+- `AgentEvent` 新增 2 kind：`tool_call_start` / `tool_call_end`（共 14 kind）。详见 [ADR 0005](../adr/0005-agent-event-tool-call-start-end.md)。
+- `examples/day15/ex_002_edit_agent.ts` —— file_read → file_edit → file_read 完整多轮反馈闭环示例（mkdtemp 临时目录 + finally 清理，不动仓库真实文件）。
+- 既有 `tool_call` / `tool_result` 字段不变；`FileEditTool` review 5 项未修（后续阶段）。
+- 测试增量：[`tests/libs/agent/agent.test.ts`](../../tests/libs/agent/agent.test.ts) 新增 3 个用例覆盖事件顺序 / ok 标志 / latencyMs & tokenUsage。
+
+---
+
 ## 📎 相关引用
 
 - **Spec**：[`docs/superpowers/specs/2026-08-26-day14-notion-md-rag-ui-design.md`](../superpowers/specs/2026-08-26-day14-notion-md-rag-ui-design.md)
