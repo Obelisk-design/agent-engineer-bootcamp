@@ -92,6 +92,10 @@
 - LangChain v1.x API 跟 v0.x 不一样（参考 Step 1 retro）—— 照搬旧文档必报错
 - `@langchain/community` 标 deprecated（LangChain v1.0 推荐新结构），但 `@langchain/community/vectorstores/lancedb` 路径仍可用
 
+## 与 langchain-cmp/ 的关系
+
+副线 step 1–5 关注单一对照点（chat / chain / RAG / chunk / Tool 抽象）。「tool loop / agent 多轮反馈」对照实验放在 [langchain-cmp/](../../langchain-cmp/) —— 独立项目避免与 stepN 编号风格冲突。详见 [langchain-cmp/README.md](../../langchain-cmp/README.md)。
+
 ## 相关 memory
 
 - [[langchain-side-retro]] —— Step 1-2 真实感受 + "LangChain 在规模效应下才有用"的核心判断
