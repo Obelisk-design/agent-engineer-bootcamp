@@ -493,6 +493,57 @@ pnpm dev:web
 
 **推荐候选**：候选 2 — **FileEditTool**。理由：FileEditTool 在 Day 12 / Day 13 两次推迟，L1 闭环（Glob→Grep→Read→Edit）缺最后一手；接 Day 11 cat-n 行号做锚点 + zod union 绕 bug C。
 
+## ✅ Day 15 FileEditTool 落地状态（plan `docs/superpowers/plans/2026-09-07-file-edit-tool.md`）
+
+按上述推荐候选，本 day 落地范围**仅** FileEditTool 本身，**不**接 Agent loop。Agent loop（model 改 → tool 执行 → model 重新 file_read 的反馈回路）属于下一阶段，需要新 plan + 新 spec。
+
+### 实际产出
+
+```text
+libs/tools/repo/
+  file-edit-tool.ts                   🆕 单文件精确文本替换 + 原子写入
+  index.ts                            MODIFIED — barrel 导出 fileEditTool/FileEditArgs/FileEditResult
+tests/libs/tools/repo/
+  file-edit-tool.test.ts              🆕 18 cases：schema 校验 + 匹配语义 + IO + diff 格式 + provider schema
+examples/day15/
+  ex_001_file_edit.ts                 🆕 手跑 file_read → file_edit → file_read 演示（mkdtemp，不改真实文件）
+```
+
+### 关键不变量（实测 PASS）
+
+- `Tool.schema` 仍是参数契约唯一事实源（ADR 0003）；`execute` 不重复类型判断，只校验 IO 前置条件（绝对路径 / 存在性 / 普通文件）。
+- `replaceAll` 用 `z.union([z.boolean(), z.stringbool()])`（`looseBoolean`），布尔在前 + stringbool 兜住 LLM 常发的 `"true"`/`"false"`；默认 `false`，JSON Schema 不进 `required`。
+- `replaceAll=false`：要求 `oldString` **恰好**匹配 1 次（零次 / 多次都 throw 且**不进入写入步骤**，原文件不变）—— 这与 Day 11 spec 中描述的"单次 replace"实现细节等价但语义更安全：歧义替换直接拒绝，避免静默改错位置。
+- `replaceAll=true`：要求 ≥1 次匹配，替换全部匹配；基于 `indexOf` 推进（非正则）。
+- 原子写入：临时文件与原文件同目录，`wx` 标志创建 + `fs.rename`；`finally` 清理临时文件，清理失败不覆盖原始错误。
+- 失败信息全部以 `file_edit:` 前缀开头（便于上游 tool_result 解析）。
+- 多匹配场景 diff 输出 `<N chars>` 摘要，不复制整段旧/新文本进 tool result（避免模型上下文膨胀）。
+
+### 验证证据（命令 + 结果）
+
+```bash
+pnpm typecheck                                       # exit 0
+pnpm typecheck:web                                   # exit 0
+pnpm lint                                            # exit 0
+pnpm format:check                                    # exit 0（prettier --write 后）
+pnpm test                                            # 40 files / 265 passed / 2 skipped（file-edit-tool.test.ts 18/18 GREEN）
+pnpm test tests/libs/tools/repo/file-edit-tool.test.ts   # 18/18 PASS
+pnpm exec tsx examples/day15/ex_001_file_edit.ts     # exit 0，输出 BEFORE/AFTER cat-n + replacements: 1 + -/+ diff
+```
+
+### 3 个反例验证（手工跑通，避免把未自动化的 Agent loop 写成已验证）
+
+1. **相对路径被 schema/execute 拒绝** → `file_edit: path must be absolute, got: rel/path.ts`（PASS）
+2. **多匹配且 `replaceAll=false` 时原文件保持不变** → throw `oldString matched 2 times ...; require exactly once when replaceAll=false` + 文件内容与写入前完全一致（PASS）
+3. **`replaceAll="true"` 替换全部匹配** → `replacements: 3`，文件内容全部替换（PASS）
+
+### 已知边界（本 day **不做**，留给后续 plan）
+
+- Agent loop 接线：tool call → `file_edit` → tool_result → model 再 `file_read` 的反馈回路未实现，spec 里"自动写代码"类场景仍需手动。
+- 多文件批改：当前 1 call = 1 文件；后续如需 batch 应开新 tool（如 `file_edit_many`）而不是把 FileEditTool 复杂化。
+- 大文件：未与 FileReadTool 一样做三层截断；超大 oldString 全量写入可能 OOM（本 day fixture 远小于该量级，YAGNI 不做）。
+- dry-run / undo：未实现；本 day 明确不引依赖。
+
 ### 跨天观察（从 survey §14 抽取，跟本 day 直接相关 3 条 + 其他 day 通用 2 条）
 
 1. **「真 LLM 手跑」贯穿全程必需环节**：Day 14 真搜索 + 真入库全靠手测 + 浏览器，无一进 CI。
