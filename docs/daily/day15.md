@@ -138,7 +138,7 @@ pnpm exec tsx langchain-cmp/scenarios/relative_path_rejected.ts
 
 ### 已知盲点
 
-- **FileEditTool review 5 项未修**（用户决策「不修只验证」）：错误前缀统一（写入/rename 失败路径未包 `file_edit:`）、diff 上限（按匹配次数判断不按字符总量）、权限丢失（umask 影响）、symlink 替换语义、二进制损坏（UTF-8 解码再写回）。留作后续阶段。
+- **FileEditTool review 5 项已修**：错误前缀统一（写入/rename 路径） + diff 大小上限（按字节总量）+ 权限位保留 + symlink 显式拒绝 + binary 文件检测（NUL 比例嗅探）。详见 [libs/tools/repo/file-edit-tool.ts](../../libs/tools/repo/file-edit-tool.ts) 与本 day 「踩坑与修复」段。
 - **LangChain 对照**不进入主线依赖，仅 devDependencies；LangChain 全量套件体积 ~80 MB。
 - **happy_path 与 dev 网关绑定**：本地 `.env` 必须含 `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `MODEL_NAME`；当前 `recursionLimit=20`，ai-coding 模型在某些 prompt 下可能调更多 tool。
 - **`tool_call_end` 在 `tool_result` 之后**：与 ADR 0005 / day14 §Day 15 增量段一致；语义是「这组调用全部完成（含 result）」。
@@ -178,6 +178,56 @@ pnpm exec tsx langchain-cmp/scenarios/relative_path_rejected.ts
 
 **Why**：subagent 自己报告 + 自修；typecheck 即刻绿。
 
+### F-4 — FileEditTool 写入/rename 路径错误前缀缺失
+
+**症状**：chmod 0444 / 写不可写目录等 fs 错误直接抛出原始 `EPERM` / `EACCES`，与既有 `file_edit: path does not exist` 等合约不一致。
+
+**根因**：`execute` 里 `fs.writeFile` / `fs.rename` 没有 try/catch，上游 tool_result 解析要靠 `file_edit:` 前缀聚合所有错误来源。
+
+**修法**：新增 `wrapFsError(stage, err)` helper，把 `fs.writeFile` / `fs.rename` / mode 还原 / lstat 都包成 try/catch；保留 `file_edit: <stage> failed: <reason>` 格式。Commit `e2c442b`。
+
+**Why**：所有可恢复错误必须走同一前缀契约，模型消费侧只需 grep `file_edit:`。
+
+### F-5 — diff 大小按字节上限截断
+
+**症状**：单匹配下若 oldString/newString 超过阈值，整段都被 inline 进 `diff` 字段；tool result 膨胀到 N×200 字符。
+
+**根因**：`buildDiffSummary` 只在 `replacements > 1` 时用 `<N chars>` 摘要；单匹配始终内联整段。
+
+**修法**：引入常量 `MAX_DIFF_OLD_BYTES = 200` / `MAX_DIFF_NEW_BYTES = 200`；单匹配但任一侧超过上限时同样转成 `<N chars>` 摘要 + `(large match; read the file to verify)`。Commit `b99065a`。
+
+**Why**：tool result 体积上限是给模型看的信号，必须按字节总量控制而不是只看匹配次数。
+
+### F-6 — 原子写入后文件权限位丢失
+
+**症状**：`fs.writeFile(tempPath, ..., { flag: 'wx' })` 用 umask 默认值（0o666 & ~umask）创建临时文件；`fs.rename` 后原文件的 0o600 / 0o755 被覆盖。
+
+**根因**：`writeFile` 不指定 `mode` 时从 umask 推；rename 后 mode 沿用临时文件而不是原文件。
+
+**修法**：rename 成功后 `fs.stat` 拿到当前 mode，与原始 `stat.mode & 0o777` 比对，不一致则 `fs.chmod(filePath, originalMode)` 还原；chmod 失败也走 `wrapFsError('restore file mode', err)` 统一前缀。Commit `c2c272a`。
+
+**Why**：0o600 是 secrets / private key 常见 mode，被静默退化为 0o644 等于把权限悄悄放大，是 review 红线。
+
+### F-7 — symlink 被 rename 静默替换
+
+**症状**：传入一个指向 `target.ts` 的 symlink `link.ts`，edit 成功后 `link.ts` 变成普通文件，target 没被改、link 消失。
+
+**根因**：`fs.stat` 跟随 symlink；后续 `fs.rename(tempPath, linkPath)` 用临时文件覆盖了 symlink 本身。
+
+**修法**：入口改用 `fs.lstat`；若 `lstat.isSymbolicLink()` 直接抛 `file_edit: symlink not supported: <path>`，原文件不动、link 保留。Commit `f1e54c4`。
+
+**Why**：symlink 是 build cache / monorepo 内部别名常用形态；edit 后静默删除 link 等于破坏调用方依赖关系。
+
+### F-8 — binary 文件被 UTF-8 解码再写回（不可逆损坏）
+
+**症状**：传入 NUL 字节占比高的 binary，`fs.readFile(path, 'utf8')` 把 0x00 解码为 charCodeAt=0、0xff/0xfe 解码为 U+FFFD；edit 后再写回，binary 内容被悄悄破坏。
+
+**根因**：没有 binary 嗅探，UTF-8 round-trip 不能保留 binary 字节。
+
+**修法**：新增 `BINARY_SNIFF_BYTES = 8 * 1024` / `BINARY_RATIO = 0.1` 常量与 `looksBinary(content)` helper（按 charCodeAt === 0 计数）；`readFile` 之后嗅探，超过阈值则抛 `file_edit: binary file not supported`。Commit `465b165`。
+
+**Why**：binary 文件的精确替换不在 file_edit 职责内；显式拒绝比静默损坏安全，且原文件 byte-equal 不变（测试断言）。
+
 ---
 
 ## ✅ Acceptance Criteria 核对
@@ -199,11 +249,11 @@ pnpm exec tsx langchain-cmp/scenarios/relative_path_rejected.ts
 - ✅ `pnpm exec tsx langchain-cmp/scenarios/relative_path_rejected.ts` exit 0（双 tool 拒相对路径）
 - ✅ LangChain 仅在 devDependencies（grep 验证）
 - ✅ `libs/` `apps/` 无 langchain import（grep 验证）
-- ✅ `libs/tools/repo/file-edit-tool.ts` 未触（review 5 项留给后续阶段）
+- ✅ `libs/tools/repo/file-edit-tool.ts` 已加固：错误前缀统一 / diff 大小上限 / 权限保留 / symlink 拒绝 / binary 检测
 
 ### 本 day 已知遗留
 
-- ⚠️ `FileEditTool` review 5 项（错误前缀统一 / diff 上限 / 权限 / symlink / binary）未修；user 决策「不修只验证」
+- ✅ `FileEditTool` review 5 项已修（错误前缀统一 / diff 大小上限 / 权限保留 / symlink 拒绝 / binary 检测）—— 详见 [libs/tools/repo/file-edit-tool.ts](../../libs/tools/repo/file-edit-tool.ts) 的对应 commit 与本 day 「踩坑与修复」段。
 - ⚠️ langchain-cmp 3 个场景未进 CI / vitest，是可执行脚本（dev 网关失败时不破坏 CI）
 - ⚠️ RAG namespace isolation 历史超时本次未复现（之前 5 个 fail，本次 0 failed；建议下个 session 复跑确认）
 
