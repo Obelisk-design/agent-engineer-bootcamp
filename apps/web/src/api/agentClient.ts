@@ -108,7 +108,7 @@ function parseFrame(raw: string): AgentEvent | null {
  *
  * 跟 libs/agent/event.ts 判别联合对齐 —— 加新 kind 时这里要同步扩展。
  *
- * 当前 AgentEvent 12 kind（Day 08 末态）：
+ * 当前 AgentEvent 14 kind（Day 15 增量）：
  */
 function isAgentEvent(value: unknown): value is AgentEvent {
   if (typeof value !== 'object' || value === null) return false;
@@ -121,6 +121,8 @@ function isAgentEvent(value: unknown): value is AgentEvent {
     kind === 'message_delta' ||
     kind === 'context' || // 🆕 Day 08
     kind === 'tool_call' ||
+    kind === 'tool_call_start' || // 🆕 Day 15
+    kind === 'tool_call_end' || // 🆕 Day 15
     kind === 'tool_result' ||
     kind === 'message_end' ||
     kind === 'run_summary' || // 🆕 Day 08
