@@ -478,3 +478,31 @@ describe('FileEditTool symlink rejection (Day 15 hardening)', () => {
     }
   });
 });
+
+describe('FileEditTool binary detection (Day 15 hardening)', () => {
+  it('rejects editing a binary file with many NUL bytes', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-binary-'));
+    try {
+      const f = path.join(tmp, 'blob.bin');
+      const buf = Buffer.concat([
+        Buffer.from([0x00, 0xff, 0xfe, 0x41, 0x42, 0x43, 0x00, 0x00, 0x00]),
+        Buffer.alloc(200, 0x00),
+      ]);
+      await fs.writeFile(f, buf);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      await expect(
+        registry.execute('file_edit', {
+          path: f,
+          oldString: 'ABC',
+          newString: 'XYZ',
+        }),
+      ).rejects.toThrow(/file_edit: binary file not supported/);
+      // 原文件不变
+      const after = await fs.readFile(f);
+      expect(after.equals(buf)).toBe(true);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});

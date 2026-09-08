@@ -47,6 +47,26 @@ function wrapFsError(stage: string, err: unknown): Error {
 }
 
 /**
+ * binary 文件嗅探：
+ *   取文件前 8KB，统计 NUL 字节（charCodeAt === 0）比例，超过 10% 则视为 binary，
+ *   拒绝通过 UTF-8 替换路径编辑（避免高位字节被替换为 U+FFFD 造成不可逆损坏）。
+ *
+ * 不引 magic-byte 表（YAGNI）；NUL 比例足以覆盖大多数 binary 场景。
+ */
+const BINARY_SNIFF_BYTES = 8 * 1024;
+const BINARY_RATIO = 0.1;
+
+function looksBinary(content: string): boolean {
+  const sniff = content.slice(0, BINARY_SNIFF_BYTES);
+  if (sniff.length === 0) return false;
+  let nulCount = 0;
+  for (let i = 0; i < sniff.length; i++) {
+    if (sniff.charCodeAt(i) === 0) nulCount++;
+  }
+  return nulCount / sniff.length > BINARY_RATIO;
+}
+
+/**
  * 布尔参数三写法都不对（实测，见 repo-search-tool.ts 注释）：
  *   - `z.coerce.boolean().parse("false") === true`（复现 Day 10 bug A）
  *   - `z.boolean()` 单用 → LLM 发 "false" 字符串整个 tool call 失败
@@ -161,6 +181,12 @@ export const fileEditTool: Tool<typeof fileEditSchema, FileEditResult> = {
     }
 
     const original = await fs.readFile(filePath, 'utf8');
+    if (looksBinary(original)) {
+      throw new Error(
+        `file_edit: binary file not supported: ${filePath} ` +
+          `(looks binary by NUL ratio in first ${BINARY_SNIFF_BYTES} bytes; refuse to round-trip non-text bytes through UTF-8)`,
+      );
+    }
     const indices = findAllIndices(original, oldString);
 
     if (replaceAll) {
