@@ -79,14 +79,18 @@ describe('Trace Collector (POST /agent)', () => {
       context: { peakPromptTokens: expect.any(Number), iterations: expect.any(Number) },
     });
 
-    // 完整 12 kind 序列（不含 error）—— Day 07 加 message_delta，Day 08 加 run_summary
+    // 完整 14 kind 序列（不含 error）——
+    // Day 07 加 message_delta；Day 08 加 run_summary；
+    // 🆕 Day 15 加 tool_call_start / tool_call_end
     const kinds = trace.events.map((e) => e.kind);
     expect(kinds).toEqual([
       'message_start',
       'iteration',
       'request',
       'response',
+      'tool_call_start', // 🆕 Day 15
       'tool_call',
+      'tool_call_end', // 🆕 Day 15
       'tool_result',
       'iteration',
       'request',

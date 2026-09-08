@@ -36,7 +36,9 @@ describe('Agent.runEvents — event sequence', () => {
     for await (const ev of agent.runEvents([{ role: 'user', content: 'compute 1+2' }]))
       events.push(ev);
 
-    // 序列断言：覆盖 11 kind（不含 error / context）—— Day 07 加 message_delta；Day 08 加 run_summary
+    // 序列断言：覆盖 13 kind（不含 error / context）——
+    // Day 07 加 message_delta；Day 08 加 run_summary；
+    // 🆕 Day 15 加 tool_call_start / tool_call_end（tool_call 之前 / tool_result 之后）
     // 注：calculator-flow 测试不传 model → 不 yield context 事件
     const kinds = events.map((e) => e.kind);
     expect(kinds).toEqual([
@@ -44,7 +46,9 @@ describe('Agent.runEvents — event sequence', () => {
       'iteration', // 1
       'request', // 1
       'response', // 1: toolCalls
+      'tool_call_start', // 🆕 Day 15
       'tool_call',
+      'tool_call_end', // 🆕 Day 15
       'tool_result',
       'iteration', // 2
       'request', // 2
