@@ -23,8 +23,11 @@ export {
 export {
   retrieve,
   retrieveRepeated,
+  retrieveMerged,
   type RetrieveOptions,
   type RetrieveResult,
+  type RetrieveMergedOptions,
+  type RetrieveMergedResult,
   type ChunkStrategy,
 } from './retrieve.js';
 
