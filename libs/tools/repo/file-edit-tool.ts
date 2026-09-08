@@ -38,6 +38,15 @@ import { z } from 'zod';
 import type { Tool } from '../tool.js';
 
 /**
+ * 把 fs 层抛出的原始错误统一包成 `file_edit:` 前缀的 Error，
+ * 便于上游 tool_result 解析（不依赖 Node.js errno 字符串）。
+ */
+function wrapFsError(stage: string, err: unknown): Error {
+  const reason = err instanceof Error ? err.message : String(err);
+  return new Error(`file_edit: ${stage} failed: ${reason}`);
+}
+
+/**
  * 布尔参数三写法都不对（实测，见 repo-search-tool.ts 注释）：
  *   - `z.coerce.boolean().parse("false") === true`（复现 Day 10 bug A）
  *   - `z.boolean()` 单用 → LLM 发 "false" 字符串整个 tool call 失败
@@ -169,9 +178,17 @@ export const fileEditTool: Tool<typeof fileEditSchema, FileEditResult> = {
     const tempPath = makeTempPath(filePath);
     let tempCreated = false;
     try {
-      await fs.writeFile(tempPath, updated, { encoding: 'utf8', flag: 'wx' });
-      tempCreated = true;
-      await fs.rename(tempPath, filePath);
+      try {
+        await fs.writeFile(tempPath, updated, { encoding: 'utf8', flag: 'wx' });
+        tempCreated = true;
+      } catch (err) {
+        throw wrapFsError('write temp file', err);
+      }
+      try {
+        await fs.rename(tempPath, filePath);
+      } catch (err) {
+        throw wrapFsError('rename into place', err);
+      }
     } finally {
       // 任何路径下都要清理临时文件（rename 成功后 tempPath 已不存在，rm 会抛 ENOENT）
       if (tempCreated) {

@@ -349,3 +349,29 @@ describe('fileEditTool — provider schema', () => {
     expect(params.required ?? []).not.toContain('replaceAll');
   });
 });
+
+describe('FileEditTool error prefix unification (Day 15 hardening)', () => {
+  it('writeFile failure is wrapped with file_edit: prefix and original file is unchanged', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-prefix-'));
+    try {
+      const f = path.join(tmp, 'x.ts');
+      await fs.writeFile(f, 'const answer = 1;\n');
+      // chmod 0444 让 writeFile 抛 EACCES
+      await fs.chmod(f, 0o444);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      await expect(
+        registry.execute('file_edit', {
+          path: f,
+          oldString: 'const answer = 1;',
+          newString: 'const answer = 2;',
+        }),
+      ).rejects.toThrow(/^file_edit: /);
+      const after = await fs.readFile(f, 'utf8');
+      expect(after).toBe('const answer = 1;\n');
+      await fs.chmod(f, 0o644);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
