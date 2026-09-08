@@ -1,0 +1,11 @@
+{
+  "name": "langchain-cmp",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scenario:happy": "tsx scenarios/happy_path.ts",
+    "scenario:multi-match": "tsx scenarios/multi_match_failure.ts",
+    "scenario:relative": "tsx scenarios/relative_path_rejected.ts"
+  }
+}
