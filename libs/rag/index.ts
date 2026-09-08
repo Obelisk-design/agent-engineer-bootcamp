@@ -35,6 +35,7 @@ export { buildRagPrompt } from './prompt.js';
 
 export {
   DEFAULT_EVAL_QUERIES,
+  EVAL_QUERIES_V1,
   judgeHit,
   buildReport,
   formatReport,
