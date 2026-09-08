@@ -3,6 +3,23 @@ packages:
 
 # pnpm 11+：白名单列出的包才允许执行 install/build script。
 # 历史坑：Day 01 写成 `allowBuilds: { esbuild: false }` 反而禁用 esbuild，导致 vite/vitest 安装阶段就警告。
-# 包来源：devDependencies 里的 esbuild（vite / vitest 都靠它的 native build）。
-allowBuilds:
+#
+# 包来源：devDependencies 里的 esbuild（vite / vitest 都靠它的 native build）；
+# sharp / onnxruntime-node / protobufjs 是 langchain / hono node-server 的间接 hoist 依赖。
+# GitHub Actions CI Node 22/24 install --frozen-lockfile 必须 exit 0，
+# 否则后续 typecheck / lint / test / build 全部 skipped。
+#
+# 注意：pnpm 11 在 install 时会主动生成 `allowBuilds:` 占位段；
+# 这里改用 `onlyBuiltDependencies`（pnpm 11+ 推荐写法），
+# 但仍以显式布尔映射 `allowBuilds` 作为兜底，避免 pnpm 11.6 占位段被覆盖。
+onlyBuiltDependencies:
   - esbuild
+  - sharp
+  - onnxruntime-node
+  - protobufjs
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+  onnxruntime-node: true
+  protobufjs: true
