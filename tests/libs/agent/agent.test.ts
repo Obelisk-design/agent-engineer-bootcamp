@@ -57,3 +57,75 @@ describe('Agent', () => {
     );
   });
 });
+
+// 🆕 Day 15: tool_call_start / tool_call_end 事件覆盖。
+// 不动现有 calculatorTool 的 4 个测试，新加 3 个聚焦可观测性事件的用例。
+describe('Agent tool_call_start / tool_call_end (Day 15)', () => {
+  it('yields tool_call_start before tool_call and tool_call_end after execute', async () => {
+    const chat = new FakeChatClient([
+      {
+        toolCalls: [{ id: 't1', toolName: 'calculator', args: { expression: '2+3' } }],
+      },
+      { content: 'done' },
+    ]);
+    const tools = new ToolRegistry();
+    tools.register(calculatorTool);
+    const agent = new Agent({ chat, tools });
+
+    const kinds: string[] = [];
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'go' }])) {
+      if (ev.kind.startsWith('tool_')) kinds.push(ev.kind);
+    }
+
+    // 顺序约束：start → call → end → result（Day 15 ADR 0005）
+    expect(kinds).toEqual(['tool_call_start', 'tool_call', 'tool_call_end', 'tool_result']);
+  });
+
+  it('marks ok=false when tool throws, still yields tool_result with Error string', async () => {
+    const chat = new FakeChatClient([
+      {
+        toolCalls: [{ id: 't1', toolName: 'missing_tool', args: {} }],
+      },
+      { content: 'done' },
+    ]);
+    const tools = new ToolRegistry();
+    // 不注册 missing_tool —— ToolRegistry.execute 会抛 unknown tool
+    const agent = new Agent({ chat, tools });
+
+    let endEvent: { ok?: boolean; latencyMs?: number } | null = null;
+    let resultEvent: { output?: string } | null = null;
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'go' }])) {
+      if (ev.kind === 'tool_call_end') endEvent = ev;
+      if (ev.kind === 'tool_result') resultEvent = ev;
+    }
+
+    expect(endEvent?.ok).toBe(false);
+    expect(String(resultEvent?.output ?? '')).toContain('Error');
+  });
+
+  it('latencyMs is non-negative and tokenUsage echoes turn-1 accumulated usage', async () => {
+    const chat = new FakeChatClient([
+      {
+        toolCalls: [{ id: 't1', toolName: 'calculator', args: { expression: '1' } }],
+        usage: { promptTokens: 10, completionTokens: 5 },
+      },
+      { content: 'done' },
+    ]);
+    const tools = new ToolRegistry();
+    tools.register(calculatorTool);
+    const agent = new Agent({ chat, tools });
+
+    let endEvent: {
+      latencyMs?: number;
+      ok?: boolean;
+      tokenUsage?: { promptTokens: number; completionTokens: number };
+    } | null = null;
+    for await (const ev of agent.runEvents([{ role: 'user', content: 'go' }])) {
+      if (ev.kind === 'tool_call_end') endEvent = ev;
+    }
+
+    expect(endEvent?.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(endEvent?.ok).toBe(true);
+    expect(endEvent?.tokenUsage).toEqual({ promptTokens: 10, completionTokens: 5 });
+  });
+});
