@@ -26,6 +26,13 @@
  * - context：每次 LLM 调用前 yield，携带 promptTokens 与 contextLimit。前端 HeaderPill / Sidebar 消费。
  * - run_summary：message_end / error 之前 yield，携带累积的 totalPromptTokens / totalCompletionTokens / peakPromptTokens / iterations。
  *
+ * Day 15 追加：加 `tool_call_start` / `tool_call_end` 两种事件（14 kind 总计）。
+ * - tool_call_start：tool_call 之前 yield，携带 id / name / args / startedAt。
+ *   给 TraceCollector / DevTools 提供 tool 起始时间戳。
+ * - tool_call_end：tool_result 之后 yield，携带 id / name / latencyMs / ok / tokenUsage。
+ *   tokenUsage 始终写入（不依赖 ok），让 error 路径也能把 tool 关联到 turn。
+ *   既有 tool_call / tool_result 字段、顺序、消费者契约不动；新增 kind 是 additive。
+ *
  * 不做的事（YAGNI）：
  * - 事件序列号 / id（SSE 重连场景）
  * - 时间戳（消费方自己加）
@@ -63,6 +70,24 @@ export type AgentEvent =
       readonly id: string;
       readonly name: string;
       readonly args: unknown;
+    }
+  | {
+      readonly kind: 'tool_call_start'; // 🆕 Day 15: 可观测性
+      readonly id: string;
+      readonly name: string;
+      readonly args: unknown;
+      readonly startedAt: number;
+    }
+  | {
+      readonly kind: 'tool_call_end'; // 🆕 Day 15: 可观测性
+      readonly id: string;
+      readonly name: string;
+      readonly latencyMs: number;
+      readonly ok: boolean;
+      readonly tokenUsage?: {
+        readonly promptTokens: number;
+        readonly completionTokens: number;
+      };
     }
   | {
       readonly kind: 'tool_result';
