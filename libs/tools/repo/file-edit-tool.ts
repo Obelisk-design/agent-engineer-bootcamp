@@ -225,17 +225,25 @@ interface DiffSummaryInput {
 
 /**
  * 最小 diff 摘要：
- *   - 单匹配：展示 path、replacements、一条 - 旧片段、一条 + 新片段（每行首字符标 -/+）。
- *   - 多匹配：避免把整段 oldString/newString 复制进 tool result，只输出数量与文件路径，
+ *   - 单匹配且 old/new 均不超过 200 字符：展示 path、replacements、一条 - 旧片段、一条 + 新片段（每行首字符标 -/+）。
+ *   - 多匹配或任一侧超过 200 字符：避免把整段 oldString/newString 复制进 tool result，只输出字符数与文件路径，
  *     提示调用方通过 file_read 复查。
  *
  * 故意走最朴素格式（不是 unified diff），保持实现轻、给模型看的信号简单。
+ * 单匹配时也按字节量截断（而不是只看匹配次数），避免「N 次小匹配」之外
+ * 还有「1 次巨大匹配」造成的 tool result 膨胀。
  */
+const MAX_DIFF_OLD_BYTES = 200;
+const MAX_DIFF_NEW_BYTES = 200;
+
 function buildDiffSummary(input: DiffSummaryInput): string {
   const { path: filePath, replacements, oldString, newString } = input;
   const head = `file_edit: ${filePath} (${replacements} replacement${replacements === 1 ? '' : 's'})`;
   if (replacements > 1) {
     return `${head}\n- <${oldString.length} chars>\n+ <${newString.length} chars>\n(multiple matches; read the file to verify)`;
+  }
+  if (oldString.length > MAX_DIFF_OLD_BYTES || newString.length > MAX_DIFF_NEW_BYTES) {
+    return `${head}\n- <${oldString.length} chars>\n+ <${newString.length} chars>\n(large match; read the file to verify)`;
   }
   const oldLines = oldString.split('\n');
   const newLines = newString.split('\n');

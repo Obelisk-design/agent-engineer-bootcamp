@@ -375,3 +375,28 @@ describe('FileEditTool error prefix unification (Day 15 hardening)', () => {
     }
   });
 });
+
+describe('FileEditTool diff size cap (Day 15 hardening)', () => {
+  it('large single-match oldString is summarized not inlined', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-diff-cap-'));
+    try {
+      const f = path.join(tmp, 'big.ts');
+      const oldBlock = 'a'.repeat(500);
+      const newBlock = 'b'.repeat(500);
+      await fs.writeFile(f, `prefix\n${oldBlock}\nsuffix\n`);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      const result = (await registry.execute('file_edit', {
+        path: f,
+        oldString: oldBlock,
+        newString: newBlock,
+      })) as FileEditResult;
+      expect(result.replacements).toBe(1);
+      expect(result.diff).toMatch(/<500 chars>/);
+      expect(result.diff).not.toContain(oldBlock);
+      expect(result.diff).toContain('(large match; read the file to verify)');
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});
