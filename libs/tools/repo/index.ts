@@ -12,6 +12,7 @@ export {
   type RepoSearchMatch,
 } from './repo-search-tool.js';
 export { fileReadTool, type FileReadArgs, type FileReadResult } from './file-read-tool.js';
+export { fileEditTool, type FileEditArgs, type FileEditResult } from './file-edit-tool.js';
 export {
   MAX_READ_LINES,
   MAX_LINE_CHARS,
