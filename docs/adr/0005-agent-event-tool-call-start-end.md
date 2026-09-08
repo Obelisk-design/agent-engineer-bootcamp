@@ -15,11 +15,11 @@ Day 04–08 建立的 12 kind AgentEvent 已稳定，是 SSE / TraceCollector �
 在 `AgentEvent` 判别联合中追加 2 个新 kind：
 
 - `tool_call_start` —— 在 `tool_call` 之前 yield，携带 `id` / `name` / `args` / `startedAt: number`。
-- `tool_call_end` —— 在 `tool_result` 之后 yield，携带 `id` / `name` / `latencyMs: number` / `ok: boolean` / `tokenUsage?: { promptTokens, completionTokens }`。
+- `tool_call_end` —— 在 `tool_result` **之后** yield，携带 `id` / `name` / `latencyMs: number` / `ok: boolean` / `tokenUsage?: { promptTokens, completionTokens }`。
 
 `tokenUsage` 始终写当前 turn 的累计 usage（即 tool 调用执行后那一刻的 `totalPromptTokens` / `totalCompletionTokens` 快照），不依赖 `ok`，让 error 路径也能关联到轮次。
 
-事件顺序：`tool_call_start → tool_call → tool_call_end → tool_result`，与既有节奏一致。
+事件顺序：`tool_call_start → tool_call → tool_result → tool_call_end`，与既有节奏一致。`tool_call_end` 放在 `tool_result` 之后是因为它的语义是「这组调用全部完成（含 result）」，end 才是最后产出。
 
 ## Consequences
 
