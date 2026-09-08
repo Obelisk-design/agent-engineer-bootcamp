@@ -270,6 +270,17 @@ export class Agent {
 
         // 顺序执行每个 tool_call，逐一 yield 事件
         for (const tc of response.toolCalls) {
+          // 🆕 Day 15: tool_call_start —— 工具执行前 yield，携带起始时间戳。
+          // 让 TraceCollector / DevTools 得到 tool 起始时间。
+          const startedAt = Date.now();
+          yield {
+            kind: 'tool_call_start',
+            id: tc.id,
+            name: tc.toolName,
+            args: tc.args,
+            startedAt,
+          };
+
           yield {
             kind: 'tool_call',
             id: tc.id,
@@ -280,13 +291,31 @@ export class Agent {
           // Day 11: 走 registry.execute —— 参数校验的唯一入口（ADR 0003）。
           // tool 不存在 / 参数不合 schema / execute 自身抛错，三类失败统一 throw，
           // 在这里 catch 成 Error 字符串给 LLM（Day 07 规则：Tool 错误不 throw 出 Agent）。
+          // 🆕 Day 15: 同时记录 ok 标志，让 tool_call_end 能表达执行成败。
+          let ok = true;
           let resultContent: string;
           try {
             const result = await this.options.tools.execute(tc.toolName, tc.args);
             resultContent = JSON.stringify(result);
           } catch (err) {
+            ok = false;
             resultContent = `Error: ${err instanceof Error ? err.message : String(err)}`;
           }
+
+          // 🆕 Day 15: tool_call_end —— 工具执行后 yield，携带耗时与 turn 累计 usage 快照。
+          // tokenUsage 始终写入（不依赖 ok），让 error 路径也能把 tool 关联到 turn。
+          const latencyMs = Date.now() - startedAt;
+          yield {
+            kind: 'tool_call_end',
+            id: tc.id,
+            name: tc.toolName,
+            latencyMs,
+            ok,
+            tokenUsage: {
+              promptTokens: totalPromptTokens,
+              completionTokens: totalCompletionTokens,
+            },
+          };
 
           yield {
             kind: 'tool_result',
