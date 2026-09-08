@@ -400,3 +400,51 @@ describe('FileEditTool diff size cap (Day 15 hardening)', () => {
     }
   });
 });
+
+// Windows 上 chmod / mode 行为与 POSIX 不一致；模式保留测试仅在 POSIX 跑。
+const isPosix = process.platform !== 'win32';
+const modeTest = isPosix ? it : it.skip;
+
+describe('FileEditTool preserve file mode (Day 15 hardening)', () => {
+  modeTest('keeps original 0o600 permission after edit', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-mode-'));
+    try {
+      const f = path.join(tmp, 'priv.ts');
+      await fs.writeFile(f, 'const a = 1;\n', { mode: 0o600 });
+      const before = (await fs.stat(f)).mode & 0o777;
+      expect(before).toBe(0o600);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      await registry.execute('file_edit', {
+        path: f,
+        oldString: 'const a = 1;',
+        newString: 'const a = 2;',
+      });
+      const after = (await fs.stat(f)).mode & 0o777;
+      expect(after).toBe(0o600);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  modeTest('keeps original 0o755 permission after edit', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'fedit-mode-'));
+    try {
+      const f = path.join(tmp, 'script.sh');
+      await fs.writeFile(f, 'echo hi\n', { mode: 0o755 });
+      const before = (await fs.stat(f)).mode & 0o777;
+      expect(before).toBe(0o755);
+      const registry = new ToolRegistry();
+      registry.register(fileEditTool);
+      await registry.execute('file_edit', {
+        path: f,
+        oldString: 'echo hi',
+        newString: 'echo bye',
+      });
+      const after = (await fs.stat(f)).mode & 0o777;
+      expect(after).toBe(0o755);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+});

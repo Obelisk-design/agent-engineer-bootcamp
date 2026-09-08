@@ -172,6 +172,8 @@ export const fileEditTool: Tool<typeof fileEditSchema, FileEditResult> = {
       }
     }
 
+    const originalMode = stat.mode & 0o777;
+
     const updated = applyReplacements(original, indices, oldString, newString);
 
     // 原子写入：临时文件 → rename。原文件在 rename 成功前不会被截断。
@@ -188,6 +190,15 @@ export const fileEditTool: Tool<typeof fileEditSchema, FileEditResult> = {
         await fs.rename(tempPath, filePath);
       } catch (err) {
         throw wrapFsError('rename into place', err);
+      }
+      // 还原原文件 mode（writeFile 用 umask 默认值，rename 继承临时文件的 mode）
+      try {
+        const newMode = (await fs.stat(filePath)).mode & 0o777;
+        if (newMode !== originalMode) {
+          await fs.chmod(filePath, originalMode);
+        }
+      } catch (err) {
+        throw wrapFsError('restore file mode', err);
       }
     } finally {
       // 任何路径下都要清理临时文件（rename 成功后 tempPath 已不存在，rm 会抛 ENOENT）
