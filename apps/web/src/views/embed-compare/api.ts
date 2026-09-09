@@ -35,7 +35,11 @@ export function warnDevKeyOnce(): void {
 
 export async function searchHits(
   query: string,
-  opts: { topK?: number; namespace?: 'notion' | 'md' | 'all' } = {},
+  opts: {
+    topK?: number;
+    namespace?: 'notion' | 'md' | 'all';
+    signal?: AbortSignal;
+  } = {},
 ): Promise<SearchResponse> {
   warnDevKeyOnce();
   const body: SearchRequest = {
@@ -47,6 +51,7 @@ export async function searchHits(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    ...(opts.signal ? { signal: opts.signal } : {}),
   });
   if (!res.ok) {
     const errBody = (await res.json().catch(() => ({}))) as { error?: string };
@@ -57,6 +62,7 @@ export async function searchHits(
 
 export interface RerankOpts {
   topN?: number;
+  signal?: AbortSignal;
 }
 
 export async function rerankHits(
@@ -74,6 +80,7 @@ export async function rerankHits(
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    ...(opts.signal ? { signal: opts.signal } : {}),
   });
   if (!res.ok) {
     const errBody = (await res.json().catch(() => ({}))) as { error?: string };
