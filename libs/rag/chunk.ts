@@ -200,9 +200,33 @@ function splitLongHeadingChunk(
   let cursor = 0;
   let buffer = '';
   let bufferStart = 0;
+
+  // 工具：把超长段按字符硬切，cursor 推进
+  const hardCut = (p: string, startCursor: number): number => {
+    let pos = 0;
+    let cur = startCursor;
+    while (pos < p.length) {
+      const slice = p.slice(pos, pos + maxChars);
+      const byteStart = baseByteStart + cur;
+      const byteEnd = byteStart + Buffer.byteLength(slice, 'utf-8');
+      paraOut.push({
+        text: slice,
+        source: chunk.source,
+        sourceKind: chunk.sourceKind,
+        ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
+        byteStart,
+        byteEnd,
+      });
+      cur += Buffer.byteLength(slice, 'utf-8');
+      pos += maxChars;
+    }
+    return cur;
+  };
+
   for (const p of paragraphs) {
     const candidate = buffer.length === 0 ? p : `${buffer}\n\n${p}`;
     if (candidate.length > maxChars && buffer.length > 0) {
+      // 先 flush 现有 buffer（buffer 本身 ≤ maxChars，可以直接出）
       const byteStart = baseByteStart + bufferStart;
       const byteEnd = byteStart + Buffer.byteLength(buffer, 'utf-8');
       paraOut.push({
@@ -214,28 +238,20 @@ function splitLongHeadingChunk(
         byteEnd,
       });
       cursor = byteEnd - baseByteStart;
-      buffer = p;
-      bufferStart = cursor;
-    } else if (candidate.length > maxChars) {
-      // 单段超过 maxChars 且无 buffer → 按字符硬切
-      let pos = 0;
-      while (pos < p.length) {
-        const slice = p.slice(pos, pos + maxChars);
-        const byteStart = baseByteStart + bufferStart + pos;
-        const byteEnd = byteStart + Buffer.byteLength(slice, 'utf-8');
-        paraOut.push({
-          text: slice,
-          source: chunk.source,
-          sourceKind: chunk.sourceKind,
-          ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
-          byteStart,
-          byteEnd,
-        });
-        pos += maxChars;
+      // 新段 p 自己可能也超 maxChars → 走字符硬切
+      if (p.length > maxChars) {
+        cursor = hardCut(p, cursor);
+        buffer = '';
+        bufferStart = cursor;
+      } else {
+        buffer = p;
+        bufferStart = cursor;
       }
+    } else if (candidate.length > maxChars) {
+      // 单段超过 maxChars 且无 buffer → 直接按字符硬切
+      cursor = hardCut(p, cursor);
       buffer = '';
-      bufferStart = pos;
-      cursor = bufferStart;
+      bufferStart = cursor;
     } else {
       buffer = candidate;
       if (bufferStart === 0) bufferStart = cursor;
