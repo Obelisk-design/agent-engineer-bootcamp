@@ -23,7 +23,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import * as lancedb from '@lancedb/lancedb';
 import {
-  chunkByHeading,
+  chunkByHeadingSmart,
   chunkByParagraph,
   dropEmptyChunks,
   type Chunk,
@@ -408,7 +408,7 @@ async function runIncrementalIndex(
       if (src === undefined) continue;
 
       const headingChunks = dropEmptyChunks(
-        chunkByHeading(src.content, src.sourceLabel, src.sourceKind),
+        chunkByHeadingSmart(src.content, src.sourceLabel, src.sourceKind),
       );
       const paragraphChunks = dropEmptyChunks(
         chunkByParagraph(src.content, src.sourceLabel, src.sourceKind),

@@ -95,14 +95,179 @@ export function chunkByHeading(
 }
 
 /**
+ * 按 markdown heading 切分，并对超长 heading 段做二次切（Day 18 新增）。
+ *
+ * 设计动机：探针证 heading 切里长 heading 段（>800 字符，如 ## 🎯 今日目标 = 1093 字符）
+ * 把 cosine / PCA 关键词稀释到大量任务清单 / 路径字符串里 → 关键词密度只有 paragraph 切的一半。
+ *
+ * 二次切策略（按优先级）：
+ *   1. 优先按子 heading 边界切：段内有 `###` 时按 `###` 切，子 chunk 带最近一级 `##` heading
+ *   2. 无子 heading 时按段落切：按 `\n\n` 切，每段 ≤ maxChars
+ *   3. 二次切不加 overlap：heading 子段本身是语义单元，重叠会污染检索
+ *
+ * 不做（YAGNI）：
+ *   - 不动 chunkByHeading 旧签名（向后兼容）
+ *   - 不做 token-level 硬切（路线表 Day 18 不需要）
+ *   - 不引第三种策略
+ */
+export function chunkByHeadingSmart(
+  md: string,
+  source: string,
+  sourceKind: SourceKind = 'daily',
+  maxChars = 800,
+  startOrdinal = 0,
+): Chunk[] {
+  const firstPass = chunkByHeading(md, source, sourceKind, startOrdinal);
+  if (firstPass.every((c) => c.text.length <= maxChars)) return firstPass;
+
+  const out: Chunk[] = [];
+  let ordinal = startOrdinal;
+  for (const chunk of firstPass) {
+    if (chunk.text.length <= maxChars) {
+      // 重新赋 ordinal 保持全局连续
+      out.push({ ...chunk, ordinal: ordinal++ });
+      continue;
+    }
+    // 长 heading 段 → 二次切
+    const subChunks = splitLongHeadingChunk(chunk, maxChars, ordinal);
+    for (const sub of subChunks) {
+      out.push({ ...sub, ordinal: ordinal++ });
+    }
+  }
+  return out;
+}
+
+/**
+ * 把单个超长 heading chunk 二次切。返回的子 chunk 不带 ordinal（由 caller 连续编号）。
+ *
+ * 二次切策略：
+ *   1. 优先按子 heading 切：识别 chunk.text 里的 `#{1,3}` 行，按最早出现的子 heading 切
+ *   2. 无子 heading 时按 \n\n 切，每段 ≤ maxChars
+ *   3. 实在不行按字符硬切
+ */
+function splitLongHeadingChunk(
+  chunk: Chunk,
+  maxChars: number,
+  _startOrdinal: number,
+): Omit<Chunk, 'ordinal'>[] {
+  const text = chunk.text;
+  const parentHeading = chunk.heading;
+  const baseByteStart = chunk.byteStart;
+  const subHeadingRe = /^#{1,3}\s+(.+?)\s*#*\s*$/;
+  const lines = text.split(/\r?\n/);
+
+  // 1. 优先按子 heading 切（chunk.text 第一行是 heading 本身，从第二行开始找 ###）
+  const subBoundaries: number[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (subHeadingRe.test(lines[i]!)) subBoundaries.push(i);
+  }
+  if (subBoundaries.length > 0) {
+    const segments: Array<{ startLine: number; endLine: number }> = [];
+    segments.push({ startLine: 1, endLine: subBoundaries[0]! - 1 });
+    for (let i = 0; i < subBoundaries.length; i++) {
+      const start = subBoundaries[i]!;
+      const end = i + 1 < subBoundaries.length ? subBoundaries[i + 1]! - 1 : lines.length - 1;
+      segments.push({ startLine: start, endLine: end });
+    }
+    const out: Omit<Chunk, 'ordinal'>[] = [];
+    let cursor = 0;
+    for (const seg of segments) {
+      const segText = lines
+        .slice(seg.startLine, seg.endLine + 1)
+        .join('\n')
+        .trimEnd();
+      if (segText.length === 0) continue;
+      // 估算 segText 的字节偏移（粗略：line count × avg）
+      // 简化：用 chunk.byteStart + cursor 估
+      const byteStart = baseByteStart + cursor;
+      const byteEnd = byteStart + Buffer.byteLength(segText, 'utf-8');
+      cursor = byteEnd - baseByteStart;
+      out.push({
+        text: segText,
+        source: chunk.source,
+        sourceKind: chunk.sourceKind,
+        ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
+        byteStart,
+        byteEnd,
+      });
+    }
+    return out;
+  }
+
+  // 2. 无子 heading → 按 \n\n 切
+  const paragraphs = text.split(/\n\n+/);
+  const paraOut: Omit<Chunk, 'ordinal'>[] = [];
+  let cursor = 0;
+  let buffer = '';
+  let bufferStart = 0;
+  for (const p of paragraphs) {
+    const candidate = buffer.length === 0 ? p : `${buffer}\n\n${p}`;
+    if (candidate.length > maxChars && buffer.length > 0) {
+      const byteStart = baseByteStart + bufferStart;
+      const byteEnd = byteStart + Buffer.byteLength(buffer, 'utf-8');
+      paraOut.push({
+        text: buffer,
+        source: chunk.source,
+        sourceKind: chunk.sourceKind,
+        ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
+        byteStart,
+        byteEnd,
+      });
+      cursor = byteEnd - baseByteStart;
+      buffer = p;
+      bufferStart = cursor;
+    } else if (candidate.length > maxChars) {
+      // 单段超过 maxChars 且无 buffer → 按字符硬切
+      let pos = 0;
+      while (pos < p.length) {
+        const slice = p.slice(pos, pos + maxChars);
+        const byteStart = baseByteStart + bufferStart + pos;
+        const byteEnd = byteStart + Buffer.byteLength(slice, 'utf-8');
+        paraOut.push({
+          text: slice,
+          source: chunk.source,
+          sourceKind: chunk.sourceKind,
+          ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
+          byteStart,
+          byteEnd,
+        });
+        pos += maxChars;
+      }
+      buffer = '';
+      bufferStart = pos;
+      cursor = bufferStart;
+    } else {
+      buffer = candidate;
+      if (bufferStart === 0) bufferStart = cursor;
+    }
+  }
+  if (buffer.length > 0) {
+    const byteStart = baseByteStart + bufferStart;
+    const byteEnd = byteStart + Buffer.byteLength(buffer, 'utf-8');
+    paraOut.push({
+      text: buffer,
+      source: chunk.source,
+      sourceKind: chunk.sourceKind,
+      ...(parentHeading !== undefined ? { heading: parentHeading } : {}),
+      byteStart,
+      byteEnd,
+    });
+  }
+  return paraOut;
+}
+
+/**
  * 按段落切分（按 \n\n）。代码块（``` 围栏）和表格段（连续以 | 开头的行）整体保留不被切碎。
- * 超长段落按字符硬切 + 200 字符 overlap（默认），overlap 部分追加到下一个 chunk 头部。
+ * 超长段落按字符硬切 + 400 字符 overlap（默认），overlap 部分追加到下一个 chunk 头部。
+ *
+ * 默认 overlap 翻倍（200 → 400）：Day 18 探针证 paragraph 切已经粒度合适，
+ * 主要损失是跨滑窗语义被切断，overlap 翻倍让跨段语义保留更好。
  */
 export function chunkByParagraph(
   md: string,
   source: string,
   sourceKind: SourceKind = 'daily',
-  overlapChars = 200,
+  overlapChars = 400,
   startOrdinal = 0,
 ): Chunk[] {
   if (overlapChars < 0) {
