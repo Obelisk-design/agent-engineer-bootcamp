@@ -8,6 +8,7 @@
 import { Hono } from 'hono';
 import { ragSearchHandler } from './rag-search.js';
 import { ragIngestHandler } from './rag-ingest.js';
+import { ragRerankHandler } from './rag-rerank.js';
 import { getNamespaceHealth } from './env.js';
 import { HealthResponse } from '@bootcamp/api-schema';
 
@@ -26,6 +27,7 @@ export function createRagApp(): Hono {
 
   app.post('/search', ragSearchHandler);
   app.post('/ingest', ragIngestHandler);
+  app.post('/rerank', ragRerankHandler);
 
   return app;
 }
