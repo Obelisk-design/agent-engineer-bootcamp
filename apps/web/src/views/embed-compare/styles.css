@@ -1,0 +1,88 @@
+/**
+ * apps/web/src/views/embed-compare/styles.css
+ *
+ * embed-compare page 共有：panel 卡片 / hits 列表 / 错误 / loading
+ * 不动 apps/web/src/views/embed/styles.css（EmbedDemo 独立）
+ */
+
+.ec-panel {
+  background: #18181b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #27272a;
+  padding-bottom: 0.5rem;
+}
+.panel-head h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #e4e4e7;
+}
+.ec-error {
+  background: #7f1d1d;
+  border: 1px solid #f87171;
+  color: #fee2e2;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+.ec-loading {
+  color: #fbbf24;
+  font-size: 0.875rem;
+}
+.ec-hint {
+  color: #a1a1aa;
+  font-size: 0.875rem;
+}
+.hits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.hit-row {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto;
+  gap: 0.5rem;
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  align-items: center;
+}
+.hit-rank {
+  font-family: monospace;
+  color: #71717a;
+  font-weight: 600;
+  text-align: center;
+}
+.hit-body {
+  min-width: 0;
+}
+.hit-source {
+  font-size: 0.75rem;
+  color: #a1a1aa;
+  margin-bottom: 0.25rem;
+}
+.hit-content {
+  color: #d4d4d8;
+  word-break: break-word;
+}
+.hit-score {
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #a1a1aa;
+  text-align: right;
+}
+.hit-score strong {
+  color: #fbbf24;
+}
