@@ -25,6 +25,7 @@ function onHits(emitHits: SearchResponse['hits']): void {
 }
 
 const apiKeyAvailable = (import.meta.env.VITE_OPENAI_API_KEY ?? '').length > 0;
+const devBaseUrl = (import.meta.env.VITE_OPENAI_BASE_URL ?? 'http://10.230.10.242:8000/v1');
 </script>
 
 <template>
@@ -83,7 +84,7 @@ const apiKeyAvailable = (import.meta.env.VITE_OPENAI_API_KEY ?? '').length > 0;
 
     <footer class="ec-footer">
       <p class="text-xs text-zinc-500">
-        dev gateway: <code>{{ import.meta.env.VITE_OPENAI_BASE_URL }}</code> · reranker:
+        dev gateway: <code>{{ devBaseUrl }}</code> · reranker:
         <code>qwen3-reranker-4b</code>
       </p>
       <p class="text-xs text-zinc-600">warnDevKeyOnce() 已在浏览器 console 打印告警（一次性）</p>

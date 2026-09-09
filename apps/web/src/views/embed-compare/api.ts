@@ -14,7 +14,6 @@
  *   - search / rerank API（间接走 lancedb）走本文件的 fetch
  */
 
-import 'dotenv/config'; // 仅 typecheck 时；运行时由 vite 处理
 import type {
   SearchRequest,
   SearchResponse,
