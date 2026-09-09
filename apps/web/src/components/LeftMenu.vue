@@ -25,6 +25,7 @@ const items = [
   { key: 'traces', label: 'Traces', icon: 'activity' as const },
   { key: 'logs', label: 'Logs', icon: 'layers' as const },
   { key: 'embed', label: 'Embed', icon: 'chat' as const, href: '#/embed-demo' },
+  { key: 'embed-cmp', label: 'Compare', icon: 'chat' as const, href: '#/embed-compare' },
 ];
 
 const ICON_MAP = {
