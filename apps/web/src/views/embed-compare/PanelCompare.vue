@@ -50,6 +50,10 @@ async function run(): Promise<void> {
     result.value = searchRes;
     emit('hits', searchRes.hits);
 
+    // 空态：0 hits（KNN 语义表为空否则必有返回）→ 提前返回，不再调第二次 embed
+    // （embedTexts([]) 行为未知，且 1 个点的热图无意义）
+    if (searchRes.hits.length === 0) return;
+
     // 渲染距离热图需要"输入 vector + 5 个 hit text"——但 hit 没有 vector，只有 text
     // 简单做法：labels 仅有文本，热图用 input vs hit 字符串
     // 真正准确需要再 embed hit 一次，但 vllm 限流成本高
@@ -91,6 +95,9 @@ watch(
 
     <p v-if="err" class="ec-error mt-3">{{ err }}</p>
     <p v-else-if="busy" class="ec-loading mt-3">embedding + lancedb search + 距离矩阵…</p>
+    <p v-else-if="result && result.hits.length === 0" class="ec-empty mt-3">
+      搜索不到 — 当前 namespace（<code>{{ props.namespace }}</code>）没有返回任何结果，该库可能未索引或为空。换个 namespace 试试，或先跑入库脚本。
+    </p>
 
     <template v-else-if="result">
       <p class="ec-hint mt-2">namespace: <code>{{ props.namespace }}</code> · 返回 {{ result.hits.length }} 个 hit · {{ result.phases.retrieveMs ?? 0 }}ms</p>

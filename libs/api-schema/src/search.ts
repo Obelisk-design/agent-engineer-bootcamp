@@ -32,7 +32,9 @@ export const Hit = z.object({
   sourceKind: z.enum(['notion', 'md']),
   sourceLabel: z.string(),
   content: z.string(),
-  score: z.number().min(0).max(1),
+  // cosine similarity 理论范围 [-1, 1]（= 1 - cosine distance，distance ∈ [0, 2]）。
+  // 不相关查询 top-K 里会出现负分——曾因 min(0) 让 zod parse 炸 500（2026-09-09）。
+  score: z.number().min(-1).max(1),
   chunkKind: z.enum(['heading', 'paragraph']),
   highlight: z.array(Highlight),
   meta: z.record(z.string(), z.unknown()).optional(),

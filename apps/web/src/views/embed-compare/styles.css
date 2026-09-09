@@ -36,6 +36,14 @@
   color: #fbbf24;
   font-size: 0.875rem;
 }
+/* 空态提示：中性（虚线框），区别于 ec-error 的红色 —— 空结果不是错误 */
+.ec-empty {
+  border: 1px dashed #52525b;
+  color: #a1a1aa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
 .ec-hint {
   color: #a1a1aa;
   font-size: 0.875rem;
