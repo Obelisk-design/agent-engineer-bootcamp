@@ -13,8 +13,9 @@ import { ref } from 'vue';
 import TabBar from '../components/TabBar.vue';
 import SearchView from './SearchView.vue';
 import IngestView from './IngestView.vue';
+import TwoStageView from './TwoStageView.vue';
 
-const tabs = ['搜索', '入库'] as const;
+const tabs = ['搜索', '入库', '两阶段检索'] as const;
 type Tab = (typeof tabs)[number];
 const active = ref<Tab>('搜索');
 </script>
@@ -23,7 +24,8 @@ const active = ref<Tab>('搜索');
   <div class="mx-auto max-w-4xl space-y-4 p-6">
     <h1 class="text-2xl font-bold">Notion / MD RAG Playground</h1>
     <TabBar :tabs="tabs" v-model="active" />
-    <SearchView v-if="active === '搜索'" />
+    <TwoStageView v-if="active === '两阶段检索'" />
+    <SearchView v-else-if="active === '搜索'" />
     <IngestView v-else />
   </div>
 </template>
