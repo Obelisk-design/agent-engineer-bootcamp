@@ -39,9 +39,12 @@ export {
   judgeHit,
   buildReport,
   formatReport,
+  evaluateRerankRow,
+  formatRerankReport,
   type EvalQuery,
   type EvalRow,
   type EvaluateReport,
+  type RerankEvalRow,
 } from './evaluate.js';
 
 export {

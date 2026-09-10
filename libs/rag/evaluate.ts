@@ -246,6 +246,104 @@ export function buildReport(rows: readonly EvalRow[]): EvaluateReport {
   return { rows, summary };
 }
 
+/**
+ * Day 19 — two-stage retrieval（召回宽 K=20 → rerank 精排 top_n=3）评估。
+ *
+ * 归因三分法（per query，见 spec 2026-09-10-day19-rerank-eval-design.md）：
+ *   - gtInPool=true  + baseline miss + rerank hit → rerank 的功劳（排序失败被修）
+ *   - gtInPool=true  + rerank 也 miss              → rerank 修不动（留线索）
+ *   - gtInPool=false                               → 召回失败，rerank 数学上救不了
+ *
+ * 设计约束：
+ *   - 纯函数（poolHits / finalHits 都是输入）→ mock 单测可覆盖，不发网络
+ *   - finalHits 是 rerank 回绑后的 top-3；rerank 服务挂了时 caller 传向量序 top-3 fallback
+ *     （不伪造 rerank score，rerankFailed 由 caller 标记）
+ *   - query.groundTruthSources 未设 → gtInPool = null（该 query 不参与归因统计）
+ */
+export interface RerankEvalRow {
+  readonly queryId: string;
+  readonly query: string;
+  /** 对照臂：向量 top-3 是否命中 */
+  readonly baselineHit: boolean;
+  /** 实验臂：rerank top-3（或 fallback）是否命中 */
+  readonly rerankHit: boolean;
+  /** GT source 是否在 top-20 召回池内；query 未设 groundTruthSources → null */
+  readonly gtInPool: boolean | null;
+  /** rerank 服务失败走了 fallback（结果按向量序算） */
+  readonly rerankFailed: boolean;
+  /** 实验臂 top-3 的 source（调试用） */
+  readonly topSources: readonly string[];
+  readonly elapsedMs: number;
+}
+
+export function evaluateRerankRow(
+  query: EvalQuery,
+  poolHits: readonly SearchHit[],
+  finalHits: readonly SearchHit[],
+  k = 3,
+): Omit<RerankEvalRow, 'rerankFailed' | 'elapsedMs'> {
+  return {
+    queryId: query.id,
+    query: query.query,
+    baselineHit: judgeHit(query, poolHits, k),
+    rerankHit: judgeHit(query, finalHits, k),
+    gtInPool:
+      query.groundTruthSources !== undefined && query.groundTruthSources.length > 0
+        ? poolHits.some((h) => query.groundTruthSources!.includes(h.record.source))
+        : null,
+    topSources: finalHits.map((h) => h.record.source),
+  };
+}
+
+export function formatRerankReport(rows: readonly RerankEvalRow[]): string {
+  const lines: string[] = [];
+  lines.push('| Query | baseline (向量 top-3) | rerank (top-20→3) | GT in pool | 归因 |');
+  lines.push('| --- | --- | --- | --- | --- |');
+
+  let baselineTotal = 0;
+  let rerankTotal = 0;
+  let rerankWins = 0; // 在池 + baseline miss + rerank hit
+  let rerankFixes = 0; // 在池 + 两边都 miss（rerank 修不动）
+  let rerankBreaks = 0; // 在池 + baseline hit + rerank miss（rerank 排错，负贡献）
+  let recallMisses = 0; // 不在池（rerank 救不了）
+  let failedCount = 0;
+
+  for (const r of rows) {
+    const poolMark = r.gtInPool === null ? '-' : r.gtInPool ? '✓' : '✗ 召回失败';
+    let attribution: string;
+    if (r.gtInPool === null) {
+      attribution = '（未设 GT）';
+    } else if (!r.gtInPool) {
+      attribution = '召回失败';
+      recallMisses++;
+    } else if (!r.baselineHit && r.rerankHit) {
+      attribution = '✅ rerank 救回';
+      rerankWins++;
+    } else if (!r.rerankHit) {
+      attribution = r.baselineHit ? '⚠️ rerank 排错（负贡献）' : 'rerank 修不动';
+      if (r.baselineHit) rerankBreaks++;
+      else rerankFixes++;
+    } else {
+      attribution = '两边都中';
+    }
+    if (r.rerankFailed) failedCount++;
+    baselineTotal += r.baselineHit ? 1 : 0;
+    rerankTotal += r.rerankHit ? 1 : 0;
+    lines.push(
+      `| ${r.queryId} ${r.query} | ${r.baselineHit ? '✅' : '❌'} | ${r.rerankHit ? '✅' : '❌'}${r.rerankFailed ? ' (fallback)' : ''} | ${poolMark} | ${attribution} |`,
+    );
+  }
+  const n = rows.length;
+  lines.push('');
+  lines.push(
+    `**baseline**: ${baselineTotal}/${n} → **rerank**: ${rerankTotal}/${n} (Δ ${rerankTotal - baselineTotal >= 0 ? '+' : ''}${rerankTotal - baselineTotal})`,
+  );
+  lines.push(
+    `归因：rerank 救回 ${rerankWins} · rerank 修不动 ${rerankFixes} · rerank 排错 ${rerankBreaks} · 召回失败（不在池） ${recallMisses} · rerank 服务失败 ${failedCount}`,
+  );
+  return lines.join('\n');
+}
+
 export function formatReport(report: EvaluateReport): string {
   const lines: string[] = [];
   lines.push('| Query | heading | paragraph |');
