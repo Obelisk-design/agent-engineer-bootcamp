@@ -1,0 +1,28 @@
+apiVersion: policy.corp.example/v1
+kind: ITRegulation
+metadata:
+  id: POLICY-0169
+  name: 全员密码策略更新通知
+  labels:
+    category: IT
+    owner: 信息技术部
+    confidential: public
+spec:
+  version: 2.2
+  effectiveDate: 2025-02-04
+  workflow:
+    - name: 申请
+      system: OA
+      sla: 24h
+    - name: 部门审核
+      required: true
+    - name: 信息技术部会签
+      required: true
+    - name: 法务合规审核
+      required: false
+  tags:
+    - 制度
+    - 合规
+    - IT
+  related:
+    - POLICY-0168

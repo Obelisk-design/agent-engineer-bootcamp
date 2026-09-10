@@ -1,0 +1,28 @@
+apiVersion: policy.corp.example/v1
+kind: 财务Regulation
+metadata:
+  id: POLICY-0168
+  name: 年度预算编制启动会通知
+  labels:
+    category: 财务
+    owner: 财务部
+    confidential: public
+spec:
+  version: 1.1
+  effectiveDate: 2025-01-01
+  workflow:
+    - name: 申请
+      system: OA
+      sla: 24h
+    - name: 部门审核
+      required: true
+    - name: 财务部会签
+      required: true
+    - name: 法务合规审核
+      required: true
+  tags:
+    - 制度
+    - 合规
+    - 财务
+  related:
+    - POLICY-0167

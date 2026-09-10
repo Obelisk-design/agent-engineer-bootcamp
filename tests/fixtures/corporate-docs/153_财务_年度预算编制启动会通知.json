@@ -1,0 +1,47 @@
+{
+  "id": "POLICY-0153",
+  "title": "年度预算编制启动会通知",
+  "category": "财务",
+  "owner": "财务部",
+  "version": "V2.7",
+  "effectiveDate": "2025-10-12",
+  "tags": ["财务", "制度", "合规", "财务部"],
+  "sections": [
+    {
+      "id": "purpose",
+      "title": "目的与适用范围",
+      "content": "规范年度预算编制启动会通知相关工作，明确职责与流程。"
+    },
+    {
+      "id": "roles",
+      "title": "职责分工",
+      "content": "财务部为归口管理部门；各业务部门配合执行；财务、法务合规审核监督。"
+    },
+    {
+      "id": "workflow",
+      "title": "流程说明",
+      "content": "相关申请在 OA 系统提交，按权限逐级审批。"
+    },
+    {
+      "id": "faq",
+      "title": "常见问题",
+      "content": "紧急事项可先口头/邮件申请，3 个工作日内补办系统流程。"
+    }
+  ],
+  "approvers": [
+    {
+      "role": "部门负责人",
+      "required": true
+    },
+    {
+      "role": "财务部主管",
+      "required": true
+    },
+    {
+      "role": "法务合规审核",
+      "required": true
+    }
+  ],
+  "relatedDocs": ["POLICY-0152", "POLICY-0154"],
+  "createdAt": "2026-09-10T09:15:30.295Z"
+}

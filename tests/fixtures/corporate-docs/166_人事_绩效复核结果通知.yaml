@@ -1,0 +1,28 @@
+apiVersion: policy.corp.example/v1
+kind: 人事Regulation
+metadata:
+  id: POLICY-0166
+  name: 绩效复核结果通知
+  labels:
+    category: 人事
+    owner: 人力资源部
+    confidential: public
+spec:
+  version: 3.6
+  effectiveDate: 2025-11-23
+  workflow:
+    - name: 申请
+      system: OA
+      sla: 24h
+    - name: 部门审核
+      required: true
+    - name: 人力资源部会签
+      required: true
+    - name: 法务合规审核
+      required: false
+  tags:
+    - 制度
+    - 合规
+    - 人事
+  related:
+    - POLICY-0165

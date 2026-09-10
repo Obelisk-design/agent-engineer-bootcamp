@@ -1,0 +1,28 @@
+apiVersion: policy.corp.example/v1
+kind: 法务Regulation
+metadata:
+  id: POLICY-0170
+  name: 反舞弊举报渠道更新公告
+  labels:
+    category: 法务
+    owner: 法务合规部
+    confidential: internal
+spec:
+  version: 3.3
+  effectiveDate: 2025-03-07
+  workflow:
+    - name: 申请
+      system: OA
+      sla: 24h
+    - name: 部门审核
+      required: true
+    - name: 法务合规部会签
+      required: true
+    - name: 法务合规审核
+      required: true
+  tags:
+    - 制度
+    - 合规
+    - 法务
+  related:
+    - POLICY-0169

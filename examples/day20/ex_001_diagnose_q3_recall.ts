@@ -41,6 +41,7 @@ async function listAdrChunks(tableName: string): Promise<readonly Row[]> {
   const db = await lancedb.connect(STORE_URI);
   try {
     const names = await db.tableNames();
+    console.log(`tableNames: ${names.join(', ')}`);
     if (!names.includes(tableName)) return [];
     const t = await db.openTable(tableName);
     // lancedb JS query().where('source LIKE "docs/adr/%"').toArray()

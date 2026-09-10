@@ -1,0 +1,47 @@
+{
+  "id": "POLICY-0159",
+  "title": "全员密码策略更新通知",
+  "category": "IT",
+  "owner": "信息技术部",
+  "version": "V4.6",
+  "effectiveDate": "2025-04-02",
+  "tags": ["IT", "制度", "合规", "信息技术部"],
+  "sections": [
+    {
+      "id": "purpose",
+      "title": "目的与适用范围",
+      "content": "规范全员密码策略更新通知相关工作，明确职责与流程。"
+    },
+    {
+      "id": "roles",
+      "title": "职责分工",
+      "content": "信息技术部为归口管理部门；各业务部门配合执行；财务、法务合规审核监督。"
+    },
+    {
+      "id": "workflow",
+      "title": "流程说明",
+      "content": "相关申请在 OA 系统提交，按权限逐级审批。"
+    },
+    {
+      "id": "faq",
+      "title": "常见问题",
+      "content": "紧急事项可先口头/邮件申请，3 个工作日内补办系统流程。"
+    }
+  ],
+  "approvers": [
+    {
+      "role": "部门负责人",
+      "required": true
+    },
+    {
+      "role": "信息技术部主管",
+      "required": true
+    },
+    {
+      "role": "法务合规审核",
+      "required": false
+    }
+  ],
+  "relatedDocs": ["POLICY-0158", "POLICY-0160"],
+  "createdAt": "2026-09-10T09:15:30.304Z"
+}

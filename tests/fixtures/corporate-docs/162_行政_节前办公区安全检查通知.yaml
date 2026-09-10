@@ -1,0 +1,28 @@
+apiVersion: policy.corp.example/v1
+kind: 行政Regulation
+metadata:
+  id: POLICY-0162
+  name: 节前办公区安全检查通知
+  labels:
+    category: 行政
+    owner: 行政运营部
+    confidential: public
+spec:
+  version: 3.2
+  effectiveDate: 2025-07-11
+  workflow:
+    - name: 申请
+      system: OA
+      sla: 24h
+    - name: 部门审核
+      required: true
+    - name: 行政运营部会签
+      required: true
+    - name: 法务合规审核
+      required: false
+  tags:
+    - 制度
+    - 合规
+    - 行政
+  related:
+    - POLICY-0161
