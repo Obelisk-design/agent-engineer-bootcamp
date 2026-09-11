@@ -1,0 +1,12 @@
+// apps/web/src/styles/transition.scss
+// Day 23 Task 1 —— admin 模板的 fade 过渡（用于 el-transition / 路由切换）
+// Task 6 视需要加 slide-fade / zoom 等
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}

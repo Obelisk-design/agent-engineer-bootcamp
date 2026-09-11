@@ -1,5 +1,6 @@
 packages:
   - 'libs/*'
+  - 'apps/*'
 
 # pnpm 11+：白名单列出的包才允许执行 install/build script。
 # 历史坑：Day 01 写成 `allowBuilds: { esbuild: false }` 反而禁用 esbuild，导致 vite/vitest 安装阶段就警告。
@@ -23,3 +24,5 @@ allowBuilds:
   sharp: true
   onnxruntime-node: true
   protobufjs: true
+  '@parcel/watcher': false
+  vue-demi: false

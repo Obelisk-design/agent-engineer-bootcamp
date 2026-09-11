@@ -3,16 +3,20 @@
  *
  * Vite 配置 —— Agent Console 前端。
  *
- * 核心配置：
- * - dev server 端口由 scripts/with-ports.ts 通过 CLI --port 决定
- * - dev proxy：把 /agent /traces 代理到 VITE_API_TARGET（默认 http://localhost:3000）
- *   让前端 fetch('/agent') 直接打到 API，不需要 CORS 中间件
- * - 生产构建产物在 apps/web/dist（不污染根 dist）
+ * 变更：Day 23 Task 1 (P0) —— admin 模板移植
+ * - 加 AutoImport / Components (ElementPlusResolver) —— admin 风格按需引入
+ * - 加 SCSS modern-compiler
+ * - 保留 tailwindcss() 插件 —— Task 6 才正式弃 Tailwind，Task 1 仅注册三件套
+ *
+ * 其余配置（端口 / proxy / envDir）保持 Day 22 原状。
  */
 
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import tailwindcss from '@tailwindcss/vite';
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 
 const API_TARGET = process.env.VITE_API_TARGET ?? 'http://localhost:3000';
 // 🆕 Day 14: RAG app 跑在 3100（day09 agent 占用 3000）
@@ -23,7 +27,12 @@ const RAG_API_TARGET = process.env.VITE_RAG_API_TARGET ?? 'http://localhost:3100
 const EVAL_API_TARGET = process.env.VITE_EVAL_API_TARGET ?? 'http://localhost:3202';
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    AutoImport({ resolvers: [ElementPlusResolver()] }),
+    Components({ resolvers: [ElementPlusResolver()] }),
+  ],
   // Day 12 fix：vite 默认从 cwd 读 .env，但 vite 从根目录启、cwd 也是 apps/web，
   // 根 .env 读不到 → 前端 import.meta.env.VITE_OPENAI_API_KEY 为 undefined。
   // 显式指定 envDir 回到项目根，让前后端共用同一份 .env。
@@ -64,5 +73,11 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,
+  },
+  // 🆕 Day 23 Task 1: admin 模板用 SCSS 主题，modern-compiler 避免 dart-sass legacy 警告
+  css: {
+    preprocessorOptions: {
+      scss: { api: 'modern-compiler' },
+    },
   },
 });

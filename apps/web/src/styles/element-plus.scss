@@ -1,0 +1,11 @@
+// apps/web/src/styles/element-plus.scss
+// Day 23 Task 1 —— Element Plus CSS 变量覆盖（占位，与 variables.scss 一一对应）
+// Task 6 主题切换（dark/light）在 variables.scss 基础上扩展
+
+:root {
+  --el-color-primary: #409eff;
+  --el-color-success: #67c23a;
+  --el-color-warning: #e6a23c;
+  --el-color-danger: #f56c6c;
+  --el-color-info: #909399;
+}
