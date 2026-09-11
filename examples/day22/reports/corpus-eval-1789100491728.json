@@ -1,0 +1,134 @@
+{
+  "totalFiles": 200,
+  "byCategory": {
+    "人事": {
+      "total": 40,
+      "extracted": 14
+    },
+    "行政": {
+      "total": 40,
+      "extracted": 24
+    },
+    "财务": {
+      "total": 40,
+      "extracted": 34
+    },
+    "IT": {
+      "total": 40,
+      "extracted": 34
+    },
+    "法务": {
+      "total": 40,
+      "extracted": 29
+    }
+  },
+  "byFormat": {
+    "pdf": {
+      "total": 30,
+      "extracted": 0,
+      "empty": 30,
+      "unavailable": 0
+    },
+    "md": {
+      "total": 50,
+      "extracted": 50,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "docx": {
+      "total": 15,
+      "extracted": 15,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "xlsx": {
+      "total": 10,
+      "extracted": 10,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "pptx": {
+      "total": 5,
+      "extracted": 5,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "png": {
+      "total": 5,
+      "extracted": 0,
+      "empty": 0,
+      "unavailable": 5
+    },
+    "html": {
+      "total": 5,
+      "extracted": 5,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "csv": {
+      "total": 5,
+      "extracted": 5,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "txt": {
+      "total": 5,
+      "extracted": 5,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "eml": {
+      "total": 10,
+      "extracted": 10,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "zip": {
+      "total": 10,
+      "extracted": 10,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "jpg": {
+      "total": 10,
+      "extracted": 0,
+      "empty": 0,
+      "unavailable": 10
+    },
+    "webp": {
+      "total": 10,
+      "extracted": 0,
+      "empty": 0,
+      "unavailable": 10
+    },
+    "tiff": {
+      "total": 10,
+      "extracted": 0,
+      "empty": 0,
+      "unavailable": 10
+    },
+    "json": {
+      "total": 10,
+      "extracted": 10,
+      "empty": 0,
+      "unavailable": 0
+    },
+    "yaml": {
+      "total": 10,
+      "extracted": 10,
+      "empty": 0,
+      "unavailable": 0
+    }
+  },
+  "overall": {
+    "extractedRate": 0.675,
+    "emptyRate": 0.15,
+    "unavailableRate": 0.175,
+    "totalChunks": 259,
+    "avgChunksPerFile": 1.9185185185185185,
+    "avgTokensPerChunk": 381.5328185328185,
+    "tokenMin": 54,
+    "tokenMedian": 465,
+    "tokenMax": 934
+  }
+}

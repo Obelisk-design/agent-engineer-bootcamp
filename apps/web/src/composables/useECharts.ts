@@ -16,7 +16,7 @@
  * - 加 window resize 监听，sidebar 折叠导致主区尺寸变化时 chart 自动 resize
  */
 import * as echarts from 'echarts/core';
-import { BarChart, LineChart } from 'echarts/charts';
+import { BarChart, LineChart, ScatterChart } from 'echarts/charts';
 import {
   GridComponent,
   TooltipComponent,
@@ -29,6 +29,7 @@ import { onBeforeUnmount, ref, watchEffect, type Ref } from 'vue';
 echarts.use([
   BarChart,
   LineChart,
+  ScatterChart,
   GridComponent,
   TooltipComponent,
   LegendComponent,
