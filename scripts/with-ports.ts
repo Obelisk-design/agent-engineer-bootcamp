@@ -85,6 +85,12 @@ function main(): void {
     if (process.env['api_url'] !== undefined && process.env['api_url'] !== '') {
       childEnv['VITE_API_TARGET'] = process.env['api_url'];
     }
+    // 🆕 Day 23 Ruling 25: esbuild Windows OOM workaround
+    // 默认 4GB 堆让 esbuild native 二进制走稳 GC 路径
+    // 老大手动指定 NODE_OPTIONS 时此值被覆盖
+    if (process.env['NODE_OPTIONS'] === undefined || process.env['NODE_OPTIONS'] === '') {
+      childEnv['NODE_OPTIONS'] = '--max-old-space-size=4096';
+    }
   } else if (name === 'api') {
     childEnv['PORT'] = String(port);
   } else if (name === 'rag') {
