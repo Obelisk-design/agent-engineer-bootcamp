@@ -46,14 +46,14 @@ function numColor(n: number): string {
   // 正数偏亮蓝，负数偏亮红，0 浅灰
   // 数值多半落在 [-0.05, 0.05] 范围，把 alpha 曲线压扁一点让小值也能看见
   if (n > 0) {
-    const a = Math.min(1, 0.45 + Math.abs(n) * 12);
-    return `rgba(125, 211, 252, ${a})`;
+    const a = Math.min(1, 0.55 + Math.abs(n) * 12);
+    return `rgba(64, 158, 255, ${a})`; // Element Plus primary 蓝
   }
   if (n < 0) {
-    const a = Math.min(1, 0.45 + Math.abs(n) * 12);
-    return `rgba(251, 113, 133, ${a})`;
+    const a = Math.min(1, 0.55 + Math.abs(n) * 12);
+    return `rgba(245, 108, 108, ${a})`; // Element Plus danger 红
   }
-  return 'rgba(212, 212, 216, 0.7)';
+  return '#c0c4cc';
 }
 
 async function run(): Promise<void> {
@@ -78,13 +78,9 @@ async function run(): Promise<void> {
 <template>
   <section class="embed-panel">
     <h2>Panel A · 距离矩阵热图（10 个混合词，cosine，4096 维）</h2>
-    <button
-      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
-      :disabled="busy"
-      @click="run"
-    >
+    <el-button :loading="busy" type="primary" size="small" @click="run">
       {{ busy ? 'Running…' : 'Run' }}
-    </button>
+    </el-button>
 
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>
     <p v-else-if="busy" class="embed-loading mt-3">embedding 10 texts…</p>
@@ -94,26 +90,27 @@ async function run(): Promise<void> {
 
       <button
         type="button"
-        class="mt-4 text-xs px-3 py-1 rounded border border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+        class="mt-4 text-xs px-3 py-1 rounded border border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+        style="font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 0.375rem; border: 1px solid #dcdfe6; color: #606266; background: #ffffff; cursor: pointer"
         @click="showRaw = !showRaw"
       >
         {{ showRaw ? '▼' : '▶' }} 查看原始 4096 维向量（前 {{ SHOW_DIMS }} 维）
       </button>
 
       <div v-if="showRaw" class="mt-3 space-y-4">
-        <p class="text-sm text-zinc-300">
+        <p class="text-sm" style="color: #606266">
           大模型给每个词返回 {{ stats[0]?.dim ?? 0 }} 维向量（数字数组）。
-          <span class="text-sky-300">正数偏亮蓝</span>、
-          <span class="text-rose-300">负数偏亮红</span> —— 这就是"语义被编码成数字"的样子。
+          <span style="color: #409eff">正数偏亮蓝</span>、
+          <span style="color: #f56c6c">负数偏亮红</span> —— 这就是"语义被编码成数字"的样子。
         </p>
         <div
           v-for="s in stats"
           :key="s.label"
-          class="border border-zinc-700 rounded p-3 bg-zinc-900"
+          style="border: 1px solid #ebeef5; border-radius: 0.375rem; padding: 0.75rem; background: #fafafa"
         >
           <div class="flex items-baseline justify-between mb-2">
-            <span class="text-zinc-100 text-base font-semibold">{{ s.label }}</span>
-            <span class="text-zinc-400 text-xs font-mono">
+            <span style="color: #303133; font-size: 1rem; font-weight: 600">{{ s.label }}</span>
+            <span style="color: #909399; font-size: 0.75rem; font-family: ui-monospace, monospace">
               dim={{ s.dim }} · ‖v‖₂={{ s.norm.toFixed(3) }}
             </span>
           </div>
@@ -127,7 +124,7 @@ async function run(): Promise<void> {
             >
               {{ fmt(n) }}
             </span>
-            <span class="text-zinc-500 px-1">… +{{ s.dim - SHOW_DIMS }} dims</span>
+            <span style="color: #909399; padding: 0 0.25rem">… +{{ s.dim - SHOW_DIMS }} dims</span>
           </div>
         </div>
       </div>

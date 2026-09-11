@@ -1,6 +1,7 @@
 <!--
   apps/web/src/views/embed/PanelD.vue
   Panel D: query + 4 prefix variants — visualize distance gradient.
+  Day 23 Task 4：白底亮色。
 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue';
@@ -45,25 +46,26 @@ async function run(): Promise<void> {
 <template>
   <section class="embed-panel">
     <h2>Panel D · 距离梯度（query + 4 前缀变体）</h2>
-    <p class="text-xs text-zinc-400 mb-2">
-      query: <code class="text-zinc-200">"{{ QUERY }}"</code>
+    <p style="font-size: 0.75rem; color: #909399; margin-bottom: 0.5rem">
+      query: <code style="color: #303133">"{{ QUERY }}"</code>
     </p>
-    <button
-      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
-      :disabled="busy"
-      @click="run"
-    >
+    <el-button :loading="busy" type="primary" size="small" @click="run">
       {{ busy ? 'Running…' : 'Run' }}
-    </button>
+    </el-button>
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>
     <p v-else-if="busy" class="embed-loading mt-3">embedding query + variants…</p>
-    <ul v-else-if="rows" class="mt-3 space-y-2 text-xs">
+    <ul v-else-if="rows" class="mt-3 space-y-2" style="font-size: 0.75rem">
       <li v-for="r in rows" :key="r.name" class="flex items-center gap-3">
-        <span class="w-28 text-zinc-400">{{ r.name }}</span>
-        <div class="flex-1 bg-zinc-800 rounded h-3 overflow-hidden">
-          <div class="h-full bg-rose-500" :style="{ width: (r.distance / maxD) * 100 + '%' }" />
+        <span style="width: 7rem; color: #606266">{{ r.name }}</span>
+        <div style="flex: 1; background: #f5f7fa; border-radius: 0.375rem; height: 0.75rem; overflow: hidden">
+          <div
+            style="height: 100%; background: #f56c6c"
+            :style="{ width: (r.distance / maxD) * 100 + '%' }"
+          />
         </div>
-        <span class="w-16 text-right text-zinc-300">{{ r.distance.toFixed(3) }}</span>
+        <span style="width: 4rem; text-align: right; color: #303133; font-family: ui-monospace, monospace">
+          {{ r.distance.toFixed(3) }}
+        </span>
       </li>
     </ul>
   </section>

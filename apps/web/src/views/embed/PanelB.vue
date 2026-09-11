@@ -30,13 +30,9 @@ async function run(): Promise<void> {
 <template>
   <section class="embed-panel">
     <h2>Panel B · PCA → 2D 散点图（同 10 词）</h2>
-    <button
-      class="text-xs px-3 py-1 rounded bg-sky-700 hover:bg-sky-600 disabled:opacity-50"
-      :disabled="busy"
-      @click="run"
-    >
+    <el-button :loading="busy" type="primary" size="small" @click="run">
       {{ busy ? 'Running…' : 'Run' }}
-    </button>
+    </el-button>
     <p v-if="err" class="embed-error mt-3">{{ err }}</p>
     <p v-else-if="busy" class="embed-loading mt-3">embedding + PCA…</p>
     <div v-else-if="svg" class="mt-3" v-html="svg" />
