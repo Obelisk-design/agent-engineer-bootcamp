@@ -4,6 +4,12 @@
  * 纯函数：距离矩阵 → HTML 热图；向量集合 → SVG 散点图。
  * 输出 self-contained 字符串（Vue 直接 v-html 即可）。
  *
+ * 颜色策略（Day 23 Task 4）：
+ * - 数据色板保留（near emerald → far deep purple；point sky+highlight emerald）
+ * - chrome 颜色（背景文字/坐标轴/边框）改为"白底可读"：默认 cellText/labelText 深灰，
+ *   borderColor 浅灰。SVG scatter 容器底色由调用方 .scatter 类控制（CSS 给白底）。
+ * - 默认值对齐 Element Plus 文字色：主文 #303133 / 次要 #606266 / 占位 #909399
+ *
  * 历史：
  * - Day 18 初版：白→粉 gradient、单一圆点样式
  * - Day 19 重构：新增 ScatterOpts / DistanceMatrixTheme 可选参数（默认空对象），
@@ -13,12 +19,12 @@
 import { cosineDistance } from './distance.js';
 import { pca2d } from './pca.js';
 
-/** 默认颜色 —— 跟 apps/web 全局 zinc 调色板对齐 */
+/** 默认颜色 —— 跟 apps/web 全局亮色主题对齐（AppMain #f0f2f5 + Element Plus 文字色） */
 const DEFAULT_NEAR = 'rgb(16, 185, 129)'; // emerald-500 — close (low distance)
 const DEFAULT_FAR = 'rgb(40, 10, 35)'; // deep purple — far (high distance)
-const DEFAULT_CELL_TEXT = '#e4e4e7';
-const DEFAULT_LABEL_TEXT = '#a1a1aa';
-const DEFAULT_BORDER = 'rgba(63,63,70,0.5)';
+const DEFAULT_CELL_TEXT = '#303133'; // Element Plus 主文
+const DEFAULT_LABEL_TEXT = '#606266'; // Element Plus 次要
+const DEFAULT_BORDER = 'rgba(220, 223, 230, 0.7)'; // Element Plus border-light
 const DEFAULT_HIGHLIGHT_FILL = '#10b981';
 const DEFAULT_HIGHLIGHT_STROKE = '#34d399';
 const DEFAULT_HIGHLIGHT_RADIUS = 8;
@@ -90,14 +96,17 @@ export function distanceMatrixHTML(
       const d = grid[i]![j]!;
       const t = maxD === 0 ? 0 : d / maxD;
       const bg = lerpColor(t, near, far);
+      // 远距离深底用白字，浅底用深字 —— 自动对比
+      const fg = t > 0.45 ? '#ffffff' : '#303133';
       cells.push(
-        `<td style="background:${bg}" title="${escapeHtml(labels[i]!)} vs ${escapeHtml(labels[j]!)} = ${d.toFixed(3)}">${d.toFixed(2)}</td>`,
+        `<td style="background:${bg};color:${fg}" title="${escapeHtml(labels[i]!)} vs ${escapeHtml(labels[j]!)} = ${d.toFixed(3)}">${d.toFixed(2)}</td>`,
       );
     }
     cells.push('</tr>');
   }
   // 自包含 <style> —— 让函数不依赖外部 CSS 也能在 v-html 下正确呈现
-  const style = `<style>.dm{border-collapse:collapse;border:1px solid ${borderColor};font-size:11px;font-family:ui-monospace,monospace;color:${cellText}}.dm th,.dm td{padding:6px 10px;text-align:center;border:1px solid ${borderColor}}.dm .lbl{color:${labelText};text-align:left;font-weight:600}.dm thead th{color:${labelText};background:rgba(255,255,255,0.02)}</style>`;
+  // Day 23 Task 4：白底可读（thead 用极浅灰底 + label 字色 #606266 + cell 字色 #303133）
+  const style = `<style>.dm{border-collapse:collapse;border:1px solid ${borderColor};font-size:11px;font-family:ui-monospace,monospace;color:${cellText};background:#ffffff}.dm th,.dm td{padding:6px 10px;text-align:center;border:1px solid ${borderColor}}.dm .lbl{color:${labelText};text-align:left;font-weight:600;background:#f5f7fa}.dm thead th{color:${labelText};background:#f5f7fa;font-weight:600}</style>`;
   return `${style}<table class="dm"><thead><tr><th></th>${labels.map((l) => `<th>${escapeHtml(l)}</th>`).join('')}</tr></thead><tbody>${cells.join('')}</tbody></table>`;
 }
 
@@ -153,7 +162,7 @@ export function scatterSVG(
       const stroke = isHi ? hiStroke : DEFAULT_CORPUS_STROKE;
       const r = isHi ? hiR : coR;
       const cls = isHi ? ' class="hi"' : '';
-      return `<g${cls}><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.2" /><text x="${cx}" y="${ty}" text-anchor="middle" font-size="10" fill="#e4e4e7">${escapeHtml(labels[i]!)}</text></g>`;
+      return `<g${cls}><circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.2" /><text x="${cx}" y="${ty}" text-anchor="middle" font-size="10" fill="#303133">${escapeHtml(labels[i]!)}</text></g>`;
     })
     .join('');
 
@@ -161,13 +170,20 @@ export function scatterSVG(
     opts.showLegend === true
       ? `<g transform="translate(${width - 110}, ${height - 30})">
         <circle cx="6" cy="0" r="${hiR}" fill="${hiFill}" stroke="${hiStroke}" stroke-width="1.2" />
-        <text x="20" y="3" font-size="10" fill="#a1a1aa">query</text>
+        <text x="20" y="3" font-size="10" fill="#606266">query</text>
         <circle cx="56" cy="0" r="${coR}" fill="${DEFAULT_CORPUS_FILL}" stroke="${DEFAULT_CORPUS_STROKE}" stroke-width="1" />
-        <text x="68" y="3" font-size="10" fill="#a1a1aa">corpus</text>
+        <text x="68" y="3" font-size="10" fill="#606266">corpus</text>
       </g>`
       : '';
 
-  return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" class="scatter">${dots}${legend}</svg>`;
+  // 坐标轴：用与面板文字一致的深灰；底色由调用方 .scatter 类控制（CSS 给白底）。
+  const axisStyle = `<style>.scatter text{fill:#606266;font-family:ui-monospace,monospace}.scatter .axis{stroke:#dcdfe6;stroke-width:1}</style>`;
+  const axisLines = `
+    <line class="axis" x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" />
+    <line class="axis" x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" />
+  `;
+
+  return `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" class="scatter">${axisStyle}${axisLines}${dots}${legend}</svg>`;
 }
 
 function escapeHtml(s: string): string {
