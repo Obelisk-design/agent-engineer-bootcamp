@@ -29,7 +29,7 @@
  */
 
 import { retrieve, type ChunkStrategy } from '../rag/retrieve.js';
-import type { SearchHit } from '../rag/store.js';
+import type { SearchHit, VectorStore } from '../rag/store.js';
 import { rerank } from '../reranker/rerank.js';
 import type { LoadedQuery } from './gt-loader.js';
 import type { QueryLabels } from './schema.js';
