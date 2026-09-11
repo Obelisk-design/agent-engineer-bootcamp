@@ -1,30 +1,22 @@
 <!--
   apps/web/src/components/Composer.vue
 
-  底部输入栏 —— Claude Code 风格：圆角多行 + 主操作按钮靠右下。
-  - 受控 textarea，行数 1-8 自适应
-  - Enter 提交 / Shift+Enter 换行 / Ctrl/⌘+Enter 也提交
-  - busy=true 时 Send 替换为 Stop
-
-  设计：与主区留 24px 上下 padding，按钮 hover 高亮。
+  底部输入栏 —— Element Plus + useAgentStore 接入。
+  受控 textarea + 主按钮 + Stop 按钮（busy 时切换）。
+  Enter 提交 / Shift+Enter 换行 / Ctrl/⌘+Enter 也提交。
+  数据流：textarea → store.send() / store.stop()
 -->
-
 <script setup lang="ts">
 import { ref } from 'vue';
-import { IconSend, IconStop } from './icons.js';
+import { useAgentStore } from '@/store/modules/agent';
 
-defineProps<{ busy: boolean }>();
-const emit = defineEmits<{
-  send: [input: string];
-  stop: [];
-}>();
-
+const agent = useAgentStore();
 const inputText = ref('');
 
 function submit(): void {
   const value = inputText.value.trim();
-  if (value === '') return;
-  emit('send', value);
+  if (value === '' || agent.isStreaming) return;
+  agent.send(value);
   inputText.value = '';
 }
 
@@ -39,47 +31,97 @@ function onKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <div class="px-6 py-4 bg-zinc-950 border-t border-zinc-800 shrink-0">
-    <div class="max-w-3xl mx-auto">
-      <div
-        class="rounded-xl border border-zinc-700 bg-zinc-900 focus-within:border-emerald-600/60 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all"
-      >
-        <textarea
-          v-model="inputText"
-          placeholder="Ask the agent anything…  (Enter to send · Shift+Enter for newline)"
-          :disabled="busy"
-          rows="2"
-          class="w-full px-4 pt-3 pb-2 bg-transparent text-zinc-100 placeholder-zinc-500 text-[13.5px] leading-relaxed resize-none outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          data-testid="composer-input"
-          @keydown="onKeydown"
-        />
-        <div class="flex items-center justify-between px-3 pb-2.5">
-          <span class="text-[10.5px] text-zinc-600 font-mono">
-            Enter to send · Shift+Enter for newline
-          </span>
-          <button
-            v-if="!busy"
-            type="button"
-            class="px-3.5 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 inline-flex items-center gap-1.5 font-semibold text-[12.5px] disabled:bg-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors"
-            data-testid="composer-send"
-            :disabled="inputText.trim() === ''"
-            @click="submit"
-          >
-            <span>Send</span>
-            <IconSend :size="13" />
-          </button>
-          <button
-            v-else
-            type="button"
-            class="px-3.5 h-8 rounded-lg bg-red-500 hover:bg-red-400 text-zinc-50 inline-flex items-center gap-1.5 font-semibold text-[12.5px] transition-colors"
-            data-testid="composer-stop"
-            @click="emit('stop')"
-          >
-            <IconStop :size="12" />
-            <span>Stop</span>
-          </button>
-        </div>
+  <div class="composer">
+    <div class="composer-inner">
+      <textarea
+        v-model="inputText"
+        placeholder="Ask the agent anything…  (Enter to send · Shift+Enter for newline)"
+        :disabled="agent.isStreaming"
+        rows="2"
+        class="composer-textarea"
+        data-testid="composer-input"
+        @keydown="onKeydown"
+      />
+      <div class="composer-bar">
+        <span class="composer-hint">Enter to send · Shift+Enter for newline</span>
+        <el-button
+          v-if="!agent.isStreaming"
+          type="primary"
+          size="small"
+          data-testid="composer-send"
+          :disabled="inputText.trim() === ''"
+          @click="submit"
+        >
+          Send
+        </el-button>
+        <el-button
+          v-else
+          type="danger"
+          size="small"
+          data-testid="composer-stop"
+          @click="agent.stop()"
+        >
+          Stop
+        </el-button>
       </div>
     </div>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.composer {
+  padding: 16px 24px;
+  background: #181818;
+  border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.composer-inner {
+  max-width: 768px;
+  margin: 0 auto;
+  border-radius: 12px;
+  border: 1px solid #3a3a3a;
+  background: #1e1e1e;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus-within {
+    border-color: #409eff;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
+  }
+}
+
+.composer-textarea {
+  width: 100%;
+  padding: 12px 16px 8px;
+  background: transparent;
+  color: #e5e5e5;
+  border: none;
+  outline: none;
+  font-size: 13.5px;
+  line-height: 1.6;
+  resize: none;
+  font-family: inherit;
+
+  &::placeholder {
+    color: #6a6a6a;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 10px;
+}
+
+.composer-hint {
+  font-size: 10.5px;
+  color: #6a6a6a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+</style>
