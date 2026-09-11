@@ -2,6 +2,7 @@
   apps/web/src/views/embed-compare/components/VectorSearchPanel.vue
 
   Vector Search 阶段展示壳：摘要 + hit 列表 + 可折叠距离热图。
+  Day 23 Task 4：白底亮色，el-card + Element Plus status colors。
 -->
 
 <script setup lang="ts">
@@ -33,59 +34,72 @@ function truncate(s: string, n: number): string {
 </script>
 
 <template>
-  <section class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
-    <header class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-400">
-        Vector Search · Top {{ topK }}
-      </h2>
-      <span v-if="result" class="font-mono text-[10px] text-zinc-500">
-        namespace: <span class="text-sky-300">{{ namespace }}</span> · {{ result.hits.length }} hits · {{ result.retrieveMs }}ms
-      </span>
-    </header>
+  <el-card shadow="never">
+    <template #header>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #303133">
+          Vector Search · Top {{ topK }}
+        </span>
+        <span v-if="result" style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
+          namespace: <span style="color: #409eff">{{ namespace }}</span> · {{ result.hits.length }} hits · {{ result.retrieveMs }}ms
+        </span>
+      </div>
+    </template>
 
-    <p v-if="running" class="mt-3 text-sm text-amber-400">● Searching vectors in LanceDB…</p>
-    <p v-else-if="errorMsg" class="mt-3 rounded border border-red-700 bg-red-900/40 px-3 py-2 text-xs text-red-200">
-      ✕ Vector search failed: {{ errorMsg }}
-    </p>
-    <p
+    <el-alert
+      v-if="running"
+      type="warning"
+      :closable="false"
+      title="● Searching vectors in LanceDB…"
+      show-icon
+    />
+    <el-alert
+      v-else-if="errorMsg"
+      type="error"
+      :closable="false"
+      :title="`✕ Vector search failed: ${errorMsg}`"
+      show-icon
+    />
+    <el-empty
       v-else-if="empty"
-      class="mt-3 rounded border border-dashed border-zinc-700 px-3 py-2 text-xs text-zinc-400"
-    >
-      搜索不到 — namespace <code>{{ namespace }}</code> 没有返回任何结果，该库可能未索引或为空。换个 namespace 试试，或先跑入库脚本。
-    </p>
+      :description="`搜索不到 — namespace ${namespace} 没有返回任何结果，该库可能未索引或为空。换个 namespace 试试，或先跑入库脚本。`"
+      :image-size="60"
+    />
 
     <template v-else-if="result && result.hits.length > 0">
-      <ol class="mt-3 flex flex-col gap-2">
+      <ol style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none">
         <li
           v-for="(h, i) in result.hits"
           :key="h.chunkId"
-          class="grid grid-cols-[3rem_1fr_auto] items-center gap-2 rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs"
+          style="display: grid; grid-template-columns: 3rem 1fr auto; align-items: center; gap: 8px; border: 1px solid #ebeef5; border-radius: 0.375rem; padding: 8px 12px; background: #fafafa; font-size: 0.75rem"
         >
-          <div class="text-center font-mono text-sm font-semibold text-zinc-500">#{{ i + 1 }}</div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-zinc-500">
-              <code class="font-mono">{{ h.chunkKind }}</code> ·
-              <span class="text-sky-300">{{ h.sourceLabel }}</span>
-            </div>
-            <div class="mt-0.5 break-words text-zinc-200">{{ truncate(h.content, 120) }}</div>
+          <div style="text-align: center; font-family: ui-monospace, monospace; font-size: 0.875rem; font-weight: 600; color: #909399">
+            #{{ i + 1 }}
           </div>
-          <div class="text-right font-mono text-xs">
-            <div class="text-sky-300">vector {{ h.score.toFixed(3) }}</div>
-            <div class="text-[10px] text-zinc-500">distance {{ distanceOf(h).toFixed(3) }}</div>
+          <div style="min-width: 0">
+            <div style="font-size: 10px; color: #909399">
+              <code style="font-family: ui-monospace, monospace">{{ h.chunkKind }}</code> ·
+              <span style="color: #409eff">{{ h.sourceLabel }}</span>
+            </div>
+            <div style="margin-top: 2px; word-break: break-word; color: #303133">{{ truncate(h.content, 120) }}</div>
+          </div>
+          <div style="text-align: right; font-family: ui-monospace, monospace; font-size: 0.75rem">
+            <div style="color: #409eff">vector {{ h.score.toFixed(3) }}</div>
+            <div style="font-size: 10px; color: #909399">distance {{ distanceOf(h).toFixed(3) }}</div>
           </div>
         </li>
       </ol>
 
-      <details v-if="result.heatMapHtml" class="mt-4">
-        <summary class="cursor-text text-xs text-zinc-400 hover:text-zinc-200">
+      <details v-if="result.heatMapHtml" style="margin-top: 16px">
+        <summary style="cursor: pointer; font-size: 0.75rem; color: #606266">
           查看输入 vs top-{{ topK }} cosine 距离热图
         </summary>
-        <div class="mt-2 overflow-x-auto" v-html="result.heatMapHtml" />
+        <div style="margin-top: 8px; overflow-x: auto" v-html="result.heatMapHtml" />
       </details>
     </template>
 
-    <p v-else class="mt-3 text-xs text-zinc-500">
+    <p v-else style="margin-top: 12px; font-size: 0.75rem; color: #909399">
       等待 Vector Search 完成。
     </p>
-  </section>
+  </el-card>
 </template>

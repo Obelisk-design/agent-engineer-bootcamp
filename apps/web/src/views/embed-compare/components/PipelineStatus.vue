@@ -3,6 +3,7 @@
 
   横向 5 节点条：Query → Embed → Vector Search → Rerank → Final。
   每个节点根据 stage.status 渲染对应圆点（○ / ● / ✓ / ! / ⊘）。
+  Day 23 Task 4：白底亮色，用 Element Plus 状态色。
 -->
 
 <script setup lang="ts">
@@ -21,38 +22,40 @@ defineProps<{
 function dot(stage: PipelineStage): { glyph: string; color: string } {
   switch (stage.status) {
     case 'running':
-      return { glyph: '●', color: 'text-amber-400' };
+      return { glyph: '●', color: '#e6a23c' }; // Element Plus warning
     case 'success':
-      return { glyph: '✓', color: 'text-emerald-400' };
+      return { glyph: '✓', color: '#67c23a' }; // Element Plus success
     case 'error':
-      return { glyph: '!', color: 'text-red-400' };
+      return { glyph: '!', color: '#f56c6c' }; // Element Plus danger
     case 'skipped':
-      return { glyph: '⊘', color: 'text-zinc-500' };
+      return { glyph: '⊘', color: '#909399' }; // Element Plus info
     case 'idle':
     default:
-      return { glyph: '○', color: 'text-zinc-500' };
+      return { glyph: '○', color: '#c0c4cc' }; // Element Plus placeholder
   }
 }
 </script>
 
 <template>
-  <div class="flex items-center gap-1 overflow-x-auto py-1">
+  <div style="display: flex; align-items: center; gap: 4px; overflow-x: auto; padding: 4px 0">
     <template v-for="(entry, idx) in entries" :key="entry.key">
-      <div class="flex min-w-0 items-center gap-1.5">
-        <span class="font-mono text-base leading-none" :class="dot(entry.stage).color">
+      <div style="display: flex; min-width: 0; align-items: center; gap: 6px">
+        <span style="font-family: ui-monospace, monospace; font-size: 1rem; line-height: 1" :style="{ color: dot(entry.stage).color }">
           {{ dot(entry.stage).glyph }}
         </span>
-        <span class="truncate text-xs text-zinc-400">{{ entry.label }}</span>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.75rem; color: #606266">
+          {{ entry.label }}
+        </span>
         <span
           v-if="entry.stage.ms !== undefined && entry.stage.status !== 'idle'"
-          class="font-mono text-[10px] text-zinc-500"
+          style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399"
         >
           {{ entry.stage.ms }}ms
         </span>
       </div>
       <span
         v-if="idx < entries.length - 1"
-        class="select-none px-1 text-zinc-700"
+        style="user-select: none; padding: 0 4px; color: #c0c4cc"
         aria-hidden="true"
       >→</span>
     </template>

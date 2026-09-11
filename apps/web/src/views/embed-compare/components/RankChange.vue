@@ -3,6 +3,7 @@
 
   重排前后位置变化指示：⬆ N / ⬇ N / =。
   from = 重排前 index（0-based），to = 重排后 index（0-based）。
+  Day 23 Task 4：白底亮色 + Element Plus 状态色 (success/danger/info)。
 -->
 
 <script setup lang="ts">
@@ -19,18 +20,18 @@ const label = computed(() => {
   return delta.value < 0 ? `↑ ${-delta.value}` : `↓ ${delta.value}`;
 });
 const tone = computed(() => {
-  if (delta.value === 0) return 'border-zinc-700 bg-zinc-900 text-zinc-500';
+  if (delta.value === 0) return 'border: 1px solid #dcdfe6; background: #f5f7fa; color: #909399';
   return delta.value < 0
-    ? 'border-emerald-700 bg-emerald-900/30 text-emerald-300'
-    : 'border-red-800 bg-red-900/30 text-red-300';
+    ? 'border: 1px solid #b3e19d; background: #f0f9eb; color: #67c23a'
+    : 'border: 1px solid #fab6b6; background: #fef0f0; color: #f56c6c';
 });
 const title = computed(() => `原 #${props.from + 1} → 现 #${props.to + 1}`);
 </script>
 
 <template>
   <span
-    class="inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[10px]"
-    :class="tone"
+    style="display: inline-flex; align-items: center; border-radius: 0.25rem; padding: 1px 6px; font-family: ui-monospace, monospace; font-size: 10px"
+    :style="tone"
     :title="title"
   >
     {{ label }}

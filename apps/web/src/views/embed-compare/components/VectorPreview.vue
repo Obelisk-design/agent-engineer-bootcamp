@@ -4,6 +4,7 @@
   Embedding 向量预览：<details> 折叠，显示首 100 维 monospace。
   完整 4096 维必须避免直铺——按规则十六"virtualized / preformatted / drawer"。
   这里用 preformatted text + 折叠，是低成本方案。
+  Day 23 Task 4：白底亮色，预览容器浅灰底 + 深字。
 -->
 
 <script setup lang="ts">
@@ -28,12 +29,12 @@ const total = computed(() => props.vector?.length ?? 0);
 </script>
 
 <template>
-  <details v-if="vector !== null" class="mt-3">
-    <summary class="cursor-text text-xs text-zinc-400 hover:text-zinc-200">
+  <details v-if="vector !== null" style="margin-top: 12px">
+    <summary style="cursor: pointer; font-size: 0.75rem; color: #606266">
       查看输入向量（前 {{ previewCount ?? 100 }} 维 / {{ total }} 总维）
     </summary>
     <pre
-      class="mt-2 overflow-x-auto rounded-md border border-zinc-800 bg-zinc-950 p-3 font-mono text-[10px] leading-relaxed text-zinc-300 whitespace-pre-wrap break-all"
+      style="margin-top: 8px; overflow-x: auto; border-radius: 0.375rem; border: 1px solid #ebeef5; background: #f5f7fa; padding: 12px; font-family: ui-monospace, monospace; font-size: 10px; line-height: 1.6; color: #303133; white-space: pre-wrap; word-break: break-all"
     >{{ preview }}…</pre>
   </details>
 </template>

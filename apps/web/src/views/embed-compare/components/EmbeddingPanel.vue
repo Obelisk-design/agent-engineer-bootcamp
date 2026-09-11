@@ -4,6 +4,7 @@
   Embedding 阶段展示壳：摘要（dim / norm / model / latency）+ VectorSpace + VectorPreview。
   VectorSpace 接受完整的 (labels, vectors)，由编排器对齐好（labels[0] = 'query'），
   本组件只负责摘要 + 错误态 + 折叠向量预览。
+  Day 23 Task 4：白底亮色，el-card 包装 + el-empty/ElMessage 错误。
 -->
 
 <script setup lang="ts">
@@ -43,18 +44,30 @@ const running = computed(() => props.stage.status === 'running');
 </script>
 
 <template>
-  <section class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
-    <header class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-400">Embedding</h2>
-      <span v-if="embedding" class="font-mono text-[10px] text-zinc-500">
-        dim {{ embedding.dimension }} · L2 norm {{ stats?.norm.toFixed(3) ?? '—' }} · model {{ embedding.model }} · {{ embedding.embedMs }}ms
-      </span>
-    </header>
+  <el-card shadow="never">
+    <template #header>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #303133">Embedding</span>
+        <span v-if="embedding" style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
+          dim {{ embedding.dimension }} · L2 norm {{ stats?.norm.toFixed(3) ?? '—' }} · model {{ embedding.model }} · {{ embedding.embedMs }}ms
+        </span>
+      </div>
+    </template>
 
-    <p v-if="running" class="mt-3 text-sm text-amber-400">● Generating embedding…</p>
-    <p v-else-if="errorMsg" class="mt-3 rounded border border-red-700 bg-red-900/40 px-3 py-2 text-xs text-red-200">
-      ✕ Embedding failed: {{ errorMsg }}
-    </p>
+    <el-alert
+      v-if="running"
+      type="warning"
+      :closable="false"
+      title="● Generating embedding…"
+      show-icon
+    />
+    <el-alert
+      v-else-if="errorMsg"
+      type="error"
+      :closable="false"
+      :title="`✕ Embedding failed: ${errorMsg}`"
+      show-icon
+    />
 
     <template v-else-if="embedding && vectors.length === labels.length && vectors.length >= 2">
       <VectorSpace
@@ -62,14 +75,14 @@ const running = computed(() => props.stage.status === 'running');
         :vectors="vectors"
         :highlight-index="0"
       />
-      <p v-if="stats" class="mt-2 font-mono text-[10px] text-zinc-500">
+      <p v-if="stats" style="margin-top: 8px; font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
         min {{ stats.min.toFixed(4) }} · max {{ stats.max.toFixed(4) }} · mean {{ stats.mean.toFixed(4) }} · norm {{ stats.norm.toFixed(3) }}
       </p>
       <VectorPreview :vector="embedding.vector" />
     </template>
 
-    <p v-else class="mt-3 text-xs text-zinc-500">
+    <p v-else style="margin-top: 12px; font-size: 0.75rem; color: #909399">
       等待 Embedding 完成。
     </p>
-  </section>
+  </el-card>
 </template>

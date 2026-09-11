@@ -1,11 +1,12 @@
 <!--
   apps/web/src/views/embed-compare/components/FinalResults.vue
 
-  最终结果区：排名列表（rank · sourceLabel · content · Rerank Score amber 主，Vector Score sky 次）。
+  最终结果区：排名列表（rank · sourceLabel · content · Rerank Score amber 主，Vector Score blue 次）。
   - 有 reranker：按 reranked 顺序，relevanceScore 主显示。
   - reranker 失败/跳过：按 vectorHits 顺序，score 主显示（不伪造 rerank score）。
-  - 0 hits：显示 dashed empty。
-  - 裁决阈值：reranked[0].relevanceScore < 0.3 → 显示 "无相关内容" 提示。
+  - 0 hits：显示 el-empty。
+  - 裁决阈值：reranked[0].relevanceScore < 0.3 → 显示 warning。
+  Day 23 Task 4：白底亮色 + el-card + el-empty。
 -->
 
 <script setup lang="ts">
@@ -39,77 +40,82 @@ function truncate(s: string, n: number): string {
 </script>
 
 <template>
-  <section class="rounded-md border border-zinc-800 bg-zinc-900 p-4">
-    <header class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-      <h2 class="text-sm font-semibold uppercase tracking-wide text-zinc-400">Final Results</h2>
-      <span v-if="after" class="font-mono text-[10px] text-zinc-500">
-        {{ after.reranked.length }} hits
-      </span>
-      <span v-else-if="vectorHits" class="font-mono text-[10px] text-zinc-500">
-        {{ vectorHits.length }} hits (vector order, reranker unavailable)
-      </span>
-    </header>
+  <el-card shadow="never">
+    <template #header>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px">
+        <span style="font-size: 0.875rem; font-weight: 600; color: #303133">Final Results</span>
+        <span v-if="after" style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
+          {{ after.reranked.length }} hits
+        </span>
+        <span v-else-if="vectorHits" style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
+          {{ vectorHits.length }} hits (vector order, reranker unavailable)
+        </span>
+      </div>
+    </template>
 
-    <p
+    <el-alert
       v-if="verdictWarn"
-      class="mt-3 rounded border border-amber-700 bg-amber-900/30 px-3 py-2 text-xs text-amber-200"
-    >
-      ⚠ {{ verdictWarn }}
-    </p>
+      type="warning"
+      :closable="false"
+      :title="`⚠ ${verdictWarn}`"
+      show-icon
+    />
 
-    <p
+    <el-empty
       v-if="empty"
-      class="mt-3 rounded border border-dashed border-zinc-700 px-3 py-2 text-xs text-zinc-400"
-    >
-      0 hits — namespace 可能为空。换个 namespace 试试，或先跑入库脚本。
-    </p>
+      description="0 hits — namespace 可能为空。换个 namespace 试试，或先跑入库脚本。"
+    />
 
     <!-- 有 reranker → 按 reranked 顺序 -->
-    <ol v-else-if="after" class="mt-3 flex flex-col gap-2">
+    <ol v-else-if="after" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none">
       <li
         v-for="(h, i) in after.reranked"
         :key="h.chunkId"
-        class="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs"
+        style="border: 1px solid #ebeef5; border-radius: 0.375rem; padding: 8px 12px; background: #fafafa; font-size: 0.75rem"
       >
-        <div class="flex items-baseline justify-between gap-2">
-          <span class="font-mono text-base font-semibold text-zinc-300">#{{ i + 1 }}</span>
-          <div class="text-right font-mono">
-            <div class="text-amber-300">rerank {{ h.relevanceScore.toFixed(3) }}</div>
-            <div class="text-[10px] text-sky-300/70">vector {{ h.score.toFixed(3) }}</div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+          <span style="font-family: ui-monospace, monospace; font-size: 1rem; font-weight: 600; color: #303133">
+            #{{ i + 1 }}
+          </span>
+          <div style="text-align: right; font-family: ui-monospace, monospace">
+            <div style="color: #e6a23c">rerank {{ h.relevanceScore.toFixed(3) }}</div>
+            <div style="font-size: 10px; color: #409eff">vector {{ h.score.toFixed(3) }}</div>
           </div>
         </div>
-        <div class="mt-1 text-[10px] text-zinc-500">
-          <code class="font-mono">{{ h.chunkKind }}</code> ·
-          <span class="text-zinc-300">{{ h.sourceLabel }}</span>
+        <div style="margin-top: 4px; font-size: 10px; color: #909399">
+          <code style="font-family: ui-monospace, monospace">{{ h.chunkKind }}</code> ·
+          <span style="color: #303133">{{ h.sourceLabel }}</span>
         </div>
-        <div class="mt-0.5 break-words text-zinc-200">{{ truncate(h.content, 160) }}</div>
+        <div style="margin-top: 2px; word-break: break-word; color: #303133">{{ truncate(h.content, 160) }}</div>
       </li>
     </ol>
 
     <!-- reranker 跳过/失败 → 按 vectorHits 顺序，无伪造 rerank score -->
-    <ol v-else-if="vectorHits && vectorHits.length > 0" class="mt-3 flex flex-col gap-2">
+    <ol v-else-if="vectorHits && vectorHits.length > 0" style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; padding: 0; list-style: none">
       <li
         v-for="(h, i) in vectorHits"
         :key="h.chunkId"
-        class="rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs"
+        style="border: 1px solid #ebeef5; border-radius: 0.375rem; padding: 8px 12px; background: #fafafa; font-size: 0.75rem"
       >
-        <div class="flex items-baseline justify-between gap-2">
-          <span class="font-mono text-base font-semibold text-zinc-300">#{{ i + 1 }}</span>
-          <div class="text-right font-mono">
-            <div class="text-sky-300">vector {{ h.score.toFixed(3) }}</div>
-            <div v-if="rerankSkipped" class="text-[10px] text-zinc-500">rerank skipped</div>
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px">
+          <span style="font-family: ui-monospace, monospace; font-size: 1rem; font-weight: 600; color: #303133">
+            #{{ i + 1 }}
+          </span>
+          <div style="text-align: right; font-family: ui-monospace, monospace">
+            <div style="color: #409eff">vector {{ h.score.toFixed(3) }}</div>
+            <div v-if="rerankSkipped" style="font-size: 10px; color: #909399">rerank skipped</div>
           </div>
         </div>
-        <div class="mt-1 text-[10px] text-zinc-500">
-          <code class="font-mono">{{ h.chunkKind }}</code> ·
-          <span class="text-zinc-300">{{ h.sourceLabel }}</span>
+        <div style="margin-top: 4px; font-size: 10px; color: #909399">
+          <code style="font-family: ui-monospace, monospace">{{ h.chunkKind }}</code> ·
+          <span style="color: #303133">{{ h.sourceLabel }}</span>
         </div>
-        <div class="mt-0.5 break-words text-zinc-200">{{ truncate(h.content, 160) }}</div>
+        <div style="margin-top: 2px; word-break: break-word; color: #303133">{{ truncate(h.content, 160) }}</div>
       </li>
     </ol>
 
-    <p v-else class="mt-3 text-xs text-zinc-500">
+    <p v-else style="margin-top: 12px; font-size: 0.75rem; color: #909399">
       等待分析完成。
     </p>
-  </section>
+  </el-card>
 </template>

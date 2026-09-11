@@ -3,6 +3,7 @@
 
   2D PCA 散点图（v-html scatterSVG）。query 点 emerald + 较大；corpus 点 sky。
   底部 disclaimer 强调二维只是投影，原始向量高维。
+  Day 23 Task 4：白底亮色 SVG 容器（scatterSVG 已自带 #303133/#606266 文字色 + 浅灰轴）。
 -->
 
 <script setup lang="ts">
@@ -34,9 +35,9 @@ const svg = computed(() => {
 </script>
 
 <template>
-  <div class="rounded-md border border-zinc-800 bg-zinc-950 p-3">
-    <div v-html="svg" class="overflow-x-auto" />
-    <p class="mt-2 text-[10px] text-zinc-500">
+  <div style="border: 1px solid #ebeef5; border-radius: 0.375rem; background: #ffffff; padding: 12px">
+    <div style="overflow-x: auto" v-html="svg" />
+    <p style="margin-top: 8px; font-size: 10px; color: #909399">
       2D projection for visualization only — original vectors remain high-dimensional.
       PCA over (n={{ vectors.length }}, d={{ vectors[0]?.length ?? 0 }}).
     </p>

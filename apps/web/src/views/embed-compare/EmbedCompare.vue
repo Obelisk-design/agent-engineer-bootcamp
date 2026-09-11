@@ -6,7 +6,7 @@
   - 单 [Analyze] 按钮驱动完整 pipeline（Query → Embed → Vector Search → Rerank → Final）
   - 所有 section 从 analysisState 读数据，零独立 panel
   - AbortController 支持 [Cancel]
-  - 视觉对齐 apps/web 全局 zinc 调色板 + Tailwind utility
+  - Day 23 Task 4：视觉对齐 apps/web 全局亮色 Element Plus 主题（AppMain #f0f2f5）
 -->
 
 <script setup lang="ts">
@@ -118,11 +118,11 @@ const liveLog = computed(() => {
 
 function liveColor(status: string): string {
   switch (status) {
-    case 'success': return 'text-emerald-400';
-    case 'running': return 'text-amber-400';
-    case 'error': return 'text-red-400';
-    case 'skipped': return 'text-zinc-500';
-    default: return 'text-zinc-600';
+    case 'success': return 'color: #67c23a'; // Element Plus success
+    case 'running': return 'color: #e6a23c'; // Element Plus warning
+    case 'error': return 'color: #f56c6c'; // Element Plus danger
+    case 'skipped': return 'color: #909399'; // Element Plus info
+    default: return 'color: #c0c4cc'; // Element Plus placeholder
   }
 }
 
@@ -255,108 +255,116 @@ function pickExample(ex: string): void {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1400px] space-y-6 px-6 py-4 text-zinc-200">
-    <!-- Header -->
-    <header class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="text-lg font-semibold text-zinc-100">AI Retrieval Playground</h1>
-        <p class="mt-1 text-xs text-zinc-400">
-          Query → Embed → Vector Search → Rerank → Final. One click runs the whole pipeline.
-        </p>
-      </div>
-      <div class="font-mono text-[10px] text-zinc-500">
-        <div>embedding: <span class="text-zinc-300">{{ embeddingModel }}</span></div>
-        <div>reranker: <span class="text-amber-300">qwen3-reranker-4b</span></div>
-      </div>
-    </header>
+  <div class="mx-auto" style="max-width: 1400px; padding: 16px 24px; color: #303133">
+    <el-space direction="vertical" fill size="default" style="width: 100%">
+      <!-- Header -->
+      <el-card shadow="never">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 style="font-size: 1.125rem; font-weight: 600; color: #303133; margin: 0">
+              AI Retrieval Playground
+            </h1>
+            <p style="margin-top: 4px; font-size: 0.75rem; color: #606266">
+              Query → Embed → Vector Search → Rerank → Final. One click runs the whole pipeline.
+            </p>
+          </div>
+          <div style="font-family: ui-monospace, monospace; font-size: 10px; color: #909399">
+            <div>embedding: <span style="color: #303133">{{ embeddingModel }}</span></div>
+            <div>reranker: <span style="color: #e6a23c">qwen3-reranker-4b</span></div>
+          </div>
+        </div>
+      </el-card>
 
-    <!-- Env-missing 红 banner -->
-    <div
-      v-if="!apiKeyAvailable"
-      class="rounded-md border border-red-700 bg-red-900/40 px-4 py-3 text-sm text-red-200"
-    >
-      请设置 <code>VITE_OPENAI_API_KEY</code> / <code>VITE_OPENAI_BASE_URL</code> /
-      <code>VITE_OPENAI_EMBEDDING_MODEL</code> in <code>.env</code> 后重启
-      <code>pnpm dev:web</code>。
-    </div>
-
-    <!-- Query Composer -->
-    <QueryComposer
-      v-if="apiKeyAvailable"
-      :query="analysisState.query"
-      :namespace="analysisState.namespace"
-      :top-k="analysisState.topK"
-      :rerank-enabled="analysisState.rerankEnabled"
-      :busy="busy"
-      @update:query="(v: string) => (analysisState.query = v)"
-      @update:namespace="(v: 'notion' | 'md' | 'all') => (analysisState.namespace = v)"
-      @update:top-k="(v: number) => (analysisState.topK = v)"
-      @update:rerank-enabled="(v: boolean) => (analysisState.rerankEnabled = v)"
-      @analyze="run"
-      @cancel="cancel"
-    />
-
-    <!-- Empty state -->
-    <EmptyState v-if="apiKeyAvailable && !hasRun" :examples="EXAMPLE_QUERIES" @pick="pickExample" />
-
-    <!-- Pipeline + live log + sections -->
-    <template v-if="apiKeyAvailable && hasRun">
-      <section class="rounded-md border border-zinc-800 bg-zinc-900 px-4 py-3">
-        <PipelineStatus :entries="pipelineEntries" />
-        <ol class="mt-3 space-y-1 font-mono text-[11px]">
-          <li
-            v-for="line in liveLog"
-            :key="line.key"
-            class="flex items-baseline gap-2"
-            :class="liveColor(line.status)"
-          >
-            <span class="w-4 select-none text-zinc-700">·</span>
-            <span>{{ line.text }}</span>
-          </li>
-        </ol>
-      </section>
-
-      <EmbeddingPanel
-        :embedding="analysisState.embedding"
-        :labels="allEmbedLabels"
-        :vectors="allEmbedVectors"
-        :highlight-index="allEmbedVectors.length - 1"
-        :stage="analysisState.pipeline.embed"
+      <!-- Env-missing 红 banner -->
+      <el-alert
+        v-if="!apiKeyAvailable"
+        type="error"
+        :closable="false"
+        title="环境变量缺失"
+        description="请设置 VITE_OPENAI_API_KEY / VITE_OPENAI_BASE_URL / VITE_OPENAI_EMBEDDING_MODEL in .env 后重启 pnpm dev:web。"
+        show-icon
       />
 
-      <VectorSearchPanel
-        :result="analysisState.vectorSearch"
-        :top-k="analysisState.topK"
+      <!-- Query Composer -->
+      <QueryComposer
+        v-if="apiKeyAvailable"
+        :query="analysisState.query"
         :namespace="analysisState.namespace"
-        :stage="analysisState.pipeline.vectorSearch"
+        :top-k="analysisState.topK"
+        :rerank-enabled="analysisState.rerankEnabled"
+        :busy="busy"
+        @update:query="(v: string) => (analysisState.query = v)"
+        @update:namespace="(v: 'notion' | 'md' | 'all') => (analysisState.namespace = v)"
+        @update:top-k="(v: number) => (analysisState.topK = v)"
+        @update:rerank-enabled="(v: boolean) => (analysisState.rerankEnabled = v)"
+        @analyze="run"
+        @cancel="cancel"
       />
 
-      <RerankerPanel
-        :before="analysisState.vectorSearch?.hits ?? null"
-        :after="analysisState.reranker?.response ?? null"
-        :stage="analysisState.pipeline.reranker"
-      />
+      <!-- Empty state -->
+      <EmptyState v-if="apiKeyAvailable && !hasRun" :examples="EXAMPLE_QUERIES" @pick="pickExample" />
 
-      <FinalResults
-        :after="analysisState.reranker?.response ?? null"
-        :vector-hits="analysisState.vectorSearch?.hits ?? null"
-        :rerank-skipped="
-          analysisState.pipeline.reranker.status === 'skipped' ||
-          analysisState.pipeline.reranker.status === 'error'
-        "
-      />
-    </template>
+      <!-- Pipeline + live log + sections -->
+      <template v-if="apiKeyAvailable && hasRun">
+        <el-card shadow="never">
+          <PipelineStatus :entries="pipelineEntries" />
+          <ol style="margin-top: 12px; font-family: ui-monospace, monospace; font-size: 11px; list-style: none; padding: 0">
+            <li
+              v-for="line in liveLog"
+              :key="line.key"
+              style="display: flex; align-items: baseline; gap: 8px"
+              :style="liveColor(line.status)"
+            >
+              <span style="width: 1rem; user-select: none; color: #c0c4cc">·</span>
+              <span>{{ line.text }}</span>
+            </li>
+          </ol>
+        </el-card>
+
+        <EmbeddingPanel
+          :embedding="analysisState.embedding"
+          :labels="allEmbedLabels"
+          :vectors="allEmbedVectors"
+          :highlight-index="allEmbedVectors.length - 1"
+          :stage="analysisState.pipeline.embed"
+        />
+
+        <VectorSearchPanel
+          :result="analysisState.vectorSearch"
+          :top-k="analysisState.topK"
+          :namespace="analysisState.namespace"
+          :stage="analysisState.pipeline.vectorSearch"
+        />
+
+        <RerankerPanel
+          :before="analysisState.vectorSearch?.hits ?? null"
+          :after="analysisState.reranker?.response ?? null"
+          :stage="analysisState.pipeline.reranker"
+        />
+
+        <FinalResults
+          :after="analysisState.reranker?.response ?? null"
+          :vector-hits="analysisState.vectorSearch?.hits ?? null"
+          :rerank-skipped="
+            analysisState.pipeline.reranker.status === 'skipped' ||
+            analysisState.pipeline.reranker.status === 'error'
+          "
+        />
+      </template>
+    </el-space>
 
     <!-- Page-level fatal error -->
-    <p
+    <el-alert
       v-if="analysisState.lastError"
-      class="rounded-md border border-red-700 bg-red-900/40 px-4 py-3 text-sm text-red-200"
-    >
-      ✕ {{ analysisState.lastError }}
-    </p>
+      type="error"
+      :title="analysisState.lastError"
+      :closable="false"
+      show-icon
+      style="margin-top: 12px"
+    />
 
     <!-- Footer -->
-    <footer class="border-t border-zinc-800 pt-3 text-center font-mono text-[10px] text-zinc-500">
+    <footer style="border-top: 1px solid #ebeef5; padding-top: 12px; text-align: center; font-family: ui-monospace, monospace; font-size: 10px; color: #909399; margin-top: 16px">
       dev gateway: <code>{{ devBaseUrl }}</code> · reranker: <code>qwen3-reranker-4b</code>
     </footer>
   </div>
