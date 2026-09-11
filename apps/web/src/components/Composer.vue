@@ -69,41 +69,46 @@ function onKeydown(event: KeyboardEvent): void {
 </template>
 
 <style lang="scss" scoped>
+@use '@/views/agent/styles/tokens' as t;
+
 .composer {
-  padding: 16px 24px;
-  background: #181818;
-  border-top: 1px solid #2a2a2a;
+  padding: t.$space-4 t.$space-5;                          // 🆕 16/24 token
+  background: t.$bg-panel;                              // 🆕 #161a22 (vs #181818)
+  border-top: 1px solid t.$border;                      // 🆕 #232830 (vs #2a2a2a)
   flex-shrink: 0;
 }
 
 .composer-inner {
   max-width: 768px;
   margin: 0 auto;
-  border-radius: 12px;
-  border: 1px solid #3a3a3a;
-  background: #1e1e1e;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: t.$radius-xl;                          // 🆕 12px (vs 12px 一致)
+  border: 1px solid t.$border-strong;                   // 🆕 #2f3540 (vs #3a3a3a)
+  background: t.$bg-input;                              // 🆕 #1a1d23
+  transition:
+    border-color t.$dur-base t.$ease-base,
+    box-shadow t.$dur-base t.$ease-base;
 
   &:focus-within {
-    border-color: #409eff;
-    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.15);
+    border-color: t.$accent-strong;
+    box-shadow: 0 0 0 3px t.$accent-soft;
   }
 }
 
 .composer-textarea {
   width: 100%;
-  padding: 12px 16px 8px;
+  padding: t.$space-3 t.$space-4 8px;                     // 🆕 12/16 token
   background: transparent;
-  color: #e5e5e5;
+  color: t.$fg;
   border: none;
   outline: none;
-  font-size: 13.5px;
-  line-height: 1.6;
+  font-size: t.$font-size-md;                           // 🆕 13px
+  line-height: t.$line-height-relaxed;                  // 🆕 1.65
   resize: none;
   font-family: inherit;
+  font-variant-numeric: tabular-nums;                  // 🆕 等宽数字
 
   &::placeholder {
-    color: #6a6a6a;
+    color: t.$fg-faint;
   }
 
   &:disabled {
@@ -116,12 +121,12 @@ function onKeydown(event: KeyboardEvent): void {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px 10px;
+  padding: 0 t.$space-3 t.$space-2;                       // 🆕 12/8
 }
 
 .composer-hint {
-  font-size: 10.5px;
-  color: #6a6a6a;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: t.$font-size-xs;                           // 🆕 11px
+  color: t.$fg-faint;
+  font-family: t.$font-mono;
 }
 </style>

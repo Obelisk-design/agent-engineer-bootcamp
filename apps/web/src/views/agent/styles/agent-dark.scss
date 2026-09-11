@@ -1,106 +1,177 @@
 /*
  * apps/web/src/views/agent/styles/agent-dark.scss
  *
- * Day 23 Task 5 (P4) —— Agent Console 暗色主题
+ * Day 23 Task 5 (P4) + Phase U (Task 6) —— Agent Console 暗色主题（premium 版）
  *
  * AppMain 在路由 meta.theme === 'dark' 时给根 div 加 .agent-route class，
  * 整套暗色规则全部 scoped 在该 class 下 —— 不会污染 eval/rag/embed 亮色页面。
  *
- * 设计目标：
- * - 整体黑色 (#0a0a0a) 底 + 浅灰文字 (#e5e5e5)
- * - el-card 暗色 (#181818) + 边框 (#2a2a2a)
- * - el-button 次级暗色 (#2a2a2a) + 文字 (#e5e5e5) + 边框 (#3a3a3a)
- * - el-input wrapper 暗色 (#1e1e1e) + 内嵌 1px 边框 (#3a3a3a)
+ * Phase U 改造点：
+ * - 所有颜色 / 间距 / 圆角 / 字号走 _tokens.scss 单一事实源
+ * - 加 .agent-route overflow: hidden 阻止外层滚动条
+ * - el-card / el-button / el-input 暗色更克制（避免"脏黑"）
  *
  * 不覆盖组件内部细节（让 el-card / el-button 自带 border-radius / padding），
- * 只调"颜色 / 边框 / 背景"，符合 admin 暗色改造惯例。
+ * 只调"颜色 / 边框 / 背景 / box-shadow"，符合 admin 暗色改造惯例。
  */
 
+@use './tokens' as *;
+
 .agent-route {
-  background: #0a0a0a;
-  color: #e5e5e5;
+  background: $bg-base;
+  color: $fg;
   height: 100%;
+  overflow: hidden;        // 🆕 Phase U：消除外层滚动条
+  font-family: $font-sans;
+
+  // ============ Element Plus 组件 ============
 
   .el-card {
-    background: #181818;
-    color: #e5e5e5;
-    border-color: #2a2a2a;
+    background: $bg-panel;
+    color: $fg;
+    border-color: $border;
   }
 
   .el-card__header {
-    border-bottom-color: #2a2a2a;
-    color: #e5e5e5;
+    border-bottom-color: $border;
+    color: $fg-strong;
   }
 
   .el-button {
-    background: #2a2a2a;
-    color: #e5e5e5;
-    border-color: #3a3a3a;
+    background: $bg-elevated;
+    color: $fg;
+    border-color: $border-strong;
+    transition:
+      background $dur-base $ease-base,
+      border-color $dur-base $ease-base,
+      color $dur-base $ease-base;
   }
 
   .el-button:hover {
-    background: #353535;
-    color: #ffffff;
-    border-color: #4a4a4a;
+    background: lighten($bg-elevated, 4%);
+    color: $fg-strong;
+    border-color: $border-focus;
   }
 
   .el-button--primary {
-    background: #409eff;
-    color: #ffffff;
-    border-color: #409eff;
+    background: $accent-strong;
+    color: #0e1117;
+    border-color: $accent-strong;
+    font-weight: $font-weight-medium;
   }
 
   .el-button--primary:hover {
-    background: #66b1ff;
-    border-color: #66b1ff;
+    background: $accent;
+    border-color: $accent;
+    box-shadow: 0 0 0 3px $accent-soft;
   }
 
   .el-button--danger {
-    background: #f56c6c;
-    color: #ffffff;
-    border-color: #f56c6c;
+    background: $danger;
+    color: #0e1117;
+    border-color: $danger;
+    font-weight: $font-weight-medium;
   }
 
   .el-input__wrapper {
-    background: #1e1e1e;
-    box-shadow: 0 0 0 1px #3a3a3a inset;
+    background: $bg-input;
+    box-shadow: 0 0 0 1px $border-strong inset;
+    transition: box-shadow $dur-base $ease-base;
   }
 
   .el-input__wrapper.is-focus {
-    box-shadow: 0 0 0 1px #409eff inset;
+    box-shadow: 0 0 0 1px $border-focus inset;
   }
 
   .el-input__inner {
-    color: #e5e5e5;
+    color: $fg;
   }
 
   .el-input__inner::placeholder {
-    color: #6a6a6a;
+    color: $fg-faint;
   }
 
   .el-textarea__inner {
-    background: #1e1e1e;
-    color: #e5e5e5;
-    border-color: #3a3a3a;
+    background: $bg-input;
+    color: $fg;
+    border-color: $border-strong;
+    transition: border-color $dur-base $ease-base;
+  }
+
+  .el-textarea__inner:focus {
+    border-color: $border-focus;
   }
 
   .el-empty__description p {
-    color: #909399;
+    color: $fg-muted;
   }
 
   .el-table {
-    background: #181818;
-    color: #e5e5e5;
-    --el-table-bg-color: #181818;
-    --el-table-tr-bg-color: #181818;
-    --el-table-header-bg-color: #202020;
-    --el-table-row-hover-bg-color: #222222;
-    --el-table-border-color: #2a2a2a;
-    --el-table-header-text-color: #d0d0d0;
-    --el-table-text-color: #e5e5e5;
+    background: $bg-panel;
+    color: $fg;
+    --el-table-bg-color: #{$bg-panel};
+    --el-table-tr-bg-color: #{$bg-panel};
+    --el-table-header-bg-color: #{$bg-elevated};
+    --el-table-row-hover-bg-color: #{$bg-elevated};
+    --el-table-border-color: #{$border};
+    --el-table-header-text-color: #{$fg-strong};
+    --el-table-text-color: #{$fg};
   }
 
   .el-tag {
-    border-color: #3a3a3a;
+    border-color: $border-strong;
+    background: $bg-elevated;
+    color: $fg;
+  }
+
+  // ============ 自定义滚动条（webkit only）============
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: $border-strong;
+    border-radius: 4px;
+    transition: background $dur-base $ease-base;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: $fg-faint;
+  }
+
+  // ============ 通用动画关键帧 ============
+  // 消息 / TimelineItem 进入动画用
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.55;
+      transform: scale(0.92);
+    }
+  }
+
+  @keyframes streamingBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @keyframes ctxBarGrow {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
   }
 }

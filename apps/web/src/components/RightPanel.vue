@@ -1,8 +1,17 @@
 <!--
   apps/web/src/components/RightPanel.vue
 
-  右侧 second panel —— 三段式：Context Window 摘要 / Iterations 列表 / Execution Timeline。
-  数据流：useAgentStore() —— contexts / runSummary / timeline / scrollToIteration。
+  Day 23 Task 5 (P4) + Phase U (Task 6) —— 右侧 second panel（premium 版）
+
+  三段式：Context Window 摘要 / Iterations 列表 / Execution Timeline
+  数据流：useAgentStore() —— contexts / runSummary / timeline / scrollToIteration
+
+  Phase U 视觉 polish：
+  - 取消 .timeline-scroll 的 overflow-y: auto —— 整个 .right-panel 唯一滚动容器
+  - Context / Iterations / Timeline 三块在面板内依次排列，自适应挤压
+  - 颜色 / 间距 / 圆角 / 字号走 token（设计语言统一）
+  - kv-row hover 走 t.$bg-hover（rgba(255,255,255,0.04)）
+  - ctx-bar fill 用 cubic-bezier ease-out 300ms 平滑生长
 -->
 <script setup lang="ts">
 import { useAgentStore } from '@/store/modules/agent';
@@ -14,9 +23,9 @@ function pct(tokens: number, limit: number): number {
   return Math.min(100, Math.round((tokens / limit) * 100));
 }
 function barColor(p: number): string {
-  if (p < 50) return '#67c23a';
-  if (p <= 80) return '#e6a23c';
-  return '#f56c6c';
+  if (p < 50) return '#4ade80';                                  // 🆕 token t.$accent
+  if (p <= 80) return '#f5b942';                                 // 🆕 token t.$warn
+  return '#f87171';                                              // 🆕 token t.$danger
 }
 function formatTokens(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—';
@@ -44,7 +53,7 @@ function total(): number | null {
     <!-- ========== Context Window 摘要 ========== -->
     <section class="block">
       <header class="block-header">
-        <span class="block-icon" style="background: #67c23a">⚙</span>
+        <span class="block-icon block-icon--green">⚙</span>
         <h3 class="block-title">Context Window</h3>
       </header>
 
@@ -55,7 +64,7 @@ function total(): number | null {
         </div>
         <div class="kv-row">
           <span class="label">Peak</span>
-          <span class="value mono" style="color: #e6a23c">{{ formatTokens(peak()) }}</span>
+          <span class="value mono kv-emphasis">{{ formatTokens(peak()) }}</span>
         </div>
         <div class="kv-row">
           <span class="label">Total</span>
@@ -71,7 +80,7 @@ function total(): number | null {
     <!-- ========== Iterations 详细 ========== -->
     <section v-if="agent.runContexts.length > 0" class="block">
       <header class="block-header">
-        <span class="block-icon" style="background: #909399">≡</span>
+        <span class="block-icon block-icon--muted">≡</span>
         <h3 class="block-title">Iterations</h3>
       </header>
       <ul class="iter-list">
@@ -102,14 +111,15 @@ function total(): number | null {
     <section class="block block-flex">
       <header class="block-header block-header-row">
         <div class="block-header-left">
-          <span class="block-icon" style="background: #67c23a">▶</span>
+          <span class="block-icon block-icon--green">▶</span>
           <h3 class="block-title">Execution Timeline</h3>
         </div>
-        <span class="value mono" style="font-size: 10.5px; color: #808080">
+        <span class="value mono block-counter">
           {{ agent.timeline.length }} step{{ agent.timeline.length === 1 ? '' : 's' }}
         </span>
       </header>
-      <div class="timeline-scroll">
+      <!-- 🆕 Phase U：去掉嵌套 overflow-y，让 .right-panel 单滚动 -->
+      <div class="timeline-content">
         <ExecutionTimeline :items="agent.timeline" />
       </div>
     </section>
@@ -117,26 +127,30 @@ function total(): number | null {
 </template>
 
 <style lang="scss" scoped>
+@use '@/views/agent/styles/tokens' as t;
+
 .right-panel {
-  width: 320px;
+  width: t.$right-panel-width;
   flex-shrink: 0;
-  background: #181818;
-  border-left: 1px solid #2a2a2a;
+  background: t.$bg-panel;
+  border-left: 1px solid t.$border;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden;                                       // 🆕 Phase U：仅此一层滚动
+  overflow-y: auto;                                       // 🆕 内嵌滚动（如需）
+  font-variant-numeric: tabular-nums;
 }
 
 .block {
-  padding: 16px;
-  border-bottom: 1px solid #2a2a2a;
+  padding: t.$space-4;                                      // 🆕 16px
+  border-bottom: 1px solid t.$border;
   flex-shrink: 0;
 
   &.block-flex {
     display: flex;
     flex-direction: column;
     flex: 1;
-    min-height: 0;
+    min-height: 0;                                        // 🆕 flex 子项能收缩
     padding: 0;
   }
 }
@@ -144,71 +158,91 @@ function total(): number | null {
 .block-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: t.$space-2;
+  margin-bottom: t.$space-3;                                // 🆕 12px
 
   &.block-header-row {
     justify-content: space-between;
-    padding: 10px 16px;
-    border-bottom: 1px solid #2a2a2a;
+    padding: t.$space-3 t.$space-4;                           // 🆕 12/16
+    border-bottom: 1px solid t.$border;
     margin-bottom: 0;
+    background: t.$bg-base;                                 // 🆕 区段头与面板底色区分
   }
 }
 
 .block-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: t.$space-2;
 }
 
 .block-icon {
   width: 18px;
   height: 18px;
-  border-radius: 4px;
-  color: #181818;
+  border-radius: t.$radius-sm;
+  color: t.$bg-base;
   font-size: 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  &--green {
+    background: t.$accent-strong;                           // 🆕 emerald 主调
+  }
+  &--muted {
+    background: t.$fg-faint;                                // 🆕 灰
+  }
 }
 
 .block-title {
-  font-size: 10.5px;
+  font-size: t.$font-size-xs;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #a0a0a0;
-  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: t.$fg-muted;
+  font-weight: t.$font-weight-semibold;
   margin: 0;
+}
+
+.block-counter {
+  font-size: 10.5px;
+  color: t.$fg-faint;
 }
 
 .kv-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: t.$space-2;
 }
 
 .kv-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: t.$font-size-sm;
+  padding: 2px 0;
+  transition: background t.$dur-fast t.$ease-base;
 
   &.kv-row-divider {
-    padding-top: 8px;
-    border-top: 1px solid #2a2a2a;
+    padding-top: t.$space-2;
+    border-top: 1px solid t.$border;
+    margin-top: t.$space-1;
   }
 }
 
+.kv-emphasis {
+  color: t.$warn;                                            // 🆕 peak token 强调
+}
+
 .label {
-  color: #808080;
+  color: t.$fg-muted;
 }
 
 .value {
-  color: #e5e5e5;
+  color: t.$fg;
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: t.$font-mono;
 }
 
 .iter-list {
@@ -217,17 +251,17 @@ function total(): number | null {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: t.$space-1;
 }
 
 .iter-item {
-  border-radius: 4px;
-  padding: 6px;
+  border-radius: t.$radius-sm;
+  padding: t.$space-2;
   cursor: pointer;
-  transition: background 0.12s;
+  transition: background t.$dur-fast t.$ease-base;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: t.$bg-hover;
   }
 }
 
@@ -235,26 +269,28 @@ function total(): number | null {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 11px;
+  font-size: t.$font-size-xs;
 }
 
 .ctx-bar {
   width: 100%;
   height: 4px;
-  background: #2a2a2a;
+  background: t.$border;
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: t.$space-1;
 }
 
 .ctx-bar-fill {
   height: 100%;
-  transition: width 0.2s;
+  transition: width t.$dur-slow t.$ease-out;                  // 🆕 300ms ease-out
+  transform-origin: left;
 }
 
-.timeline-scroll {
+.timeline-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 12px 0;
+  min-height: 0;
+  padding: t.$space-3 0;                                    // 🆕 12/0
+  // 🆕 Phase U：移除 overflow-y: auto —— 让 .right-panel 单滚动
 }
 </style>

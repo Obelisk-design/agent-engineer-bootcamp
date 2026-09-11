@@ -39,6 +39,7 @@ const route = useRoute();
  */
 .app-main.agent-route {
   padding: 0;
-  background: #0a0a0a;
+  background: #0e1117;
+  overflow: hidden;
 }
 </style>

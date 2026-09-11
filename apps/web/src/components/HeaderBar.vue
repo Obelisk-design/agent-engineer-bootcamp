@@ -138,16 +138,18 @@ const STATUS: Record<typeof agent.status, { label: string; bg: string; color: st
 </template>
 
 <style lang="scss" scoped>
+@use '@/views/agent/styles/tokens' as t;
+
 .header-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 0 16px;
-  height: 44px;
-  background: #181818;
-  border-bottom: 1px solid #2a2a2a;
-  color: #e5e5e5;
-  font-size: 13px;
+  gap: t.$space-4;
+  padding: 0 t.$space-4;
+  height: t.$navbar-height;
+  background: t.$bg-panel;                                 // 🆕 #161a22
+  border-bottom: 1px solid t.$border;                      // 🆕 #232830
+  color: t.$fg;
+  font-size: t.$font-size-md;
   flex-shrink: 0;
   user-select: none;
 }
@@ -155,34 +157,34 @@ const STATUS: Record<typeof agent.status, { label: string; bg: string; color: st
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: t.$space-2;
+  font-weight: t.$font-weight-semibold;
   flex-shrink: 0;
 }
 
 .brand-logo {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #67c23a, #409eff);
+  border-radius: t.$radius-sm;                             // 🆕 4px
+  background: linear-gradient(135deg, t.$accent-strong, t.$info);  // 🆕 emerald → blue (克制)
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #181818;
-  font-weight: 700;
+  color: t.$bg-base;                                       // 🆕 #0e1117
+  font-weight: t.$font-weight-bold;
   font-size: 11px;
 }
 
 .brand-version {
-  color: #6a6a6a;
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: t.$fg-faint;
+  font-size: t.$font-size-xs;
+  font-family: t.$font-mono;
 }
 
 .divider {
   width: 1px;
   height: 20px;
-  background: #2a2a2a;
+  background: t.$border;
   flex-shrink: 0;
 
   &.small {
@@ -193,37 +195,39 @@ const STATUS: Record<typeof agent.status, { label: string; bg: string; color: st
 .tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: t.$space-1;
   flex-shrink: 0;
 }
 
 .tab {
   padding: 0 10px;
   height: 28px;
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: t.$radius-md;                             // 🆕 6px
+  font-size: t.$font-size-sm;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: t.$space-2;
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background t.$dur-fast t.$ease-base,
+    color t.$dur-fast t.$ease-base;
   font-family: inherit;
 }
 
 .tab-active {
-  background: rgba(103, 194, 58, 0.12);
-  color: #85ce61;
-  box-shadow: inset 0 0 0 1px rgba(103, 194, 58, 0.3);
+  background: t.$accent-soft;
+  color: t.$accent;
+  box-shadow: inset 0 0 0 1px rgba(t.$accent, 0.30);       // 🆕 emerald soft
 }
 
 .tab-inactive {
-  color: #808080;
+  color: t.$fg-muted;
 
   &:hover {
-    background: #2a2a2a;
-    color: #d0d0d0;
+    background: t.$bg-hover;                              // 🆕 rgba(255,255,255,0.04)
+    color: t.$fg;
   }
 }
 
@@ -234,27 +238,28 @@ const STATUS: Record<typeof agent.status, { label: string; bg: string; color: st
 .token-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: t.$space-3;                                         // 🆕 12px
   font-size: 11.5px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;                    // 🆕 等宽数字
 }
 
 .label {
-  color: #808080;
+  color: t.$fg-muted;
 }
 
 .value {
-  color: #e5e5e5;
+  color: t.$fg;
 }
 
 .mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: t.$font-mono;
 }
 
 .kv {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: t.$space-2;
 }
 
 .dot {
@@ -266,32 +271,37 @@ const STATUS: Record<typeof agent.status, { label: string; bg: string; color: st
 .ctx-bar {
   width: 56px;
   height: 4px;
-  background: #2a2a2a;
+  background: t.$border;
   border-radius: 2px;
   overflow: hidden;
 }
 
 .ctx-bar-fill {
   height: 100%;
-  transition: width 0.2s;
+  transition: width t.$dur-slow t.$ease-out;                 // 🆕 300ms ease-out
+  transform-origin: left;
 }
 
 .status-pill {
-  padding: 0 8px;
+  padding: 0 t.$space-2;
   height: 26px;
-  border-radius: 6px;
+  border-radius: t.$radius-md;                             // 🆕 6px
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 500;
+  gap: t.$space-2;
+  font-size: t.$font-size-xs;
+  font-weight: t.$font-weight-medium;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  transition:
+    background t.$dur-base t.$ease-base,
+    color t.$dur-base t.$ease-base;                          // 🆕 状态切换平滑过渡
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  transition: background t.$dur-base t.$ease-base;
 }
 </style>
