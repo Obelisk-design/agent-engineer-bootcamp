@@ -83,9 +83,13 @@ export default defineConfig({
     },
   },
   // 🆕 Day 23 Task 1: admin 模板用 SCSS 主题，modern-compiler 避免 dart-sass legacy 警告
+  // 🆕 Day 23 Task 3 修 build: 全局注入 variables.scss，避免每个 layout 组件各自 @use
   css: {
     preprocessorOptions: {
-      scss: { api: 'modern-compiler' },
+      scss: {
+        api: 'modern-compiler',
+        additionalData: `@use "@/styles/variables.scss" as *;\n`,
+      },
     },
   },
 });
