@@ -44,7 +44,7 @@ void agent;
 .agent-console {
   display: grid;
   grid-template-rows: t.$navbar-height 1fr auto;
-  height: 100vh;
+  height: calc(100vh - 100px);  // 预留顶部 + 底部空间，避免被浏览器 UI 遮挡
   background: t.$bg-base;
   color: t.$fg;
   overflow: hidden;
