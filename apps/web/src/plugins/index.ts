@@ -17,6 +17,8 @@ import i18n from '@/locales';
 
 export default {
   install(app: App): void {
+    // ElementPlus 类型把 locale 设计得过严（zhCn 不匹配 Partial<ConfigProviderProps>），
+    // 社区公认 workaround：as never 绕过。运行期 locale 生效，行为正确。
     app.use(ElementPlus, { locale: zhCn } as never);
     app.use(i18n);
     for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
