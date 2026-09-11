@@ -145,3 +145,98 @@ docs/daily/screenshots/day22-eval-*.png     # 5 张截图
 > "spec §10.2 的 4 件事，按 GT 集 / eval 闭环 / 标签 / judge prompt 顺序，我今天干哪件？"
 
 如果还有 spec 没看清的细节（chunkLabels array 还是单值？LLM Judge 阈值？），回头看 [docs/superpowers/specs/2026-09-11-rag-eval-platform-design.md](../superpowers/specs/2026-09-11-rag-eval-platform-design.md) §5 §7。
+---
+
+# STATUS.md — Day 23 跨日衔接
+
+> 老大原话：**"admin 模板重构 + Agent Console 上 admin 壳"**
+> 日期：2026-09-11 (周五)
+> 接力时间：2026-09-14 (周一) multi-agent 全力猛干
+
+---
+
+## ✅ 已交付（Day 23 周五完成）
+
+#### 架构
+- `apps/web/` admin 模板移植 —— vue3-element-admin 风格 + Element Plus + Tailwind v4 hybrid
+- 9 路由（hash 模式）—— eval 5 子页 + rag + embed-demo + embed-compare + agent
+- 5 store —— app / settings / permission / tags（admin 自带）+ agent / eval / rag（业务）
+- `composables/useECharts.ts` —— cold-load canvas fix（Task 3 fix round 1）
+- `views/agent/styles/agent-dark.scss` —— 暗色 `.agent-route` SCSS（与亮色零污染）
+- 6 task × 独立 implementer + 自带验收 + fix loop —— SDD 跑通
+- `apps/web/README.md` 新建 —— 启动 / 端口 / 路由 / 主题策略 / esbuild workaround / Tailwind 决策依据
+- `docs/daily/day23.md` 新建 —— 完整 5 闸 + 12 项验收 + 5 教训 + Day 24+ 路线
+- `docs/adr/0005-tailwind-v4-retained-element-plus-mixed.md` 新建 —— Tailwind v4 保留决策
+- `examples/day23/ex_001_adminShellSmoke.ts` —— 10/10 路由 200 + 关键 DOM 存在
+- `examples/day23/ex_002_runAgentSSE.ts` —— agent console send "你好" → message_start / message_end 跑通
+- 23 个 parked rulings 处置 —— done 7 + park Day 24 2 + no-op 12 + 新增 27/28
+
+#### 真活数字
+- **路由验证**：10/10 hash 路由 200 OK
+- **typecheck**：`pnpm typecheck:web` exit 0
+- **build**：`NODE_OPTIONS=--max-old-space-size=2048 pnpm build:web` ✓ built in <30s
+- **agent console**：send "你好" 真通 → 4 消息 + 6 steps timeline + COMPLETED
+
+---
+
+## ⏸️ TODO（周一第一件事）
+
+#### P0 — Tailwind 渐进迁移决策（**ADR 0005 已立**）
+
+**现状**：25 文件 utility class 保留，hybrid 模式跑通（10/10 路由 200）。
+**目标**：老大决策 Day 24 是否启动渐进迁移（单文件独立改，不在单日大批量）。
+**Why 不今天做**：YAGNI（admin 模板本身就是 utility-first + 组件库）+ 第一原则（systemic problem 不 if/else 删 plugin）+ 800-2000 行 diff 风险。
+**文件**：[docs/adr/0005-tailwind-v4-retained-element-plus-mixed.md](../adr/0005-tailwind-v4-retained-element-plus-mixed.md)
+
+**渐进迁移计划**（如决定启动）：
+1. 子组件优先：MessageBubble / TimelineItem / StatusDot / ExecutionTimeline / PhaseStream / QueryBox / HitCard / TabBar / CodeBlock
+2. 然后视图：Eval 5 + RAG 3 + Embed 4
+3. 每组件独立 commit，单组件 typecheck + build OK 才 commit
+4. 全部迁移完 → 删 vite plugin + package.json + styles.css `@import` + ADR 0005 反转
+
+#### P1 — Day 22 GT 集扩到 ≥ 150 条（Day 22 P0 跨日衔接）
+
+**现状**：80 条（30 humanReviewed 占位 + 50 LLM 生成未审）。
+**目标**：老大手工审前 30 条 + 新增 70 条 = 150+ 条。
+**前置**：spec §10.2 已留口子（schema 锁死 + 接口 barrel）。
+
+#### P2 — CorpusStats 契约漂移（**Ruling 12** park Day 24）
+
+**现状**：spec 写 `{totalChunks, byTable}`；eval-server 实际返 `{tableName, size, sample[]}`。
+**目标**：老大决策 spec 是否对齐实现，还是 apps/api 加多表聚合路由。
+**Why 不今天做**：spec drift 是 multi-agent 决策，需要跨库改两端。
+
+#### P3 — Query 单条路由缺失（**Ruling 13** park Day 24）
+
+**现状**：spec 期望 `GET /eval/reports/{id}`；eval-server 实际无此路由（list-only）。
+**目标**：老大决策 apps/api 加新路由 vs 前端 list + 过滤继续 tolerate。
+**Why 不今天做**：与 P2 同款 spec drift 决策。
+
+#### P4 — retrieveMerged 合并噪声修复（Day 20 候选 1 + Day 22 eval 数据驱动）
+
+**What**：在 Day 22 eval 数据上发现 `merged K=20 rerank` 噪声——Q1/Q3/Q8 recall 失败是合并导致。
+**Why**：Day 22 eval 给真语料 + 真 GT，比 Day 20 假语料有力。
+
+---
+
+## 🎯 周一 multi-agent 任务分配建议
+
+| Agent | 任务 | 文件 |
+|---|---|---|
+| Agent-A | Tailwind 渐进迁移（每 agent 1-2 文件独立 commit） | `apps/web/src/{components,views}/**/*.vue` |
+| Agent-B | Day 22 GT 集扩到 150 条 + 标签校正 | `examples/day22/gt-dataset.json` |
+| Agent-C | CorpusStats + Query 单条路由 spec 对齐（**Ruling 12/13**） | `apps/api/src/eval-server.ts` + `docs/superpowers/specs/2026-09-11-rag-eval-platform-design.md` |
+| Agent-D | retrieveMerged 合并噪声修复 | `libs/rag/retrieve.ts` |
+| Agent-E | Day 22 重跑 ex_003 + 跨日对比报告 | `examples/day22/ex_003_retrieval_eval.ts` + `reports/` |
+
+**为什么这样分**：每个 agent 改的文件**不重叠**，避免 git contention（[[day-12-retro]] 教训）。Agent-A 是 Day 23 跨日衔接，Agent-B/C/D/E 是 Day 22 跨日衔接。
+
+---
+
+## 📞 周一第一句要问自己的话
+
+> "Day 22 收尾（GT 集 / eval 闭环 / label / judge prompt）和 Day 23 跨日（Tailwind 渐进迁移 / spec drift），按 P0 优先级，我今天干哪件？"
+
+如果还有 spec 没看清的细节（Tailwind 渐进迁移节奏？spec 契约漂移走哪端？），回头看：
+- [docs/adr/0005-tailwind-v4-retained-element-plus-mixed.md](../adr/0005-tailwind-v4-retained-element-plus-mixed.md)
+- [docs/superpowers/specs/2026-09-11-rag-eval-platform-design.md](../superpowers/specs/2026-09-11-rag-eval-platform-design.md) §4.1（CorpusStats + Query 契约）

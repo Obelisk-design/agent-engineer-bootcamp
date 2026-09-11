@@ -1,0 +1,21 @@
+=== Day 23 admin 壳 smoke test ===
+target: http://127.0.0.1:5173
+routes: 10
+
+--- route probe ---
+✅ 200   /                      root redirect to /eval/overview (hash 守卫)
+✅ 200   /#/eval/overview       Eval 总览（ECharts 柱状图）
+✅ 200   /#/eval/runner         评测运行（corpus 状态 + run 触发）
+✅ 200   /#/eval/query          查询详情（runId 前缀匹配）
+✅ 200   /#/eval/probe          库探针（CorpusStats）
+✅ 200   /#/eval/bias           偏差分析（LLM Judge 三件套）
+✅ 200   /#/rag                 RAG playground（SearchView + IngestView）
+✅ 200   /#/embed-demo          Embed Demo（Panel A/B/C/D + canvas 数据色板）
+✅ 200   /#/embed-compare       Embed Compare（多 prompt 对比 + cosine 矩阵）
+✅ 200   /#/agent               Agent Console（暗色 IDE 风格，4 件套）
+
+--- index.html probe ---
+✅ status=200 #app=true /src/main.ts=true
+
+=== summary: 10/10 routes 200, index.html OK ===
+✅ ALL PASS
