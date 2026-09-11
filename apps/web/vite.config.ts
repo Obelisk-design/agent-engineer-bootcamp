@@ -74,6 +74,14 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: true,
   },
+  // 🆕 Day 23 Task 2: vite alias @/* 与 tsconfig paths 对齐
+  // Task 1 tsconfig.json 已配 paths，但 vite.config.ts 漏配 alias → runtime 'Failed to resolve @/...'
+  // 不破坏 Task 1 既有 plugins / proxy / build 配置
+  resolve: {
+    alias: {
+      '@': new URL('./src', import.meta.url).pathname,
+    },
+  },
   // 🆕 Day 23 Task 1: admin 模板用 SCSS 主题，modern-compiler 避免 dart-sass legacy 警告
   css: {
     preprocessorOptions: {
