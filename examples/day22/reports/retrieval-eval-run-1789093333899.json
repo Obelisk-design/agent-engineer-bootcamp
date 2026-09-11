@@ -1,0 +1,2067 @@
+{
+  "runId": "run-1789093333899",
+  "timestamp": "2026-09-11T02:22:13.899Z",
+  "poolK": 20,
+  "finalK": 3,
+  "rows": [
+    {
+      "queryId": "Q001",
+      "query": "根据《员工报销时限规定》，申请金额大于50000元的报销应由哪些人审批，审批时限是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["058_财务_员工报销时限规定.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "058_财务_员工报销时限规定.docx",
+        "058_财务_员工报销时限规定.docx",
+        "090_法务_诉讼与仲裁处理流程.csv"
+      ],
+      "elapsedMs": 419
+    },
+    {
+      "queryId": "Q002",
+      "query": "POLICY-0165《反舞弊举报渠道更新公告》的版本、生效日期和负责人分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["165_法务_反舞弊举报渠道更新公告.yaml#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "165_法务_反舞弊举报渠道更新公告.yaml",
+        "180_法务_反舞弊举报渠道更新公告.md",
+        "170_法务_反舞弊举报渠道更新公告.yaml"
+      ],
+      "elapsedMs": 305
+    },
+    {
+      "queryId": "Q003",
+      "query": "《全员密码策略更新通知》中，紧急事项应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["154_IT_全员密码策略更新通知.json#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "184_IT_全员密码策略更新通知.wiki.md",
+        "189_IT_全员密码策略更新通知.wiki.md",
+        "104_IT_全员密码策略更新通知.eml"
+      ],
+      "elapsedMs": 545
+    },
+    {
+      "queryId": "Q004",
+      "query": "根据《现金与银行账户管理》V5.1，申请金额大于10000元的申请需要哪些审批人？SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["054_财务_现金与银行账户管理.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "054_财务_现金与银行账户管理.docx",
+        "054_财务_现金与银行账户管理.docx"
+      ],
+      "elapsedMs": 1220
+    },
+    {
+      "queryId": "Q005",
+      "query": "IT设备领用与归还中，紧急事项先口头或邮件申请后，应在多少个工作日内补办系统流程？超期未补办如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["063_IT_IT设备领用与归还.docx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "063_IT_IT设备领用与归还.docx",
+        "063_IT_IT设备领用与归还.docx",
+        "191_人事_远程办公考勤异常提醒.md"
+      ],
+      "elapsedMs": 879
+    },
+    {
+      "queryId": "Q006",
+      "query": "根据《办公网络使用规范》，申请金额大于 50000 元时由谁审批，SLA 是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["064_IT_办公网络使用规范.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "064_IT_办公网络使用规范.docx",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "064_IT_办公网络使用规范.docx"
+      ],
+      "elapsedMs": 802
+    },
+    {
+      "queryId": "Q007",
+      "query": "离职员工账号回收相关申请中，申请金额大于10000元时，需要哪些审批人，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["078_IT_离职员工账号回收.pptx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "078_IT_离职员工账号回收.pptx",
+        "061_IT_员工账号与权限管理.docx"
+      ],
+      "elapsedMs": 733
+    },
+    {
+      "queryId": "Q008",
+      "query": "本制度相关附件包括哪些？附件与正文效力如何？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["080_IT_终端杀毒与补丁管理.pptx#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "070_IT_AI 工具使用合规指引.xlsx",
+        "072_IT_USB 与移动存储管理.xlsx",
+        "051_财务_采购付款管理办法.docx"
+      ],
+      "elapsedMs": 411
+    },
+    {
+      "queryId": "Q009",
+      "query": "根据通知，单据金额超过 ¥10,000 的，需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["111_人事_绩效复核结果通知.zip#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "116_人事_绩效复核结果通知.zip",
+        "195_财务_Q3 报销集中处理通知.md",
+        "111_人事_绩效复核结果通知.zip"
+      ],
+      "elapsedMs": 505
+    },
+    {
+      "queryId": "Q010",
+      "query": "流程被驳回后如何修改？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["115_法务_反舞弊举报渠道更新公告.zip#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "106_人事_绩效复核结果通知.eml",
+        "101_人事_绩效复核结果通知.eml",
+        "179_IT_全员密码策略更新通知.md"
+      ],
+      "elapsedMs": 472
+    },
+    {
+      "queryId": "Q011",
+      "query": "流程被驳回后应如何修改？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["117_行政_节前办公区安全检查通知.zip#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "106_人事_绩效复核结果通知.eml",
+        "179_IT_全员密码策略更新通知.md",
+        "198_IT_全员密码策略更新通知.md"
+      ],
+      "elapsedMs": 451
+    },
+    {
+      "queryId": "Q012",
+      "query": "根据公告，单据金额超过 ¥10,000 时需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["175_法务_反舞弊举报渠道更新公告.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "195_财务_Q3 报销集中处理通知.md",
+        "108_财务_年度预算编制启动会通知.eml",
+        "103_财务_年度预算编制启动会通知.eml"
+      ],
+      "elapsedMs": 470
+    },
+    {
+      "queryId": "Q013",
+      "query": "POLICY-0177 的标题、负责部门和生效日期分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["177_行政_节前办公区安全检查通知.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "177_行政_节前办公区安全检查通知.md",
+        "170_法务_反舞弊举报渠道更新公告.yaml",
+        "171_人事_绩效复核结果通知.md"
+      ],
+      "elapsedMs": 388
+    },
+    {
+      "queryId": "Q014",
+      "query": "根据《采购付款管理办法》，申请金额在 20001 至 40000 元时，应由哪些审批人审批，SLA 是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["051_财务_采购付款管理办法.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "051_财务_采购付款管理办法.docx",
+        "057_财务_资本性支出审批.docx"
+      ],
+      "elapsedMs": 756
+    },
+    {
+      "queryId": "Q015",
+      "query": "申请金额大于20000元时，审批人和SLA分别是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["061_IT_员工账号与权限管理.docx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 669
+    },
+    {
+      "queryId": "Q016",
+      "query": "紧急申请未在规定期限内补办系统流程会有什么后果？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["064_IT_办公网络使用规范.docx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "109_IT_全员密码策略更新通知.eml",
+        "104_IT_全员密码策略更新通知.eml",
+        "114_IT_全员密码策略更新通知.zip"
+      ],
+      "elapsedMs": 465
+    },
+    {
+      "queryId": "Q017",
+      "query": "申请金额超过60000元时，应由哪些审批人审批？SLA是多少个工作日？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["065_IT_数据分类分级管理.docx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 720
+    },
+    {
+      "queryId": "Q018",
+      "query": "根据该制度，严重违规和重大违规分别如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["065_IT_数据分类分级管理.docx#003"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "077_IT_生产数据访问审批.pptx",
+        "079_IT_云盘使用管理办法.pptx",
+        "076_IT_代码仓库权限管理.pptx"
+      ],
+      "elapsedMs": 443
+    },
+    {
+      "queryId": "Q019",
+      "query": "紧急申请（口头/邮件）应如何补办？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["070_IT_AI 工具使用合规指引.xlsx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "119_IT_全员密码策略更新通知.zip",
+        "114_IT_全员密码策略更新通知.zip",
+        "175_法务_反舞弊举报渠道更新公告.md"
+      ],
+      "elapsedMs": 433
+    },
+    {
+      "queryId": "Q020",
+      "query": "办公电脑日常维护相关执行报告归档材料的保存期限是多久？电子档案与纸质档案效力如何？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["074_IT_办公电脑日常维护.xlsx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "074_IT_办公电脑日常维护.xlsx",
+        "063_IT_IT设备领用与归还.docx",
+        "073_IT_邮件使用与归档.xlsx"
+      ],
+      "elapsedMs": 654
+    },
+    {
+      "queryId": "Q021",
+      "query": "打印机使用管理紧急事项先口头或邮件申请后，应在多长时间内补办系统流程？超期未补办有什么后果？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["075_IT_打印机使用管理.xlsx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "075_IT_打印机使用管理.xlsx",
+        "075_IT_打印机使用管理.xlsx",
+        "109_IT_全员密码策略更新通知.eml"
+      ],
+      "elapsedMs": 501
+    },
+    {
+      "queryId": "Q022",
+      "query": "根据该制度，代码仓库权限管理违规中“一般”等级如何认定和处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["076_IT_代码仓库权限管理.pptx#003"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "076_IT_代码仓库权限管理.pptx",
+        "077_IT_生产数据访问审批.pptx",
+        "079_IT_云盘使用管理办法.pptx"
+      ],
+      "elapsedMs": 445
+    },
+    {
+      "queryId": "Q023",
+      "query": "紧急申请可以先口头或邮件申请吗？补办系统流程的期限和超期后果是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["099_法务_授权委托书管理办法.csv#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "114_IT_全员密码策略更新通知.zip",
+        "119_IT_全员密码策略更新通知.zip",
+        "191_人事_远程办公考勤异常提醒.md"
+      ],
+      "elapsedMs": 503
+    },
+    {
+      "queryId": "Q024",
+      "query": "报销发票遗失后应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["102_行政_节前办公区安全检查通知.eml#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "173_财务_年度预算编制启动会通知.md",
+        "196_财务_年度预算编制启动会通知.md",
+        "178_财务_年度预算编制启动会通知.md"
+      ],
+      "elapsedMs": 333
+    },
+    {
+      "queryId": "Q025",
+      "query": "报销发票遗失和流程被驳回后分别应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["107_行政_节前办公区安全检查通知.eml#002"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "196_财务_年度预算编制启动会通知.md",
+        "178_财务_年度预算编制启动会通知.md",
+        "173_财务_年度预算编制启动会通知.md"
+      ],
+      "elapsedMs": 348
+    },
+    {
+      "queryId": "Q026",
+      "query": "涉及对外付款时，须在系统中录入哪些对方账户信息？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["174_IT_全员密码策略更新通知.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "175_法务_反舞弊举报渠道更新公告.md",
+        "180_法务_反舞弊举报渠道更新公告.md",
+        "200_法务_反舞弊举报渠道更新公告.md"
+      ],
+      "elapsedMs": 702
+    },
+    {
+      "queryId": "Q027",
+      "query": "根据通知，紧急事项可以先口头/邮件申请，之后需要在多少个工作日内补办系统流程？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["178_财务_年度预算编制启动会通知.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "116_人事_绩效复核结果通知.zip",
+        "111_人事_绩效复核结果通知.zip",
+        "191_人事_远程办公考勤异常提醒.md"
+      ],
+      "elapsedMs": 525
+    },
+    {
+      "queryId": "Q028",
+      "query": "报销发票遗失时应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["180_法务_反舞弊举报渠道更新公告.md#003"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "173_财务_年度预算编制启动会通知.md",
+        "196_财务_年度预算编制启动会通知.md",
+        "178_财务_年度预算编制启动会通知.md"
+      ],
+      "elapsedMs": 335
+    },
+    {
+      "queryId": "Q029",
+      "query": "在《全员密码策略更新通知》中，紧急事项可以先通过什么方式申请，并需要在多久内补办系统流程？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["184_IT_全员密码策略更新通知.wiki.md#001"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "184_IT_全员密码策略更新通知.wiki.md",
+        "189_IT_全员密码策略更新通知.wiki.md",
+        "159_IT_全员密码策略更新通知.json"
+      ],
+      "elapsedMs": 574
+    },
+    {
+      "queryId": "Q030",
+      "query": "在反舞弊举报渠道更新公告中，相关申请和紧急事项应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["190_法务_反舞弊举报渠道更新公告.wiki.md#001"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "185_法务_反舞弊举报渠道更新公告.wiki.md",
+        "190_法务_反舞弊举报渠道更新公告.wiki.md",
+        "170_法务_反舞弊举报渠道更新公告.yaml"
+      ],
+      "elapsedMs": 857
+    },
+    {
+      "queryId": "Q031",
+      "query": "未按本通知执行且12个月内累计2次违规，将如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["200_法务_反舞弊举报渠道更新公告.md#003"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "109_IT_全员密码策略更新通知.eml",
+        "104_IT_全员密码策略更新通知.eml",
+        "171_人事_绩效复核结果通知.md"
+      ],
+      "elapsedMs": 336
+    },
+    {
+      "queryId": "Q032",
+      "query": "根据《员工福利费使用规范》，申请金额超过50000元时，需要哪些审批人，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["052_财务_员工福利费使用规范.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "052_财务_员工福利费使用规范.docx",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "093_法务_供应商合规调查.csv"
+      ],
+      "elapsedMs": 673
+    },
+    {
+      "queryId": "Q033",
+      "query": "本制度相关附件包括哪些内容？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["052_财务_员工福利费使用规范.docx#003"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "072_IT_USB 与移动存储管理.xlsx",
+        "070_IT_AI 工具使用合规指引.xlsx",
+        "051_财务_采购付款管理办法.docx"
+      ],
+      "elapsedMs": 534
+    },
+    {
+      "queryId": "Q034",
+      "query": "申请金额大于60000元的境外付款与外汇管理申请，需要哪些审批人？SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["053_财务_境外付款与外汇管理.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "053_财务_境外付款与外汇管理.docx",
+        "093_法务_供应商合规调查.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 918
+    },
+    {
+      "queryId": "Q035",
+      "query": "审批通过后，申请人应在多少个工作日内完成相关事项执行？完成后须多久向财务部提交执行报告？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["054_财务_现金与银行账户管理.docx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "096_法务_境外投资法律审查.csv",
+        "087_法务_反舞弊与举报机制.csv"
+      ],
+      "elapsedMs": 585
+    },
+    {
+      "queryId": "Q036",
+      "query": "根据《往来账款对账细则》，申请金额在15001至30000元时，应由谁审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["056_财务_往来账款对账细则.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "056_财务_往来账款对账细则.docx",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "093_法务_供应商合规调查.csv"
+      ],
+      "elapsedMs": 695
+    },
+    {
+      "queryId": "Q037",
+      "query": "该制度附件包括哪些内容？附件与正文的效力关系是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["060_财务_食堂收支核算办法.docx#003"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "072_IT_USB 与移动存储管理.xlsx",
+        "070_IT_AI 工具使用合规指引.xlsx",
+        "051_财务_采购付款管理办法.docx"
+      ],
+      "elapsedMs": 339
+    },
+    {
+      "queryId": "Q038",
+      "query": "根据《员工账号与权限管理》V2.8，申请金额超过20000元时，应由哪些审批人审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["061_IT_员工账号与权限管理.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 700
+    },
+    {
+      "queryId": "Q039",
+      "query": "根据该制度，员工12个月内累计2次轻微违规会被如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["061_IT_员工账号与权限管理.docx#003"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "076_IT_代码仓库权限管理.pptx",
+        "078_IT_离职员工账号回收.pptx",
+        "079_IT_云盘使用管理办法.pptx"
+      ],
+      "elapsedMs": 554
+    },
+    {
+      "queryId": "Q040",
+      "query": "根据该制度，密码策略与定期更换相关申请金额超过30000元时，应由哪些审批人审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["062_IT_密码策略与定期更换.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "062_IT_密码策略与定期更换.docx",
+        "050_财务_费用审批权限表.md",
+        "062_IT_密码策略与定期更换.docx"
+      ],
+      "elapsedMs": 667
+    },
+    {
+      "queryId": "Q041",
+      "query": "本制度由哪个部门负责解释，并自何时起执行？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["064_IT_办公网络使用规范.docx#003"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "172_行政_节前办公区安全检查通知.md",
+        "193_行政_会议室设备维护公告.md",
+        "177_行政_节前办公区安全检查通知.md"
+      ],
+      "elapsedMs": 355
+    },
+    {
+      "queryId": "Q042",
+      "query": "根据《数据分类分级管理》办法，申请人提交申请需要满足哪些条件？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["065_IT_数据分类分级管理.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "099_法务_授权委托书管理办法.csv",
+        "065_IT_数据分类分级管理.docx",
+        "065_IT_数据分类分级管理.docx"
+      ],
+      "elapsedMs": 718
+    },
+    {
+      "queryId": "Q043",
+      "query": "申请金额在5001至10000元时，软件采购与正版化申请由谁审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["066_IT_软件采购与正版化.xlsx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "093_法务_供应商合规调查.csv",
+        "066_IT_软件采购与正版化.xlsx"
+      ],
+      "elapsedMs": 630
+    },
+    {
+      "queryId": "Q044",
+      "query": "执行报告归档后的保存期限要求是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["067_IT_远程办公接入指引.xlsx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "055_财务_财务档案管理办法.docx",
+        "087_法务_反舞弊与举报机制.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 606
+    },
+    {
+      "queryId": "Q045",
+      "query": "数据备份与恢复流程中，审批通过后申请人应在多少个工作日内完成执行，并在多少个工作日内提交执行报告？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["068_IT_数据备份与恢复流程.xlsx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "068_IT_数据备份与恢复流程.xlsx",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "065_IT_数据分类分级管理.docx"
+      ],
+      "elapsedMs": 599
+    },
+    {
+      "queryId": "Q046",
+      "query": "本制度相关附件包括哪些？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["077_IT_生产数据访问审批.pptx#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "072_IT_USB 与移动存储管理.xlsx",
+        "051_财务_采购付款管理办法.docx",
+        "060_财务_食堂收支核算办法.docx"
+      ],
+      "elapsedMs": 366
+    },
+    {
+      "queryId": "Q047",
+      "query": "反洗钱合规细则的归口管理部门是哪个部门？其主要职责是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["091_法务_反洗钱合规细则.txt#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "091_法务_反洗钱合规细则.txt",
+        "054_财务_现金与银行账户管理.docx",
+        "185_法务_反舞弊举报渠道更新公告.wiki.md"
+      ],
+      "elapsedMs": 622
+    },
+    {
+      "queryId": "Q048",
+      "query": "根据客户合同台账制度，申请人提交申请需要满足哪些条件？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["092_法务_客户合同台账制度.html#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "092_法务_客户合同台账制度.html",
+        "099_法务_授权委托书管理办法.csv",
+        "076_IT_代码仓库权限管理.pptx"
+      ],
+      "elapsedMs": 771
+    },
+    {
+      "queryId": "Q049",
+      "query": "《劳动争议处理细则》的归口管理部门是谁，负责哪些工作？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["095_法务_劳动争议处理细则.html#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "095_法务_劳动争议处理细则.html",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "091_法务_反洗钱合规细则.txt"
+      ],
+      "elapsedMs": 554
+    },
+    {
+      "queryId": "Q050",
+      "query": "ESG报告与披露管理申请人在提交申请时须满足哪些条件？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["098_法务_ESG 报告与披露管理.html#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "099_法务_授权委托书管理办法.csv",
+        "098_法务_ESG 报告与披露管理.html",
+        "065_IT_数据分类分级管理.docx"
+      ],
+      "elapsedMs": 777
+    },
+    {
+      "queryId": "Q051",
+      "query": "授权委托书管理办法中，轻微违规和一般违规的认定标准及处理分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["099_法务_授权委托书管理办法.csv#003"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "099_法务_授权委托书管理办法.csv",
+        "076_IT_代码仓库权限管理.pptx",
+        "080_IT_终端杀毒与补丁管理.pptx"
+      ],
+      "elapsedMs": 468
+    },
+    {
+      "queryId": "Q052",
+      "query": "关联交易识别与披露的归口管理部门是谁？其主要职责有哪些？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["100_法务_关联交易识别与披露.txt#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "100_法务_关联交易识别与披露.txt",
+        "056_财务_往来账款对账细则.docx",
+        "053_财务_境外付款与外汇管理.docx"
+      ],
+      "elapsedMs": 633
+    },
+    {
+      "queryId": "Q053",
+      "query": "流程被驳回后如何修改？审批节点超时如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["103_财务_年度预算编制启动会通知.eml#002"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "109_IT_全员密码策略更新通知.eml",
+        "104_IT_全员密码策略更新通知.eml",
+        "108_财务_年度预算编制启动会通知.eml"
+      ],
+      "elapsedMs": 421
+    },
+    {
+      "queryId": "Q054",
+      "query": "根据通知，紧急事项在 OA 流程上应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["118_财务_年度预算编制启动会通知.zip#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "117_行政_节前办公区安全检查通知.zip",
+        "195_财务_Q3 报销集中处理通知.md",
+        "104_IT_全员密码策略更新通知.eml"
+      ],
+      "elapsedMs": 585
+    },
+    {
+      "queryId": "Q055",
+      "query": "根据该通知，单据金额超过 ¥10,000 时需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["119_IT_全员密码策略更新通知.zip#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "195_财务_Q3 报销集中处理通知.md",
+        "108_财务_年度预算编制启动会通知.eml",
+        "103_财务_年度预算编制启动会通知.eml"
+      ],
+      "elapsedMs": 400
+    },
+    {
+      "queryId": "Q056",
+      "query": "紧急事项可以先口头或邮件申请，之后需要在多久内补办系统流程？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["120_法务_反舞弊举报渠道更新公告.zip#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "111_人事_绩效复核结果通知.zip",
+        "116_人事_绩效复核结果通知.zip",
+        "180_法务_反舞弊举报渠道更新公告.md"
+      ],
+      "elapsedMs": 759
+    },
+    {
+      "queryId": "Q057",
+      "query": "根据年度预算编制启动会通知，相关申请应如何提交和审批？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["153_财务_年度预算编制启动会通知.json#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "183_财务_年度预算编制启动会通知.wiki.md",
+        "188_财务_年度预算编制启动会通知.wiki.md",
+        "153_财务_年度预算编制启动会通知.json"
+      ],
+      "elapsedMs": 518
+    },
+    {
+      "queryId": "Q058",
+      "query": "根据通知，单据金额超过 ¥10,000 时，需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["171_人事_绩效复核结果通知.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "195_财务_Q3 报销集中处理通知.md",
+        "108_财务_年度预算编制启动会通知.eml",
+        "103_财务_年度预算编制启动会通知.eml"
+      ],
+      "elapsedMs": 408
+    },
+    {
+      "queryId": "Q059",
+      "query": "根据通知，单据金额超过 ¥10,000 时，审批人和 SLA 分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["173_财务_年度预算编制启动会通知.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "096_法务_境外投资法律审查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "195_财务_Q3 报销集中处理通知.md"
+      ],
+      "elapsedMs": 614
+    },
+    {
+      "queryId": "Q060",
+      "query": "POLICY-0175 的标题和责任部门分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["175_法务_反舞弊举报渠道更新公告.md#001"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "175_法务_反舞弊举报渠道更新公告.md",
+        "187_行政_节前办公区安全检查通知.wiki.md",
+        "172_行政_节前办公区安全检查通知.md"
+      ],
+      "elapsedMs": 463
+    },
+    {
+      "queryId": "Q061",
+      "query": "未按本通知执行且12个月内累计2次违规的部门或个人会受到什么处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["176_人事_绩效复核结果通知.md#003"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "080_IT_终端杀毒与补丁管理.pptx",
+        "076_IT_代码仓库权限管理.pptx",
+        "109_IT_全员密码策略更新通知.eml"
+      ],
+      "elapsedMs": 342
+    },
+    {
+      "queryId": "Q062",
+      "query": "《年度预算编制启动会通知》（POLICY-0178）由哪个部门负责，生效日期是什么时候？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["178_财务_年度预算编制启动会通知.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "178_财务_年度预算编制启动会通知.md",
+        "173_财务_年度预算编制启动会通知.md",
+        "168_财务_年度预算编制启动会通知.yaml"
+      ],
+      "elapsedMs": 460
+    },
+    {
+      "queryId": "Q063",
+      "query": "流程被驳回后如何修改？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "easy",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["179_IT_全员密码策略更新通知.md#003"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "106_人事_绩效复核结果通知.eml",
+        "101_人事_绩效复核结果通知.eml",
+        "179_IT_全员密码策略更新通知.md"
+      ],
+      "elapsedMs": 447
+    },
+    {
+      "queryId": "Q064",
+      "query": "根据反舞弊举报渠道更新公告，单据金额超过¥10,000时需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["180_法务_反舞弊举报渠道更新公告.md#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "180_法务_反舞弊举报渠道更新公告.md",
+        "200_法务_反舞弊举报渠道更新公告.md",
+        "175_法务_反舞弊举报渠道更新公告.md"
+      ],
+      "elapsedMs": 521
+    },
+    {
+      "queryId": "Q065",
+      "query": "在绩效复核结果通知制度中，紧急事项应如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["181_人事_绩效复核结果通知.wiki.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "181_人事_绩效复核结果通知.wiki.md",
+        "186_人事_绩效复核结果通知.wiki.md",
+        "116_人事_绩效复核结果通知.zip"
+      ],
+      "elapsedMs": 447
+    },
+    {
+      "queryId": "Q066",
+      "query": "在《节前办公区安全检查通知》中，紧急事项可以先通过什么方式申请，并需要在多久内补办系统流程？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["182_行政_节前办公区安全检查通知.wiki.md#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "182_行政_节前办公区安全检查通知.wiki.md",
+        "187_行政_节前办公区安全检查通知.wiki.md",
+        "112_行政_节前办公区安全检查通知.zip"
+      ],
+      "elapsedMs": 498
+    },
+    {
+      "queryId": "Q067",
+      "query": "在绩效复核结果通知制度中，相关申请审批、紧急事项处理以及资金合规事项会签有什么要求？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["186_人事_绩效复核结果通知.wiki.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "181_人事_绩效复核结果通知.wiki.md",
+        "186_人事_绩效复核结果通知.wiki.md",
+        "101_人事_绩效复核结果通知.eml"
+      ],
+      "elapsedMs": 507
+    },
+    {
+      "queryId": "Q068",
+      "query": "在《全员密码策略更新通知》中，紧急事项可以通过什么方式申请，并需要在多久内补办系统流程？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["189_IT_全员密码策略更新通知.wiki.md#001"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "184_IT_全员密码策略更新通知.wiki.md",
+        "189_IT_全员密码策略更新通知.wiki.md",
+        "154_IT_全员密码策略更新通知.json"
+      ],
+      "elapsedMs": 615
+    },
+    {
+      "queryId": "Q069",
+      "query": "制度 POLICY-0192 的标题、责任部门和生效日期分别是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["192_人事_绩效复核结果通知.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "192_人事_绩效复核结果通知.md",
+        "190_法务_反舞弊举报渠道更新公告.wiki.md",
+        "187_行政_节前办公区安全检查通知.wiki.md"
+      ],
+      "elapsedMs": 415
+    },
+    {
+      "queryId": "Q070",
+      "query": "未按本通知执行时，首次违规和12个月内累计2次违规分别如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "hr",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["192_人事_绩效复核结果通知.md#003"],
+      "recallAt5": false,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "109_IT_全员密码策略更新通知.eml",
+        "104_IT_全员密码策略更新通知.eml",
+        "171_人事_绩效复核结果通知.md"
+      ],
+      "elapsedMs": 353
+    },
+    {
+      "queryId": "Q071",
+      "query": "根据通知，单据金额超过 ¥10,000 时需要额外附什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["196_财务_年度预算编制启动会通知.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "195_财务_Q3 报销集中处理通知.md",
+        "116_人事_绩效复核结果通知.zip",
+        "108_财务_年度预算编制启动会通知.eml"
+      ],
+      "elapsedMs": 476
+    },
+    {
+      "queryId": "Q072",
+      "query": "根据本通知，未按执行要求且在12个月内累计2次违规的部门或个人会如何处理？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "it",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["198_IT_全员密码策略更新通知.md#003"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "109_IT_全员密码策略更新通知.eml",
+        "077_IT_生产数据访问审批.pptx",
+        "076_IT_代码仓库权限管理.pptx"
+      ],
+      "elapsedMs": 383
+    },
+    {
+      "queryId": "Q073",
+      "query": "根据该通知，单据金额超过¥10,000时，提交相关流程需要额外提供什么材料？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "legal",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["200_法务_反舞弊举报渠道更新公告.md#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "195_财务_Q3 报销集中处理通知.md",
+        "116_人事_绩效复核结果通知.zip",
+        "111_人事_绩效复核结果通知.zip"
+      ],
+      "elapsedMs": 462
+    },
+    {
+      "queryId": "Q074",
+      "query": "申请金额超过 60000 元时，审批人和 SLA 是什么？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["035_行政_饮用水与绿植管理.md#001"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "093_法务_供应商合规调查.csv",
+        "096_法务_境外投资法律审查.csv"
+      ],
+      "elapsedMs": 902
+    },
+    {
+      "queryId": "Q075",
+      "query": "根据《工位调整与分配规则》，申请金额超过20000元时，审批人和SLA分别是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "admin",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["037_行政_工位调整与分配规则.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "090_法务_诉讼与仲裁处理流程.csv",
+        "037_行政_工位调整与分配规则.md",
+        "061_IT_员工账号与权限管理.docx"
+      ],
+      "elapsedMs": 15731
+    },
+    {
+      "queryId": "Q076",
+      "query": "根据《费用报销管理办法》，申请金额在30001至60000元时，应由谁审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["041_财务_费用报销管理办法.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "041_财务_费用报销管理办法.md",
+        "087_法务_反舞弊与举报机制.csv",
+        "093_法务_供应商合规调查.csv"
+      ],
+      "elapsedMs": 887
+    },
+    {
+      "queryId": "Q077",
+      "query": "根据《内部审计工作细则》，申请金额大于20000元时，审批人和SLA分别是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["049_财务_内部审计工作细则.md#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "087_法务_反舞弊与举报机制.csv",
+        "093_法务_供应商合规调查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv"
+      ],
+      "elapsedMs": 740
+    },
+    {
+      "queryId": "Q078",
+      "query": "采购付款管理办法执行完成后，归档材料保存期限不少于多少年？电子档案与纸质档案效力如何？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["051_财务_采购付款管理办法.docx#002"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "051_财务_采购付款管理办法.docx",
+        "053_财务_境外付款与外汇管理.docx",
+        "042_财务_对外付款审批流程.md"
+      ],
+      "elapsedMs": 633
+    },
+    {
+      "queryId": "Q079",
+      "query": "《财务档案管理办法》的归口管理部门是哪个部门？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": false
+      },
+      "expectedChunkIds": ["055_财务_财务档案管理办法.docx#001"],
+      "recallAt5": true,
+      "recallAt10": true,
+      "recallAt20": true,
+      "finalHit": true,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "055_财务_财务档案管理办法.docx",
+        "055_财务_财务档案管理办法.docx",
+        "047_财务_固定资产折旧管理办法.md"
+      ],
+      "elapsedMs": 573
+    },
+    {
+      "queryId": "Q080",
+      "query": "申请金额超过20000元时，应由哪些审批人审批，SLA是多少？",
+      "queryLabels": {
+        "type": "factual",
+        "domain": "finance",
+        "difficulty": "medium",
+        "requiresMultiSource": false,
+        "requiresNumeric": true
+      },
+      "expectedChunkIds": ["055_财务_财务档案管理办法.docx#002"],
+      "recallAt5": false,
+      "recallAt10": false,
+      "recallAt20": false,
+      "finalHit": false,
+      "rerankFailed": false,
+      "judgeFailed": true,
+      "judgeScore": 0,
+      "finalSources": [
+        "093_法务_供应商合规调查.csv",
+        "096_法务_境外投资法律审查.csv",
+        "090_法务_诉讼与仲裁处理流程.csv"
+      ],
+      "elapsedMs": 679
+    }
+  ],
+  "aggregate": {
+    "total": 80,
+    "skippedStale": 0,
+    "recallAt5": 0.5,
+    "recallAt10": 0.6125,
+    "recallAt20": 0.7,
+    "finalHitRate": 0.4625,
+    "judgeAvg": 0,
+    "rerankFailedCount": 0,
+    "judgeFailedCount": 80
+  },
+  "byDimension": {
+    "type": {
+      "factual": {
+        "total": 80,
+        "finalHit": 37,
+        "recallAt20": 56
+      }
+    },
+    "domain": {
+      "finance": {
+        "total": 21,
+        "finalHit": 7,
+        "recallAt20": 16
+      },
+      "legal": {
+        "total": 17,
+        "finalHit": 10,
+        "recallAt20": 11
+      },
+      "it": {
+        "total": 28,
+        "finalHit": 13,
+        "recallAt20": 17
+      },
+      "hr": {
+        "total": 7,
+        "finalHit": 4,
+        "recallAt20": 6
+      },
+      "admin": {
+        "total": 7,
+        "finalHit": 3,
+        "recallAt20": 6
+      }
+    },
+    "difficulty": {
+      "medium": {
+        "total": 71,
+        "finalHit": 36,
+        "recallAt20": 51
+      },
+      "easy": {
+        "total": 9,
+        "finalHit": 1,
+        "recallAt20": 5
+      }
+    }
+  }
+}

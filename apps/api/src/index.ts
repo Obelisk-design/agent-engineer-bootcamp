@@ -11,3 +11,5 @@ export {
   type SSEMessage,
 } from './sse-adapter.js';
 export { TraceCollector, type AgentTrace } from './trace-collector.js';
+export { createRagApp } from './rag-server.js';
+export { createEvalApp } from './eval-server.js';

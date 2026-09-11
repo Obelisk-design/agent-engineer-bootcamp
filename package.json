@@ -22,6 +22,7 @@
     "build": "tsc -p tsconfig.build.json && pnpm exec vue-tsc --noEmit -p apps/web/tsconfig.json",
     "dev": "nodemon",
     "dev:rag": "pnpm exec tsx scripts/with-ports.ts rag 3100 -- tsx apps/api/src/rag-server-entry.ts",
+    "dev:eval": "pnpm exec tsx scripts/with-ports.ts eval 3202 -- tsx apps/api/src/eval-server-entry.ts",
     "dev:web": "pnpm exec tsx scripts/with-ports.ts web 5173 -- vite --host 127.0.0.1",
     "prepare": "husky || true",
     "commitlint": "commitlint --edit"

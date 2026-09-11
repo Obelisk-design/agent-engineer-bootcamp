@@ -61,7 +61,12 @@ function main(): void {
 
   // scripts/dev-day08.ts / dev-day09.ts 上层已 claim 过端口，把结果通过 PORT / VITE_PORT 注入；
   // 若环境已有对应 env，就直接复用，避免二次 claim 抢到不同端口
-  const envKey = name === 'api' || name === 'rag' ? 'PORT' : name === 'web' ? 'VITE_PORT' : null;
+  const envKey =
+    name === 'api' || name === 'rag' || name === 'eval'
+      ? 'PORT'
+      : name === 'web'
+        ? 'VITE_PORT'
+        : null;
   const inherited = envKey !== null ? process.env[envKey] : undefined;
   let port: number;
   if (inherited !== undefined && inherited !== '' && Number.isFinite(Number(inherited))) {
@@ -83,6 +88,8 @@ function main(): void {
   } else if (name === 'api') {
     childEnv['PORT'] = String(port);
   } else if (name === 'rag') {
+    childEnv['PORT'] = String(port);
+  } else if (name === 'eval') {
     childEnv['PORT'] = String(port);
   }
 

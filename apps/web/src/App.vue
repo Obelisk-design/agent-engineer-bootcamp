@@ -31,6 +31,7 @@ import ExecutionTimeline from './components/ExecutionTimeline.vue';
 import EmbedDemo from './views/embed/EmbedDemo.vue';
 import EmbedCompare from './views/embed-compare/EmbedCompare.vue';
 import RagApp from './views/RagApp.vue';
+import EvalApp from './views/eval/EvalApp.vue';
 import {
   accumulateFromResponse,
   accumulateFromRunSummary,
@@ -368,6 +369,9 @@ function toggleRightPanel(): void {
   </div>
   <div v-else-if="route === '/rag'" class="flex-1 min-h-0 overflow-auto bg-zinc-50 text-zinc-900">
     <RagApp />
+  </div>
+  <div v-else-if="route === '/eval'" class="flex-1 min-h-0 overflow-auto bg-zinc-50 text-zinc-900">
+    <EvalApp />
   </div>
   <div v-else class="flex flex-col h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
     <HeaderBar
