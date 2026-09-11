@@ -82,3 +82,7 @@ pnpm-debug.log*
 
 # lancedb 本地库目录（Day 13）
 .lancedb/
+
+# superpowers SDD 内部产物（brief / report / ledger / plan / 截图）
+# spec / plan 在 docs/superpowers/ 入 git；其余 .superpowers/sdd/ 不入
+.superpowers/
