@@ -95,6 +95,10 @@ export interface RunRetrievalOptions {
     baseUrl: string,
     model: string,
   ) => Promise<{ score: number; failed: boolean }>;
+  /** Day 24：stale query（expectedChunkIds 不在当前库）不 skip，照常跑 judge + 召回。
+   *  配合 chunk_id 漂移场景（v2 清洗后 #NNN 重排）：judge-avg 分母 = 全量 query（不受 stale skip 影响），
+   *  recall/final-hit 记为 N/A 不计入聚合。 */
+  readonly ignoreStale?: boolean;
 }
 
 export async function runRetrievalEval(
@@ -104,12 +108,13 @@ export async function runRetrievalEval(
   const poolK = opts.poolK ?? 20;
   const finalK = opts.finalK ?? 3;
   const chunkStrategy = opts.chunkStrategy ?? 'heading';
+  const ignoreStale = opts.ignoreStale ?? false;
 
   const rows: RetrievalEvalRow[] = [];
   let skippedStale = 0;
 
   for (const q of queries) {
-    if (q.runtime.gtStale) {
+    if (q.runtime.gtStale && !ignoreStale) {
       skippedStale++;
       continue;
     }

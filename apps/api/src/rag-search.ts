@@ -1,55 +1,89 @@
 /**
  * apps/api/src/rag-search.ts
  *
- * POST /api/search handler。
+ * POST /api/search handler（Day 24 改造：统一库 + 版本化 + Notion 降级）。
  *
  * 流程：
  *   1. zod parse body（SearchRequest）
- *   2. namespace → tableName：
- *      - 'notion' → openVectorStore('chunks_notion_heading')（ADR 0004 双表对齐 indexer 实际写）
- *      - 'md'     → openVectorStore('chunks_md_heading')（ADR 0004 双表对齐 indexer 实际写）
- *      - 'all'    → 并行两路，merge topK by score
- *   3. retrieve 是黑盒（内部 embed + store.search），不接外部 vec / embed
- *   4. 给每个 hit 算 highlight（后端计算）
- *   5. 返回 { hits, phases }
+ *   2. namespace → 表集合：
+ *      - 'corporate' / 'docs' → 单一 corpus 当前版本 heading 表
+ *      - 'all'                → 并行两 corpus heading 表，按 score 合并 topK
+ *      - 'notion' / 'md'      → 保留 enum（向后兼容），但实际不查（表已无数据 + Notion 无数据）
+ *   3. 启动 / 首查 fail-fast：db.tableNames() 校验目标表存在；RAG_ACTIVE_VERSION 填错
+ *      或未入库时直接报错，避免静默 0 命中
+ *   4. retrieve 是黑盒（内部 embed + store.search），不接外部 vec / embed
+ *   5. 给每个 hit 算 highlight（后端计算）
+ *   6. 返回 { hits, phases }
  *
- * 字段映射（per ledger R6.2）：
+ * 字段映射：
  *   chunkId     = record.id
  *   content     = record.text
- *   sourceKind  = record.sourceKind
+ *   sourceKind  = ns（corporate / docs / notion / md；enum 在 api-schema 扩展）
  *   sourceLabel = record.source
- *   chunkKind   = 'heading' / 'paragraph'（Day 14 后段：search 并行 heading + paragraph 双 strategy）
+ *   chunkKind   = 'heading'（Day 24 单 strategy；corporate/docs 只建 heading 表）
  *   meta        = { source, sourceKind }
- *   score       = 1 - hit.score（lance 返回 cosine distance，后端转 cosine similarity ∈ [0,1]）
+ *   score       = 1 - hit.score（lance 返回 cosine distance → cosine similarity ∈ [0,1]）
  *
- * 阶段耗时（per ledger R6.1）：
+ * 阶段耗时：
  *   embedMs     = 0（retrieve 黑盒不暴露内部 embed 耗时；UI 端不展示 embed 柱）
  *   retrieveMs  = retrieve 返回的 elapsedMs
  */
 
 import type { Context } from 'hono';
+import * as lancedb from '@lancedb/lancedb';
 import { SearchRequest, SearchResponse, ApiError, type Hit } from '@bootcamp/api-schema';
 import { retrieve, openVectorStore } from '../../../libs/rag/index.js';
 import { computeHighlight } from './highlight.js';
 
-const STORE_URI = '.lancedb/rag';
+/** 当前激活版本（env 覆盖，默认 v1）。周一入 v2 后改 RAG_ACTIVE_VERSION=v2 即可。 */
+const ACTIVE_VERSION = process.env['RAG_ACTIVE_VERSION'] ?? 'v1';
 
-/** namespace → lancedb table 名的映射。
- *
- * 实际表名是 `${prefix}_heading` + `${prefix}_paragraph`（Day 13 indexer 双表设计）。
- * Day 14 spec 写 `${prefix}` 单表与实现不对称（ADR 0004）。
- *
- * Day 14 后段扩展：search 扩到 paragraph 策略。heading chunk 覆盖标题层
- * 关键词，paragraph chunk 覆盖内容层细节（blockquote / 表格 / 列表项）。
- * query 跟哪一类 cosine 更近看场景，merge by score 后取 topK。
- */
-const TABLE_BY_NAMESPACE = {
-  notion: ['chunks_notion_heading', 'chunks_notion_paragraph'],
-  md: ['chunks_md_heading', 'chunks_md_paragraph'],
-} as const;
+/** corpus → lancedb uri（决策：统一一个库改成按 corpus 各 uri，与 day24 入库对齐）。 */
+const URI_BY_CORPUS: Record<'corporate' | 'docs', string> = {
+  corporate: '.lancedb/corporate',
+  docs: '.lancedb/docs',
+};
 
-type Namespace = keyof typeof TABLE_BY_NAMESPACE;
-type Strategy = 'heading' | 'paragraph';
+/** namespace → 要查的 (corpus, table) 列表。表名带版本，单 strategy heading。 */
+interface QueryTarget {
+  readonly ns: 'corporate' | 'docs'; // hit.sourceKind 用此
+  readonly corpus: 'corporate' | 'docs';
+  readonly tableName: string;
+}
+
+function targetsForNamespace(namespace: string, version: string): readonly QueryTarget[] {
+  const table = (corpus: 'corporate' | 'docs'): string =>
+    `chunks_${corpus}_${version}_heading`;
+  switch (namespace) {
+    case 'corporate':
+      return [{ ns: 'corporate', corpus: 'corporate', tableName: table('corporate') }];
+    case 'docs':
+      return [{ ns: 'docs', corpus: 'docs', tableName: table('docs') }];
+    case 'all':
+      return [
+        { ns: 'corporate', corpus: 'corporate', tableName: table('corporate') },
+        { ns: 'docs', corpus: 'docs', tableName: table('docs') },
+      ];
+    // notion/md：enum 保留兼容，但 Notion 数据已删 / .lancedb/rag 是空库，
+    // 后端降级：直接返回空 hits（不报错，不污染 active 版本表）。
+    case 'notion':
+    case 'md':
+      return [];
+    default:
+      return [];
+  }
+}
+
+/** fail-fast：检查 (uri, tableName) 是否存在。env 填错或未入库时静默 0 命中的排查很痛苦。 */
+async function assertTableExists(uri: string, tableName: string): Promise<void> {
+  const db = await lancedb.connect(uri);
+  const existing = await db.tableNames();
+  if (!existing.includes(tableName)) {
+    throw new Error(
+      `lancedb 表不存在: ${uri}/${tableName}。检查：①RAG_ACTIVE_VERSION=${ACTIVE_VERSION} 是否对应该表；②是否跑了 examples/day24/index-corpus.ts 入库`,
+    );
+  }
+}
 
 export async function ragSearchHandler(c: Context): Promise<Response> {
   const body = await c.req.json().catch(() => null);
@@ -71,53 +105,57 @@ export async function ragSearchHandler(c: Context): Promise<Response> {
     return c.json(ApiError.parse({ error: 'OPENAI_API_KEY not set', code: 'env_missing' }), 500);
   }
 
-  // 透传给 retrieve —— libs 层不读 env（apps/api 层负责注入 baseUrl / model）
   const embedBaseUrl = process.env['OPENAI_BASE_URL'];
   const embedModel = process.env['EMBEDDING_MODEL_NAME'];
 
   const totalStart = Date.now();
+  const targets = targetsForNamespace(namespace, ACTIVE_VERSION);
 
-  // namespace → 要扫的表列表。'all' 并行两路，其余单一。
-  const namespaces: readonly Namespace[] =
-    namespace === 'all' ? (['notion', 'md'] as const) : [namespace];
+  // fail-fast：目标表必须存在（notion/md 直接空 targets，不查表）
+  for (const t of targets) {
+    try {
+      await assertTableExists(URI_BY_CORPUS[t.corpus], t.tableName);
+    } catch (e) {
+      return c.json(
+        ApiError.parse({ error: (e as Error).message, code: 'lance_error' }),
+        500,
+      );
+    }
+  }
 
-  // Phase: retrieve（并行查 heading + paragraph 两 strategy，按 score 合并 topK）
+  // Phase: retrieve（并行查目标表，按 score 合并 topK）
   const retrieveStart = Date.now();
-  const perNamespaceHits = await Promise.all(
-    namespaces
-      .flatMap((ns) => TABLE_BY_NAMESPACE[ns].map((tableName) => ({ ns, tableName })))
-      .map(async ({ ns, tableName }) => {
-        const strategy: Strategy = tableName.endsWith('_paragraph') ? 'paragraph' : 'heading';
-        const store = await openVectorStore(STORE_URI, tableName);
-        const r = await retrieve(query, {
-          k: topK,
-          chunkStrategy: strategy,
-          store,
-          apiKey,
-          ...(embedBaseUrl !== undefined ? { baseUrl: embedBaseUrl } : {}),
-          ...(embedModel !== undefined ? { model: embedModel } : {}),
-        });
-        return r.hits.map((hit) => ({ hit, strategy, ns }));
-      }),
+  const perTargetHits = await Promise.all(
+    targets.map(async (t) => {
+      const store = await openVectorStore(URI_BY_CORPUS[t.corpus], t.tableName);
+      const r = await retrieve(query, {
+        k: topK,
+        chunkStrategy: 'heading',
+        store,
+        apiKey,
+        ...(embedBaseUrl !== undefined ? { baseUrl: embedBaseUrl } : {}),
+        ...(embedModel !== undefined ? { model: embedModel } : {}),
+      });
+      return r.hits.map((hit) => ({ hit, target: t }));
+    }),
   );
 
-  const merged = perNamespaceHits
+  const merged = perTargetHits
     .flat()
-    .sort((a, b) => a.hit.score - b.hit.score) // hit.score = lance cosine distance，越小越相似 → 升序合并
+    .sort((a, b) => a.hit.score - b.hit.score) // hit.score = lance cosine distance，升序
     .slice(0, topK);
   const retrieveMs = Date.now() - retrieveStart;
 
   // Phase: highlight + 字段映射
-  // 后端把 lance cosine distance 转 cosine similarity，UI / caller 拿到 [0,1] 越大越相似
-  const hits: Hit[] = merged.map(({ hit, strategy, ns }) => {
+  const hits: Hit[] = merged.map(({ hit, target }) => {
     const rec = hit.record;
     return {
       chunkId: rec.id,
-      sourceKind: ns,
+      sourceKind: target.ns,
       sourceLabel: rec.source,
       content: rec.text,
-      score: 1 - hit.score, // cosine similarity = 1 - cosine distance
-      chunkKind: strategy,
+      score: 1 - hit.score,
+      chunkKind: 'heading',
       highlight: computeHighlight(query, rec.text),
       meta: { source: rec.source, sourceKind: rec.sourceKind },
     };

@@ -37,7 +37,7 @@ export async function searchHits(
   query: string,
   opts: {
     topK?: number;
-    namespace?: 'notion' | 'md' | 'all';
+    namespace?: 'corporate' | 'docs' | 'all';
     signal?: AbortSignal;
   } = {},
 ): Promise<SearchResponse> {

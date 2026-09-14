@@ -2,12 +2,13 @@ import { z } from 'zod';
 
 /**
  * 搜索请求：query + topK + namespace。
- * namespace='all' 时并行查 notion + md 两表，按 score 合并 topK。
+ * namespace='all' 时并行查 corporate + docs 两表（按 score 合并 topK）。
+ * Day 24 加 corporate/docs；notion/md 保留（enum 加法不删，向后兼容）。
  */
 export const SearchRequest = z.object({
   query: z.string().min(1).max(2000),
   topK: z.number().int().min(1).max(50).default(5),
-  namespace: z.enum(['notion', 'md', 'all']).default('all'),
+  namespace: z.enum(['notion', 'md', 'corporate', 'docs', 'all']).default('all'),
 });
 
 export type SearchRequest = z.infer<typeof SearchRequest>;
@@ -29,7 +30,7 @@ export type Highlight = z.infer<typeof Highlight>;
  */
 export const Hit = z.object({
   chunkId: z.string(),
-  sourceKind: z.enum(['notion', 'md']),
+  sourceKind: z.enum(['notion', 'md', 'corporate', 'docs']),
   sourceLabel: z.string(),
   content: z.string(),
   // cosine similarity 理论范围 [-1, 1]（= 1 - cosine distance，distance ∈ [0, 2]）。

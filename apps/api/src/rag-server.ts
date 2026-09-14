@@ -19,7 +19,7 @@ export function createRagApp(): Hono {
     const h = getNamespaceHealth();
     return c.json(
       HealthResponse.parse({
-        ok: h.notion.ready || h.md.ready,
+        ok: h.corpus.ready,
         namespaces: h,
       }),
     );

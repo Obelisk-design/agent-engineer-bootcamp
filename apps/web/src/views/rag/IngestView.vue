@@ -14,19 +14,19 @@ import type {
 } from '../../../../../libs/api-schema/src/index.js';
 import { subscribeSSE, type SseHandle } from '../../lib/sse.js';
 
-const namespace = ref<'notion' | 'md'>('notion');
+const namespace = ref<'corporate' | 'docs'>('corporate');
 const phases = ref<PhaseEvent[]>([]);
 const done = ref<DoneEvent | null>(null);
 const error = ref<ErrorEvent | null>(null);
 const streaming = ref(false);
-const health = ref<Record<'notion' | 'md', NamespaceHealth> | null>(null);
+const health = ref<Record<string, NamespaceHealth> | null>(null);
 
 let sseHandle: SseHandle | null = null;
 
 async function loadHealth(): Promise<void> {
   const res = await fetch('/api/health');
   if (res.ok) {
-    const body = (await res.json()) as { namespaces?: Record<'notion' | 'md', NamespaceHealth> };
+    const body = (await res.json()) as { namespaces?: Record<string, NamespaceHealth> };
     health.value = body.namespaces ?? null;
   }
 }
@@ -71,7 +71,10 @@ onBeforeUnmount(() => {
   sseHandle?.close();
 });
 
-const currentHealth = (): NamespaceHealth | undefined => health.value?.[namespace.value];
+const currentHealth = (): NamespaceHealth | undefined => {
+  if (health.value === null) return undefined;
+  return health.value[namespace.value];
+};
 </script>
 
 <template>
@@ -79,8 +82,8 @@ const currentHealth = (): NamespaceHealth | undefined => health.value?.[namespac
     <div class="flex items-center gap-2">
       <span class="text-sm text-gray-600">namespace：</span>
       <el-select v-model="namespace" :disabled="streaming" style="width: 160px">
-        <el-option label="notion" value="notion" />
-        <el-option label="md" value="md" />
+        <el-option label="corporate" value="corporate" />
+        <el-option label="docs" value="docs" />
       </el-select>
     </div>
     <el-alert

@@ -3,11 +3,8 @@
  *
  * .env 校验：读 process.env，返回每个 namespace 的就绪状态 + 缺失 key 列表。
  *
- * 约束：
- * - 启动时打 .env 校验（不静默 fail）
- * - notion 需要 NOTION_TOKEN + OPENAI_API_KEY
- * - md     需要 OPENAI_API_KEY
- * - search 需要 OPENAI_API_KEY（任意 namespace 搜索都需要 embedding）
+ * Day 24：Notion 数据已删，统一库（corporate/docs）。当前 namespace 检查只剩
+ * corpus 一个：需要 OPENAI_API_KEY（embedding）；检索走统一库不再分 notion/md 两条。
  *
  * 🆕 Day 14 fix: 顶部 import 'dotenv/config' 让所有 import 此模块的进程自动加载仓库根 .env
  * - 之前 examples/* 都显式 import dotenv，但 apps/api/src/ 漏了，导致 dev:rag 后端读不到 OPENAI_API_KEY
@@ -18,9 +15,8 @@
 import 'dotenv/config';
 import type { NamespaceHealth } from '../../../libs/api-schema/src/index.js';
 
-const REQUIRED: Record<'notion' | 'md', readonly string[]> = {
-  notion: ['NOTION_TOKEN', 'OPENAI_API_KEY'],
-  md: ['OPENAI_API_KEY'],
+const REQUIRED: Record<'corpus', readonly string[]> = {
+  corpus: ['OPENAI_API_KEY'],
 };
 
 function checkNamespace(keys: readonly string[]): NamespaceHealth {
@@ -31,10 +27,9 @@ function checkNamespace(keys: readonly string[]): NamespaceHealth {
   return { ready: missing.length === 0, missing };
 }
 
-export function getNamespaceHealth(): { notion: NamespaceHealth; md: NamespaceHealth } {
+export function getNamespaceHealth(): { corpus: NamespaceHealth } {
   return {
-    notion: checkNamespace(REQUIRED.notion),
-    md: checkNamespace(REQUIRED.md),
+    corpus: checkNamespace(REQUIRED.corpus),
   };
 }
 

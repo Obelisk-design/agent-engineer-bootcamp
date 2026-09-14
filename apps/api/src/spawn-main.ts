@@ -27,13 +27,15 @@ const REPO_ROOT = process.cwd();
 const CHILD_NODE_OPTIONS = '--max-old-space-size=4096';
 
 export interface SpawnMainOptions {
-  readonly namespace: 'notion' | 'md';
+  readonly namespace: 'notion' | 'md' | 'corporate' | 'docs';
   readonly dryRun: boolean;
   readonly onPhase: (event: PhaseEvent) => void;
   readonly onStderr: (chunk: string) => void;
   readonly signal: AbortSignal;
-  /** 测试接缝：覆盖脚本路径（默认按 namespace 映射到 examples/<ns>_import/main.ts）。 */
+  /** 测试接缝：覆盖脚本路径（默认按 namespace 映射）。 */
   readonly scriptPath?: string;
+  /** Day 24：corpus 入库需要 --version 参数（默认 v1）。 */
+  readonly version?: string;
 }
 
 export interface SpawnMainResult {
@@ -45,14 +47,20 @@ export interface SpawnMainResult {
 
 export function spawnMain(opts: SpawnMainOptions): Promise<SpawnMainResult> {
   return new Promise((resolve) => {
-    const scriptPath =
-      opts.scriptPath ??
-      (opts.namespace === 'notion'
-        ? 'examples/notion_import/main.ts'
-        : 'examples/md_import/main.ts');
+    // 脚本路径映射（Day 24：corporate/docs 走 day24 统一入库）
+    let defaultPath: string;
+    if (opts.namespace === 'notion') defaultPath = 'examples/notion_import/main.ts';
+    else if (opts.namespace === 'md') defaultPath = 'examples/md_import/main.ts';
+    else defaultPath = `examples/day24/index-corpus.ts`;
+    const scriptPath = opts.scriptPath ?? defaultPath;
 
     const args = ['tsx', scriptPath];
     if (opts.dryRun) args.push('--dry-run');
+    // Day 24 脚本要 --corpus + --version
+    if (opts.namespace === 'corporate' || opts.namespace === 'docs') {
+      args.push('--corpus', opts.namespace);
+      args.push('--version', opts.version ?? 'v1');
+    }
 
     // Windows 上 spawn 默认不解析 .cmd，需要打开 shell 让 Node 找 cmd shim；
     // macOS/Linux 直接 spawn pnpm 即可。

@@ -13,7 +13,7 @@ import type { VectorSearchPayload, PipelineStage } from '../analysisState.js';
 const props = defineProps<{
   result: VectorSearchPayload | null;
   topK: number;
-  namespace: 'notion' | 'md' | 'all';
+  namespace: 'corporate' | 'docs' | 'all';
   stage: PipelineStage;
 }>();
 

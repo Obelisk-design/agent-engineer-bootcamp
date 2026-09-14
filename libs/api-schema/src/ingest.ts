@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
-/** 入库请求：namespace + 可选 dry-run。 */
+/** 入库请求：namespace + 可选 dry-run。Day 24 加 corporate/docs；notion/md 保留兼容。 */
 export const IngestRequest = z.object({
-  namespace: z.enum(['notion', 'md']),
+  namespace: z.enum(['notion', 'md', 'corporate', 'docs']),
   dryRun: z.boolean().default(false),
 });
 export type IngestRequest = z.infer<typeof IngestRequest>;
@@ -21,7 +21,7 @@ export type PhaseEvent = z.infer<typeof PhaseEvent>;
 
 /** 终态事件：子进程 exit 0。 */
 export const DoneEvent = z.object({
-  namespace: z.enum(['notion', 'md']),
+  namespace: z.enum(['notion', 'md', 'corporate', 'docs']),
   dryRun: z.boolean(),
   added: z.number(),
   modified: z.number(),

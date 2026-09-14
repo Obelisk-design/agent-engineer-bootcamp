@@ -42,7 +42,7 @@ export interface RerankerPayload {
 export interface AnalysisState {
   /** 用户输入 */
   query: string;
-  namespace: 'notion' | 'md' | 'all';
+  namespace: 'corporate' | 'docs' | 'all';
   topK: number;
   rerankEnabled: boolean;
 

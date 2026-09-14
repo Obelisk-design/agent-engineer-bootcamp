@@ -16,8 +16,8 @@ export const useRagStore = defineStore('rag', () => {
   const error = ref<string | null>(null);
   /** 最近一次搜索耗时（ms）—— 用于 hits 上方展示 */
   const elapsed = ref<number | null>(null);
-  /** 当前 namespace —— SearchView 用 */
-  const namespace = ref<'notion' | 'md' | 'all'>('all');
+  /** 当前 namespace —— SearchView 用。Day 24：notion/md 数据已摘除，改 corporate/docs/all。 */
+  const namespace = ref<'corporate' | 'docs' | 'all'>('all');
 
   async function runSearch(): Promise<void> {
     if (!query.value.trim()) return;

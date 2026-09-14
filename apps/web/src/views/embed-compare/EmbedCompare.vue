@@ -294,7 +294,7 @@ function pickExample(ex: string): void {
         :rerank-enabled="analysisState.rerankEnabled"
         :busy="busy"
         @update:query="(v: string) => (analysisState.query = v)"
-        @update:namespace="(v: 'notion' | 'md' | 'all') => (analysisState.namespace = v)"
+        @update:namespace="(v: 'corporate' | 'docs' | 'all') => (analysisState.namespace = v)"
         @update:top-k="(v: number) => (analysisState.topK = v)"
         @update:rerank-enabled="(v: boolean) => (analysisState.rerankEnabled = v)"
         @analyze="run"

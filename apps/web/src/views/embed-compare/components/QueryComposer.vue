@@ -9,7 +9,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   query: string;
-  namespace: 'notion' | 'md' | 'all';
+  namespace: 'corporate' | 'docs' | 'all';
   topK: number;
   rerankEnabled: boolean;
   busy: boolean;
@@ -17,7 +17,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:query', value: string): void;
-  (e: 'update:namespace', value: 'notion' | 'md' | 'all'): void;
+  (e: 'update:namespace', value: 'corporate' | 'docs' | 'all'): void;
   (e: 'update:top-k', value: number): void;
   (e: 'update:rerank-enabled', value: boolean): void;
   (e: 'analyze'): void;
@@ -31,7 +31,7 @@ const emit = defineEmits<{
       :model-value="props.query"
       type="textarea"
       :rows="2"
-      placeholder="如：cosine 怎么算 / 什么是 lancedb / 紫光云是什么"
+      placeholder="如：员工报销流程 / 食堂运营办法 / cosine 怎么算"
       :disabled="props.busy"
       @update:model-value="emit('update:query', $event)"
       @keydown.meta.enter="emit('analyze')"
@@ -46,12 +46,12 @@ const emit = defineEmits<{
             :model-value="props.namespace"
             :disabled="props.busy"
             size="small"
-            style="width: 160px"
-            @update:model-value="emit('update:namespace', $event as 'notion' | 'md' | 'all')"
+            style="width: 200px"
+            @update:model-value="emit('update:namespace', $event as 'corporate' | 'docs' | 'all')"
           >
-            <el-option label="all (notion + md)" value="all" />
-            <el-option label="md (docs/daily + ADR)" value="md" />
-            <el-option label="notion" value="notion" />
+            <el-option label="all (corporate + docs)" value="all" />
+            <el-option label="corporate" value="corporate" />
+            <el-option label="docs" value="docs" />
           </el-select>
         </label>
 

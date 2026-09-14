@@ -20,10 +20,10 @@ function onSubmit() {
 <template>
   <div class="space-y-4">
     <div class="flex gap-2">
-      <el-select v-model="namespace" :disabled="loading" placeholder="namespace" style="width: 140px">
-        <el-option label="all" value="all" />
-        <el-option label="notion" value="notion" />
-        <el-option label="md" value="md" />
+      <el-select v-model="namespace" :disabled="loading" placeholder="namespace" style="width: 160px">
+        <el-option label="all (corporate + docs)" value="all" />
+        <el-option label="corporate" value="corporate" />
+        <el-option label="docs" value="docs" />
       </el-select>
       <el-input
         v-model="query"
