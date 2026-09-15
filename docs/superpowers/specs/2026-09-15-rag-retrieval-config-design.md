@@ -1,6 +1,6 @@
 # 2026-09-15 — Retrieval + Ingest 全栈配置化 design
 
-> **Status**: Draft v1 (待老大审) — self-review 待修
+> **Status**: Draft v1 (已自审，待老大最终审)
 > **Date**: 2026-09-15
 > **Deciders**: 老大 + Claude
 > **Related**: [ADR 0003](0003-tool-params-single-source-of-truth-zod.md)（Tool 参数契约 zod 单一事实源，本 spec 是该原则的 RAG 配置层延伸）
@@ -9,13 +9,14 @@
 
 工程已有 `libs/rag/retrieve.ts`（Day 12-19 演进）和 `libs/rag/indexer.ts`（Day 13-24 演进），两端的现状分别如下：
 
-**Retrieval 端缺口（生产可用级必备，4 件全缺）：**
-- **超时** —— `embed` / `store.search` 都没 timeout，hang 死整个 RAG
-- **重试 + 退避** —— 网关抖动直接 fail，没有指数退避
+**Retrieval 端缺口（生产可用级必备）：**
+- **超时 + 重试 + 退避**（3 件合一）—— `embed` / `store.search` 都没 timeout，hang 死整个 RAG；网关抖动直接 fail，没有指数退避
 - **AbortSignal** —— 用户取消 / agent 终止无响应
 - **Filter（namespace/version/sourceKinds）** —— 几乎全在调用方硬编码（`corporate` / `docs` / `all`、version、source 等无 schema）
 - **分段 metric + trace** —— 只有 `elapsedMs` 总耗时，没分 embedMs / searchMs / rerankMs / dedupMs
 - **rerank 集成** —— `retrieve*` 只到 hit，还得单独调 `rerankHits`
+
+> 老大原话"4 件全做"= 超时/重试/退避 + AbortSignal + Filter + 分段 metric + trace（+rerank 集成是顺手）。本 spec 把"超时/重试/退避"合并写，因为 RobustnessConfig 是一体的（一个 schema 字段）。
 
 **Ingest 端现状（已基本就位，需小补）：**
 - `IncrementalIndexOptions` 已 zod-shaped（`storeUri` / `tablePrefix` / `force`）
